@@ -194,6 +194,34 @@ def test_protocol():
     target.close()
 
 
+def test_target_from_settings():
+    """The path the service actually uses: Config -> make_target -> panel."""
+    print("settings to display")
+    from lcd4linux import display as display_module
+    from lcd4linux.settings import Config
+
+    context = install_fake_usb()
+    config = Config({"output_mode": "usb", "device_ids": "1908:0102"})
+    target = display_module.make_target(config)
+    check(isinstance(target, display_module.AX206Target), "USB mode builds an AX206 target")
+    check(target.device.device_ids == ((0x1908, 0x0102),),
+          "device IDs reach the driver parsed: %s" % (target.device.device_ids,))
+    target.open()
+    check((target.width, target.height) == (PANEL_WIDTH, PANEL_HEIGHT),
+          "panel opens through the settings path")
+    target.close()
+
+    config = Config({"output_mode": "usb", "device_ids": "1908:0102, 1908:3318"})
+    target = display_module.make_target(config)
+    check(target.device.device_ids == ((0x1908, 0x0102), (0x1908, 0x3318)),
+          "several device IDs are accepted")
+
+    config = Config({"output_mode": "none"})
+    check(isinstance(display_module.make_target(config), display_module.NullTarget),
+          "disabled mode builds a null target")
+    assert context is not None
+
+
 def test_rotation():
     print("rotation")
     context = install_fake_usb()
@@ -278,6 +306,55 @@ def test_images():
         check(decoded is not None, "PNG decoded")
 
 
+def test_encoding():
+    """Text files must be opened with an explicit encoding.
+
+    The locale on a CoreELEC box is plain C, so Python's default encoding is
+    ASCII and any layout containing a character like a middle dot would fail
+    to load.
+    """
+    print("file encoding")
+    import ast
+
+    sources = []
+    for directory in (os.path.join(ROOT, "resources", "lib", "lcd4linux"), ROOT):
+        for name in sorted(os.listdir(directory)):
+            if name.endswith(".py"):
+                sources.append(os.path.join(directory, name))
+    offenders = []
+    for source in sources:
+        with open(source, "r", encoding="utf-8") as handle:
+            tree = ast.parse(handle.read(), source)
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Call):
+                continue
+            if not isinstance(node.func, ast.Name) or node.func.id != "open":
+                continue
+            mode = ""
+            if len(node.args) > 1 and isinstance(node.args[1], ast.Constant):
+                mode = str(node.args[1].value)
+            if "b" in mode:
+                continue
+            if any(keyword.arg == "encoding" for keyword in node.keywords):
+                continue
+            offenders.append("%s:%d" % (os.path.basename(source), node.lineno))
+    check(not offenders, "every text mode open() names an encoding%s"
+          % ("" if not offenders else ": " + ", ".join(offenders)))
+
+    # And the bundled layouts really do contain non-ASCII text, so this
+    # matters in practice.
+    layouts = discover([os.path.join(ROOT, "resources", "layouts")])
+    non_ascii = []
+    for name, path in layouts.items():
+        with open(path, "rb") as handle:
+            if any(byte > 127 for byte in handle.read()):
+                non_ascii.append(name)
+    check(bool(non_ascii), "layouts with non-ASCII characters load: %s"
+          % ", ".join(sorted(non_ascii)))
+    for name, path in layouts.items():
+        Layout.load(path)
+
+
 def test_tokens():
     print("tokens")
     from lcd4linux import tokens
@@ -295,8 +372,9 @@ def test_tokens():
 
 def main():
     print("script.lcd4linux self test\n")
-    for test in (test_fonts, test_images, test_tokens, test_protocol,
-                 test_rotation, test_layouts):
+    for test in (test_encoding, test_fonts, test_images, test_tokens,
+                 test_protocol, test_target_from_settings, test_rotation,
+                 test_layouts):
         test()
         print("")
     if failures:

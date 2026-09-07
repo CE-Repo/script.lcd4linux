@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="script.lcd4linux"
        name="LCD4Linux"
-       version="1.0.0"
+       version="1.0.1"
        provider-name="U3knOwn">
   <requires>
     <import addon="xbmc.python" version="3.0.0"/>
@@ -31,7 +31,14 @@ Zusätzliche Python-Module werden nicht benötigt: Der USB-Zugriff läuft über 
     <platform>linux</platform>
     <license>MIT</license>
     <source>https://github.com/CE-Repo/script.lcd4linux</source>
-    <news>v1.0.0
+    <news>v1.0.1
+- Fixed the service failing to start on CoreELEC: text files are now read as
+  UTF-8 instead of the C locale's ASCII
+- Fixed the configured USB device IDs not reaching the driver, which made the
+  add-on report "no AX206 display found" even with a panel attached
+- Fixed the "User layout folder" setting being rejected by Kodi when left empty
+
+v1.0.0
 - First release
 - AX206 USB LCD support with partial screen updates
 - JSON layout engine with pages, conditions and Kodi InfoLabel access

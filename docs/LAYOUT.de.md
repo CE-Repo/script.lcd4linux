@@ -13,6 +13,9 @@ Eigene Layouts gehören nach
 Dateien dort haben Vorrang vor den mitgelieferten und überleben Updates.
 Nach dem Bearbeiten: *Dienst neu laden* im Menü (oder Layout neu auswählen).
 
+Layoutdateien werden als **UTF-8** gelesen; eine Byte-Reihenfolge-Markierung
+(BOM), wie sie manche Windows-Editoren schreiben, wird toleriert.
+
 ---
 
 ## 1. Grundgerüst

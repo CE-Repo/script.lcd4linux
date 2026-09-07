@@ -34,7 +34,7 @@ GPU_THERMAL_PATHS = (
 def _read_first(paths):
     for path in paths:
         try:
-            with open(path, "r") as handle:
+            with open(path, "r", encoding="utf-8", errors="replace") as handle:
                 return handle.read().strip()
         except (IOError, OSError):
             continue
@@ -152,7 +152,7 @@ class BaseProvider(object):
     @staticmethod
     def _meminfo():
         try:
-            with open("/proc/meminfo", "r") as handle:
+            with open("/proc/meminfo", "r", encoding="ascii") as handle:
                 fields = {}
                 for line in handle:
                     name, _, rest = line.partition(":")
@@ -195,7 +195,7 @@ class CpuSampler(object):
         if now - self._last_time < self.min_interval and self._last_sample:
             return self._value
         try:
-            with open("/proc/stat", "r") as handle:
+            with open("/proc/stat", "r", encoding="ascii") as handle:
                 fields = handle.readline().split()
         except (IOError, OSError):
             return self._value

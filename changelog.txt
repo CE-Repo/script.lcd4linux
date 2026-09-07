@@ -1,3 +1,16 @@
+v1.0.1
+- Fixed the service failing to start on CoreELEC with UnicodeDecodeError:
+  layout files and the example layout are now read as UTF-8 (BOM tolerated)
+  instead of relying on the C locale, whose default encoding is ASCII
+- Fixed the configured USB device IDs being passed to the driver as a raw
+  string, so the bus scan never matched and the add-on reported
+  "no AX206 display found" even with a panel attached
+- Fixed Kodi rejecting the empty default of the "User layout folder" setting
+  (missing allowempty constraint)
+- Service overrides are no longer lost when the settings are reloaded
+- Self test covers the settings-to-display path and guards against text mode
+  file reads without an explicit encoding
+
 v1.0.0
 - First release
 - AX206 USB LCD support (USB ID 1908:0102) through libusb/ctypes, no extra

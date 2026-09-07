@@ -12,6 +12,9 @@ Put your own layouts in
 Files there take precedence over the bundled ones and survive updates.
 After editing, choose *Reload service* from the add-on menu.
 
+Layout files are read as **UTF-8**; a byte order mark, as written by some
+Windows editors, is tolerated.
+
 ---
 
 ## 1. Skeleton

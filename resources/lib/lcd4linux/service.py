@@ -85,8 +85,11 @@ class Monitor(xbmc.Monitor if xbmc is not None else object):
 
 
 class Service(object):
-    def __init__(self, config=None):
-        self.config = config or Config()
+    def __init__(self, config=None, overrides=None):
+        #: Kept so a reload re-reads Kodi's settings without losing the
+        #: overrides a caller (tests, tools) started the service with.
+        self._overrides = dict(overrides or {})
+        self.config = config or Config(self._overrides)
         self.monitor = Monitor(self) if xbmc is not None else None
         self.provider = make_provider(self._addon_info("name"),
                                       self._addon_info("version"))
@@ -192,7 +195,7 @@ class Service(object):
     def setup(self):
         ensure_user_directories()
         self._install_example_layout()
-        self.config = Config()
+        self.config = Config(self._overrides)
         self.fonts = FontCache(self.config.font_directories)
         self.images.clear()
         self.provider = make_provider(self._addon_info("name"),
@@ -228,10 +231,12 @@ class Service(object):
         if os.path.exists(marker) or not os.path.exists(source):
             return
         try:
-            with open(source, "r") as handle:
-                text = handle.read()
-            with open(marker, "w") as handle:
-                handle.write(text)
+            # Copied as bytes: the file is UTF-8 and the locale on a CoreELEC
+            # box is plain C, so text mode would try to decode it as ASCII.
+            with open(source, "rb") as handle:
+                data = handle.read()
+            with open(marker, "wb") as handle:
+                handle.write(data)
             log("example layout written to %s" % marker)
         except (IOError, OSError) as err:
             debug("cannot write example layout: %s" % err)

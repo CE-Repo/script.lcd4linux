@@ -269,7 +269,7 @@ def make_target(config):
     override = None
     if config.force_size:
         override = (config.width, config.height)
-    return AX206Target(device_ids=config.device_ids,
+    return AX206Target(device_ids=config.device_ids_parsed,
                        index=config.device_index,
                        serial=config.device_serial,
                        rotation=config.rotation,

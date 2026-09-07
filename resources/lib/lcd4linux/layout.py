@@ -119,7 +119,10 @@ class Layout(object):
     # -- loading ----------------------------------------------------------
     @classmethod
     def load(cls, path):
-        with open(path, "r") as handle:
+        # ``utf-8-sig`` also swallows the byte order mark that Windows
+        # editors like to add.  The encoding has to be explicit: the locale
+        # on a CoreELEC box is C, so the default would be ASCII.
+        with open(path, "r", encoding="utf-8-sig") as handle:
             text = handle.read()
         return cls(_parse_json(text, path), path)
 

@@ -66,6 +66,10 @@ class AX206(object):
 
     def __init__(self, device_ids=KNOWN_DEVICES, index=0, serial=None,
                  timeout=3000):
+        # Accept both a parsed list of (vendor, product) pairs and the raw
+        # "1908:0102" setting string.
+        if isinstance(device_ids, str):
+            device_ids = parse_id_list(device_ids)
         self.device_ids = tuple(device_ids)
         self.index = int(index)
         self.serial = serial or None

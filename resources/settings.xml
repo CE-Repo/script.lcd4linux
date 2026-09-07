@@ -213,6 +213,7 @@
           <level>1</level>
           <default></default>
           <constraints>
+            <allowempty>true</allowempty>
             <writable>true</writable>
           </constraints>
           <control type="button" format="path">
