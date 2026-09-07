@@ -1,0 +1,23 @@
+v1.0.0
+- First release
+- AX206 USB LCD support (USB ID 1908:0102) through libusb/ctypes, no extra
+  Python modules required
+- Only the changed part of each frame is sent to the panel
+- JSON layout engine: pages with conditions and automatic rotation, widgets
+  for text (scrolling, wrapping, shadow), progress bars (bar/segments,
+  horizontal/vertical, knob), graphs, rectangles, lines, circles, images,
+  icons and an analogue clock
+- Access to every Kodi InfoLabel and boolean condition, plus player, system,
+  weather and library data with a filter pipeline
+- Bundled layouts: Default (music/video/clock/system), Big Cover, Minimal,
+  Dashboard
+- Built-in PNG and baseline JPEG decoders with scaled IDCT for fast cover art
+- Anti-aliased DejaVu bitmap fonts in any size
+- Rotation 0/90/180/270, mirroring, configurable pixel byte order
+- Backlight control: dim on screensaver, switch off when idle, clear on exit
+- Kodi notifications mirrored on the panel
+- Menu and remote-control actions: choose layout, preview, next page, test
+  pattern, status, reload, brightness
+- Preview mode and tools/preview.py to design layouts without hardware
+- tools/selftest.py verifies fonts, decoders, USB protocol and all layouts
+- English and German translations

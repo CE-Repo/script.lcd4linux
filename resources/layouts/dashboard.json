@@ -1,0 +1,66 @@
+{
+  "name": "Dashboard",
+  "size": [480, 320],
+  "background": "#0a0c11",
+  "defaults": {"font": "sans", "size": 16, "color": "#e6ebf5"},
+  "pageinterval": 0,
+
+  "pages": [
+    {
+      "name": "Dashboard",
+      "widgets": [
+        {"type": "rect", "x": 12, "y": 12, "w": 200, "h": 150, "radius": 10,
+         "color": "#111621", "border": 1, "bordercolor": "#1d2433"},
+        {"type": "analogclock", "x": 32, "y": 20, "w": 134, "h": 134,
+         "face": "#0d111a", "rim": "#2a3346", "rimwidth": 2,
+         "color": "#e6ebf5", "secondcolor": "#e23e3e",
+         "tickcolor": "#3d4658"},
+        {"type": "rect", "x": 224, "y": 12, "w": 244, "h": 150, "radius": 10,
+         "color": "#111621", "border": 1, "bordercolor": "#1d2433"},
+        {"type": "text", "x": 240, "y": 24, "w": 214, "h": 22,
+         "text": "${system.hostname}", "size": 17, "bold": true},
+        {"type": "text", "x": 240, "y": 48, "w": 214, "h": 20,
+         "text": "${system.ip}", "size": 14, "color": "#6f7891"},
+        {"type": "text", "x": 240, "y": 74, "w": 214, "h": 20,
+         "text": "Kodi ${system.kodiversion}", "size": 14, "color": "#6f7891"},
+        {"type": "text", "x": 240, "y": 100, "w": 214, "h": 20,
+         "text": "Up ${system.uptime}", "size": 14, "color": "#6f7891"},
+        {"type": "text", "x": 240, "y": 126, "w": 214, "h": 20,
+         "text": "${system.freespace|prefix:Free }", "size": 14,
+         "color": "#6f7891"},
+
+        {"type": "rect", "x": 12, "y": 174, "w": 148, "h": 74, "radius": 10,
+         "color": "#111621", "border": 1, "bordercolor": "#1d2433"},
+        {"type": "icon", "x": 26, "y": 186, "w": 16, "h": 16, "icon": "cpu",
+         "color": "#17b2e2"},
+        {"type": "text", "x": 48, "y": 184, "w": 100, "h": 20, "text": "CPU",
+         "size": 14, "color": "#6f7891"},
+        {"type": "text", "x": 26, "y": 206, "w": 120, "h": 30,
+         "text": "${system.cpu}%", "size": 26, "bold": true},
+
+        {"type": "rect", "x": 172, "y": 174, "w": 148, "h": 74, "radius": 10,
+         "color": "#111621", "border": 1, "bordercolor": "#1d2433"},
+        {"type": "icon", "x": 186, "y": 186, "w": 16, "h": 16, "icon": "temp",
+         "color": "#f59e0b"},
+        {"type": "text", "x": 208, "y": 184, "w": 100, "h": 20,
+         "text": "TEMP", "size": 14, "color": "#6f7891"},
+        {"type": "text", "x": 186, "y": 206, "w": 120, "h": 30,
+         "text": "${system.cputemp}°C", "size": 26, "bold": true},
+
+        {"type": "rect", "x": 332, "y": 174, "w": 136, "h": 74, "radius": 10,
+         "color": "#111621", "border": 1, "bordercolor": "#1d2433"},
+        {"type": "text", "x": 346, "y": 184, "w": 100, "h": 20, "text": "RAM",
+         "size": 14, "color": "#6f7891"},
+        {"type": "text", "x": 346, "y": 206, "w": 110, "h": 30,
+         "text": "${system.memory}%", "size": 26, "bold": true},
+
+        {"type": "rect", "x": 12, "y": 260, "w": 456, "h": 48, "radius": 10,
+         "color": "#111621", "border": 1, "bordercolor": "#1d2433"},
+        {"type": "graph", "x": 20, "y": 266, "w": 440, "h": 36,
+         "value": "${system.cpu}", "points": 110, "interval": 1,
+         "color": "#17b2e2", "fill": "#2217b2e2", "thickness": 1}
+
+      ]
+    }
+  ]
+}

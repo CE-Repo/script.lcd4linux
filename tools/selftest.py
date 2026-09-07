@@ -1,0 +1,312 @@
+#!/usr/bin/env python3
+"""Self test for script.lcd4linux.
+
+Exercises the whole pipeline without hardware: a simulated AX206 panel
+records the USB traffic and the checks below verify the command blocks, the
+partial screen updates and the layout renderer.  It runs on the target box
+too (``python3 tools/selftest.py`` on CoreELEC) and only uses modules the
+add-on ships with.
+"""
+
+import os
+import struct
+import sys
+import time
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "resources", "lib"))
+
+from lcd4linux import ax206, usbdev                     # noqa: E402
+from lcd4linux.bmfont import FontCache                  # noqa: E402
+from lcd4linux.canvas import Canvas, parse_color        # noqa: E402
+from lcd4linux.display import AX206Target               # noqa: E402
+from lcd4linux.images import ImageCache                 # noqa: E402
+from lcd4linux.kodidata import DemoProvider             # noqa: E402
+from lcd4linux.layout import Layout, Renderer, discover  # noqa: E402
+
+PANEL_WIDTH = 480
+PANEL_HEIGHT = 320
+
+failures = []
+
+
+def check(condition, message):
+    status = "ok  " if condition else "FAIL"
+    print("  [%s] %s" % (status, message))
+    if not condition:
+        failures.append(message)
+
+
+# ---------------------------------------------------------------------------
+# a simulated AX206
+# ---------------------------------------------------------------------------
+
+class FakeDevice(object):
+    """Speaks just enough Bulk-Only-Transport to answer the driver."""
+
+    def __init__(self):
+        self.info = usbdev.DeviceInfo(0x1908, 0x0102, 1, 4, product_name="fake")
+        self.commands = []
+        self.blits = []
+        self.brightness = []
+        self.bytes_sent = 0
+        self._pending_data_in = 0
+        self._expect_data_out = 0
+        self._last_command = None
+
+    # -- device interface --------------------------------------------------
+    def claim(self):
+        pass
+
+    def close(self):
+        pass
+
+    def reset(self):
+        pass
+
+    def clear_halt(self, endpoint):
+        pass
+
+    def bulk_endpoints(self):
+        return 0x81, 0x01
+
+    def write(self, endpoint, data, timeout=0):
+        if self._expect_data_out:
+            self.bytes_sent += len(data)
+            if self._last_command and self._last_command[6] == ax206.USBCMD_BLIT:
+                self.blits.append((self._last_command, len(data)))
+            self._expect_data_out = 0
+            return len(data)
+
+        assert len(data) == 31, "CBW must be 31 bytes, got %d" % len(data)
+        assert data[0:4] == b"USBC", "bad CBW signature"
+        length = struct.unpack_from("<I", data, 8)[0]
+        assert data[14] == 16, "command length must be 16"
+        command = bytearray(data[15:31])
+        assert command[0] == 0xCD, "vendor command must start with 0xcd"
+        self.commands.append(command)
+        self._last_command = command
+
+        if command[5] == 2:                       # get dimensions
+            self._pending_data_in = length
+        elif command[6] == ax206.USBCMD_SETPROPERTY:
+            self.brightness.append(command[9])
+        elif command[6] == ax206.USBCMD_BLIT:
+            self._expect_data_out = length
+        return len(data)
+
+    def read(self, endpoint, length, timeout=0):
+        if self._pending_data_in:
+            self._pending_data_in = 0
+            return struct.pack("<HHB", PANEL_WIDTH, PANEL_HEIGHT, 16)
+        return b"USBS" + struct.pack("<I", ax206.CBW_TAG) + struct.pack("<I", 0) + b"\x00"
+
+
+class FakeContext(object):
+    def __init__(self):
+        self.device = FakeDevice()
+
+    def find(self, matches):
+        return None, 1, [(object(), self.device.info)]
+
+    def release_list(self, devices):
+        pass
+
+    def close(self):
+        pass
+
+
+def install_fake_usb():
+    context = FakeContext()
+    usbdev.Context = lambda: context
+    usbdev.open_device = lambda ctx, dev, info, interface=0: context.device
+    return context
+
+
+# ---------------------------------------------------------------------------
+# tests
+# ---------------------------------------------------------------------------
+
+def test_protocol():
+    print("AX206 protocol")
+    context = install_fake_usb()
+    device = context.device
+    target = AX206Target(rotation=0)
+    target.open()
+    check((target.width, target.height) == (PANEL_WIDTH, PANEL_HEIGHT),
+          "panel size read back as %dx%d" % (target.width, target.height))
+    check(device.commands[0][5] == 2, "first command asks for the dimensions")
+
+    target.set_brightness(5)
+    check(device.brightness[-1] == 5, "brightness command carries the level")
+    check(device.commands[-1][6] == ax206.USBCMD_SETPROPERTY
+          and device.commands[-1][7] == ax206.PROPERTY_BRIGHTNESS,
+          "brightness uses SETPROPERTY/PROPERTY_BRIGHTNESS")
+
+    canvas = Canvas(PANEL_WIDTH, PANEL_HEIGHT)
+    canvas.clear(parse_color("#000000"))
+    target.present(canvas, force=True)
+    command, size = device.blits[-1]
+    check(size == PANEL_WIDTH * PANEL_HEIGHT * 2,
+          "full frame sends %d bytes" % size)
+    check((command[7] | command[8] << 8, command[9] | command[10] << 8) == (0, 0),
+          "full frame starts at 0,0")
+    check((command[11] | command[12] << 8, command[13] | command[14] << 8)
+          == (PANEL_WIDTH - 1, PANEL_HEIGHT - 1),
+          "full frame ends at the last pixel (inclusive)")
+
+    canvas.fill_rect(100, 60, 40, 20, parse_color("#ff0000"))
+    target.present(canvas)
+    command, size = device.blits[-1]
+    x0 = command[7] | command[8] << 8
+    y0 = command[9] | command[10] << 8
+    x1 = (command[11] | command[12] << 8) + 1
+    y1 = (command[13] | command[14] << 8) + 1
+    check((x0, y0, x1, y1) == (100, 60, 140, 80),
+          "partial update covers exactly the changed rectangle %s"
+          % ((x0, y0, x1, y1),))
+    check(size == 40 * 20 * 2, "partial update sends %d bytes instead of %d"
+          % (size, PANEL_WIDTH * PANEL_HEIGHT * 2))
+
+    before = len(device.blits)
+    target.present(canvas)
+    check(len(device.blits) == before, "an unchanged frame sends nothing")
+
+    payload_first_pixel = None
+    canvas.fill_rect(0, 0, 1, 1, parse_color("#ff0000"))
+    original_write = device.write
+
+    captured = {}
+
+    def capture(endpoint, data, timeout=0):
+        if device._expect_data_out:
+            captured["data"] = bytes(data[:2])
+        return original_write(endpoint, data, timeout)
+
+    device.write = capture
+    target.present(canvas)
+    device.write = original_write
+    payload_first_pixel = captured.get("data")
+    check(payload_first_pixel == b"\xf8\x00",
+          "red is sent high byte first (%s)"
+          % (payload_first_pixel.hex() if payload_first_pixel else "none"))
+
+    target.close()
+
+
+def test_rotation():
+    print("rotation")
+    context = install_fake_usb()
+    target = AX206Target(rotation=90)
+    target.open()
+    logical = target.logical_size
+    check(logical == (PANEL_HEIGHT, PANEL_WIDTH),
+          "90 degrees makes the canvas %dx%d" % logical)
+    canvas = Canvas(logical[0], logical[1])
+    canvas.fill_rect(0, 0, 10, 10, parse_color("#00ff00"))
+    target.present(canvas, force=True)
+    check(context.device.blits[-1][1] == PANEL_WIDTH * PANEL_HEIGHT * 2,
+          "rotated frame still has the panel's pixel count")
+    target.close()
+
+
+def test_layouts():
+    print("layouts")
+    directories = [os.path.join(ROOT, "resources", "layouts")]
+    available = discover(directories)
+    check(bool(available), "found %d bundled layouts" % len(available))
+    fonts = FontCache([os.path.join(ROOT, "resources", "fonts")])
+    images = ImageCache()
+    art = os.path.join(ROOT, "resources", "media", "demo-cover.jpg")
+    for name, path in sorted(available.items()):
+        layout = Layout.load(path)
+        ok = True
+        slowest = 0.0
+        for track in (0, 1):
+            provider = DemoProvider(track, 97.0, "playing", art)
+            renderer = Renderer(layout, provider, fonts, images)
+            for page in layout.pages:
+                renderer._active = page
+                renderer._visible_signature = (page.index,)
+                started = time.time()
+                try:
+                    provider.begin_frame()
+                    canvas = renderer.canvas
+                    from lcd4linux.widgets import RenderContext
+                    context = RenderContext(provider, fonts, images,
+                                            canvas.width, canvas.height)
+                    context.accent = renderer._accent(context)
+                    canvas.reset_clip()
+                    page.render(canvas, context)
+                except Exception as error:
+                    ok = False
+                    print("      %s / %s: %s" % (name, page.name, error))
+                slowest = max(slowest, time.time() - started)
+        check(ok, "%s renders every page (slowest %.0f ms)" % (name, slowest * 1000))
+
+
+def test_fonts():
+    print("fonts")
+    fonts = FontCache([os.path.join(ROOT, "resources", "fonts")])
+    families = fonts.families()
+    check("sans" in families and "mono" in families,
+          "families available: %s" % ", ".join(families))
+    font = fonts.get("sans-bold", 24)
+    check(font.measure("Hello") > 0, "text measures %d px" % font.measure("Hello"))
+    check(fonts.get("sans", 27).size == 27, "unbundled sizes are resampled")
+    umlauts = fonts.get("sans", 16)
+    check(all(umlauts.glyph(ord(ch)) is not None for ch in u"äöüßÄÖÜéèñ"),
+          "accented characters have glyphs")
+
+
+def test_images():
+    print("images")
+    from lcd4linux import images as image_module
+    cover = os.path.join(ROOT, "resources", "media", "demo-cover.jpg")
+    image = image_module.load_file(cover, 200)
+    check(image is not None and image.width > 0,
+          "JPEG decoded to %dx%d" % (image.width, image.height) if image else "JPEG failed")
+    if image:
+        scaled = image.fitted(120, 120, "cover")
+        check((scaled.width, scaled.height) == (120, 120),
+              "cover fit gives exactly 120x120")
+        accent = image.dominant_color()
+        check(len(accent) == 4, "dominant colour %s" % (accent,))
+    icon = os.path.join(ROOT, "icon.png")
+    if os.path.exists(icon):
+        decoded = image_module.load_file(icon, 128)
+        check(decoded is not None, "PNG decoded")
+
+
+def test_tokens():
+    print("tokens")
+    from lcd4linux import tokens
+    provider = DemoProvider(0, 97.0, "playing", "")
+    provider.begin_frame()
+    check(tokens.expand("${player.title}", provider) == "Enjoy the Silence",
+          "token expansion")
+    check(tokens.expand("${player.time_s|hms}", provider) == "1:37",
+          "hms filter")
+    check(tokens.evaluate("playing", provider), "state condition")
+    check(not tokens.evaluate("!playing", provider), "negated condition")
+    check(tokens.evaluate("${player.percent} > 10", provider), "comparison")
+    check(tokens.evaluate("audio+playing", provider), "and combination")
+
+
+def main():
+    print("script.lcd4linux self test\n")
+    for test in (test_fonts, test_images, test_tokens, test_protocol,
+                 test_rotation, test_layouts):
+        test()
+        print("")
+    if failures:
+        print("%d check(s) failed:" % len(failures))
+        for failure in failures:
+            print("  - %s" % failure)
+        return 1
+    print("all checks passed")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
