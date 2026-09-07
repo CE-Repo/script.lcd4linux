@@ -9,6 +9,7 @@ import json
 
 from . import ax206
 from . import layout as layout_module
+from . import spf
 from . import localize
 from .logger import log
 from .settings import ADDON_ID, Config, profile_path
@@ -92,12 +93,21 @@ def show_status():
     lines.append("%s: %s" % (localize.text(32330, "Service"),
                              status or localize.text(32331, "not running")))
     try:
-        found = ax206.AX206.enumerate(config.device_ids_parsed)
-        if found:
-            for info in found:
-                lines.append(str(info))
+        if config.display_type == "spf":
+            frames = spf.SamsungSPF.enumerate()
+            if frames:
+                for info, mode, model in frames:
+                    lines.append("%s [%s] %s" % (model, mode, info))
+            else:
+                lines.append(localize.text(32336,
+                                           "No Samsung photo frame detected"))
         else:
-            lines.append(localize.text(32332, "No AX206 display detected"))
+            found = ax206.AX206.enumerate(config.device_ids_parsed)
+            if found:
+                for info in found:
+                    lines.append(str(info))
+            else:
+                lines.append(localize.text(32332, "No AX206 display detected"))
     except Exception as error:
         lines.append("%s: %s" % (localize.text(32333, "USB error"), error))
     lines.append("")

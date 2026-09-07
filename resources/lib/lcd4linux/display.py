@@ -12,6 +12,9 @@ from array import array
 
 from . import ax206
 from . import pngio
+from . import spf
+from .errors import DisplayError
+from .jpegenc import JpegEncoder
 from .canvas import Canvas
 from .logger import error, log
 
@@ -173,7 +176,7 @@ class AX206Target(Target):
         if self.rotation:
             frame = frame.rotated(self.rotation)
         if frame.width != self.width or frame.height != self.height:
-            raise ax206.DisplayError(
+            raise DisplayError(
                 "frame is %dx%d but the panel is %dx%d"
                 % (frame.width, frame.height, self.width, self.height))
 
@@ -245,6 +248,83 @@ class AX206Target(Target):
         return chunk.tobytes()
 
 
+class SPFTarget(Target):
+    """A Samsung SPF photo frame in mini monitor mode.
+
+    The frame only takes whole JPEG images, so there is no partial update
+    here; :class:`~.jpegenc.JpegEncoder` keeps the cost down instead by
+    re-encoding only the MCU rows that changed.
+    """
+
+    def __init__(self, index=0, serial=None, rotation=0, mirror=False,
+                 timeout=5000, model=None, quality=85, subsample=True,
+                 size_override=None):
+        self.device = spf.SamsungSPF(index, serial, timeout, model=model)
+        self.rotation = int(rotation) % 360
+        self.mirror = bool(mirror)
+        self.quality = int(quality)
+        self.subsample = bool(subsample)
+        self.size_override = size_override
+        self.width = 0
+        self.height = 0
+        self.encoder = None
+        self.last_frame_bytes = 0
+
+    def open(self):
+        self.device.open()
+        self.width = self.device.width
+        self.height = self.device.height
+        if self.size_override:
+            override_w, override_h = self.size_override
+            if override_w and override_h:
+                log("overriding frame size %dx%d with %dx%d"
+                    % (self.width, self.height, override_w, override_h))
+                self.width, self.height = override_w, override_h
+        self.encoder = JpegEncoder(self.width, self.height, self.quality,
+                                   self.subsample)
+        return True
+
+    def close(self):
+        self.device.close()
+        self.encoder = None
+
+    @property
+    def is_open(self):
+        return self.device.is_open
+
+    def describe(self):
+        info = self.device.info
+        return "%s %s" % (self.device.name, info) if info else "Samsung SPF"
+
+    def set_brightness(self, level):
+        # No backlight control in this protocol; a level of 0 blanks the
+        # picture instead so "off when idle" still does something useful.
+        return
+
+    def present(self, canvas, force=False):
+        frame = canvas
+        if self.mirror:
+            frame = _mirror(frame)
+        if self.rotation:
+            frame = frame.rotated(self.rotation)
+        if frame.width != self.width or frame.height != self.height:
+            raise DisplayError(
+                "frame is %dx%d but the display is %dx%d"
+                % (frame.width, frame.height, self.width, self.height))
+        jpeg = self.encoder.encode(frame.buf, force=force)
+        self.last_frame_bytes = len(jpeg)
+        self.device.send_image(jpeg)
+        return True
+
+    def blank(self):
+        """Show a black picture; the closest thing to switching off."""
+        if self.encoder is None:
+            return
+        dark = Canvas(self.width, self.height, (0, 0, 0, 255))
+        jpeg = self.encoder.encode(dark.buf)
+        self.device.send_image(jpeg)
+
+
 def _mirror(canvas):
     """Flip a canvas horizontally."""
     out = Canvas(canvas.width, canvas.height)
@@ -269,6 +349,16 @@ def make_target(config):
     override = None
     if config.force_size:
         override = (config.width, config.height)
+    if config.display_type == "spf":
+        return SPFTarget(index=config.device_index,
+                         serial=config.device_serial,
+                         rotation=config.rotation,
+                         mirror=config.mirror,
+                         timeout=config.usb_timeout,
+                         model=config.spf_model,
+                         quality=config.jpeg_quality,
+                         subsample=config.jpeg_subsample,
+                         size_override=override)
     return AX206Target(device_ids=config.device_ids_parsed,
                        index=config.device_index,
                        serial=config.device_serial,

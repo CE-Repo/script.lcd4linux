@@ -104,6 +104,7 @@ class Layout(object):
             self.width, self.height = int(size[0]), int(size[1])
         except (TypeError, ValueError, IndexError):
             self.width, self.height = DEFAULT_SIZE
+        self.size = (self.width, self.height)
         self.background = self.spec.get("background", "#000000")
         defaults = self.spec.get("defaults", {}) or {}
         self.default_font = defaults.get("font", "sans")
@@ -265,18 +266,42 @@ def discover(directories):
     return found
 
 
-def load_layout(name, directories, fallback_size=DEFAULT_SIZE):
-    """Load ``name`` from the first directory that has it."""
+def load_layout(name, directories, size=DEFAULT_SIZE):
+    """Load ``name``, preferring a variant that matches the display size.
+
+    A layout called ``default.json`` next to a ``default-800x480.json`` uses
+    the latter on an 800x480 panel, so one setting works for both displays.
+    """
     available = discover(directories)
-    path = available.get(name)
-    if path is None and name and not name.lower().endswith(".json"):
-        path = available.get(name + ".json")
+    stem = name[:-5] if name and name.lower().endswith(".json") else (name or "")
+    candidates = []
+    if size and stem:
+        candidates.append("%s-%dx%d.json" % (stem, size[0], size[1]))
+    if stem:
+        candidates.append(stem + ".json")
+
+    path = None
+    for candidate in candidates:
+        if candidate in available:
+            path = available[candidate]
+            break
+
     if path is None and available:
-        path = available[sorted(available)[0]]
+        # Nothing under that name: take any layout built for this display.
+        for other, other_path in sorted(available.items()):
+            try:
+                if size and tuple(Layout.load(other_path).size) == tuple(size):
+                    path = other_path
+                    break
+            except Exception:
+                continue
+        if path is None:
+            path = available[sorted(available)[0]]
         log("layout %r not found, falling back to %s" % (name, path))
+
     if path is None:
         error("no layout files found in %s" % (directories,))
-        return Layout({"name": "empty", "size": list(fallback_size),
+        return Layout({"name": "empty", "size": list(size or DEFAULT_SIZE),
                        "pages": [{"name": "empty", "widgets": []}]})
     debug("loading layout %s" % path)
     return Layout.load(path)

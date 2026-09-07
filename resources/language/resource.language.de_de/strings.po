@@ -391,3 +391,51 @@ msgstr "Layout-Ordner"
 msgctxt "#32335"
 msgid "Display status"
 msgstr "Anzeigestatus"
+
+msgctxt "#32027"
+msgid "Samsung photo frame"
+msgstr "Samsung-Bilderrahmen"
+
+msgctxt "#32170"
+msgid "Display type"
+msgstr "Displaytyp"
+
+msgctxt "#32171"
+msgid "Which panel is connected. The AX206 type is the 3.5\" 480x320 LCD sold as an AIDA64 display; Samsung SPF frames are the 7\" and larger photo frames."
+msgstr "Welches Panel angeschlossen ist. Der AX206-Typ ist das 3,5\"-LCD mit 480x320, das als AIDA64-Display verkauft wird; Samsung-SPF sind die Bilderrahmen ab 7 Zoll."
+
+msgctxt "#32172"
+msgid "AX206 USB LCD (AIDA64 type)"
+msgstr "AX206-USB-LCD (AIDA64-Typ)"
+
+msgctxt "#32173"
+msgid "Samsung SPF photo frame"
+msgstr "Samsung-SPF-Bilderrahmen"
+
+msgctxt "#32174"
+msgid "Samsung model"
+msgstr "Samsung-Modell"
+
+msgctxt "#32175"
+msgid "Leave empty to use whichever frame is found, or enter a model such as SPF-72H."
+msgstr "Leer lassen, um den gefundenen Rahmen zu verwenden, oder ein Modell wie SPF-72H eintragen."
+
+msgctxt "#32176"
+msgid "JPEG quality"
+msgstr "JPEG-Qualität"
+
+msgctxt "#32177"
+msgid "Samsung frames accept complete JPEG images only. Lower values encode faster and send less data."
+msgstr "Samsung-Rahmen nehmen ausschließlich vollständige JPEG-Bilder an. Niedrigere Werte kodieren schneller und senden weniger Daten."
+
+msgctxt "#32178"
+msgid "Reduced colour resolution (4:2:0)"
+msgstr "Reduzierte Farbauflösung (4:2:0)"
+
+msgctxt "#32179"
+msgid "Faster and smaller. Switch it off for sharper coloured text at the cost of about twice the encoding time."
+msgstr "Schneller und kleiner. Abschalten für schärfere farbige Schrift, kostet etwa die doppelte Kodierzeit."
+
+msgctxt "#32336"
+msgid "No Samsung photo frame detected"
+msgstr "Kein Samsung-Bilderrahmen gefunden"

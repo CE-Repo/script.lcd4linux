@@ -1,3 +1,21 @@
+v1.1.0
+- Samsung SPF photo frame support: SPF-72H, SPF-75H/76H, SPF-83H/83M,
+  SPF-85H/85P, SPF-86H/86P, SPF-87H, SPF-105P, SPF-107H, SPF-700T, SPF-800P
+  and SPF-1000P, including the switch out of USB mass storage mode, so no
+  usb_modeswitch setup is needed
+- Built-in baseline JPEG encoder, because the frames accept complete JPEG
+  images only. A restart marker after every MCU row makes each row
+  independently coded, so unchanged rows are copied from the previous frame's
+  bitstream; flat blocks skip the DCT and repeated blocks are cached. A
+  typical update re-encodes 2 to 6 of 30 rows
+- Display type is a setting; JPEG quality and chroma subsampling configurable
+- Layouts for 800x480 panels (default, big cover, minimal, dashboard), picked
+  automatically when the selected layout name has a size specific variant
+- Backlight settings apply to the AX206 only; on a Samsung frame, which has no
+  backlight control over USB, "switch off when idle" shows a black picture
+- Both drivers now raise a shared DisplayError and either kind of panel is
+  reconnected automatically after it disappears from the bus
+
 v1.0.1
 - Fixed the service failing to start on CoreELEC with UnicodeDecodeError:
   layout files and the example layout are now read as UTF-8 (BOM tolerated)

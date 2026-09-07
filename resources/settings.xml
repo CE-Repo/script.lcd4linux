@@ -4,6 +4,17 @@
 
     <category id="display" label="32010">
       <group id="1" label="32020">
+        <setting id="display_type" type="string" label="32170" help="32171">
+          <level>0</level>
+          <default>ax206</default>
+          <constraints>
+            <options>
+              <option label="32172">ax206</option>
+              <option label="32173">spf</option>
+            </options>
+          </constraints>
+          <control type="list" format="string"/>
+        </setting>
         <setting id="output_mode" type="string" label="32100" help="32101">
           <level>0</level>
           <default>usb</default>
@@ -19,6 +30,20 @@
         <setting id="device_ids" type="string" label="32105" help="32106">
           <level>2</level>
           <default>1908:0102</default>
+          <dependencies>
+            <dependency type="visible" setting="display_type" operator="is">ax206</dependency>
+          </dependencies>
+          <control type="edit" format="string"/>
+        </setting>
+        <setting id="spf_model" type="string" label="32174" help="32175">
+          <level>2</level>
+          <default></default>
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <dependencies>
+            <dependency type="visible" setting="display_type" operator="is">spf</dependency>
+          </dependencies>
           <control type="edit" format="string"/>
         </setting>
         <setting id="device_index" type="integer" label="32107" help="32108">
@@ -129,6 +154,32 @@
         </setting>
       </group>
 
+      <group id="4" label="32027">
+        <setting id="jpeg_quality" type="integer" label="32176" help="32177">
+          <level>1</level>
+          <default>85</default>
+          <constraints>
+            <minimum>40</minimum>
+            <step>5</step>
+            <maximum>100</maximum>
+          </constraints>
+          <dependencies>
+            <dependency type="visible" setting="display_type" operator="is">spf</dependency>
+          </dependencies>
+          <control type="slider" format="integer">
+            <popup>true</popup>
+          </control>
+        </setting>
+        <setting id="jpeg_subsample" type="boolean" label="32178" help="32179">
+          <level>1</level>
+          <default>true</default>
+          <dependencies>
+            <dependency type="visible" setting="display_type" operator="is">spf</dependency>
+          </dependencies>
+          <control type="toggle"/>
+        </setting>
+      </group>
+
       <group id="3" label="32022">
         <setting id="brightness" type="integer" label="32130" help="32131">
           <level>0</level>
@@ -138,6 +189,9 @@
             <step>1</step>
             <maximum>7</maximum>
           </constraints>
+          <dependencies>
+            <dependency type="visible" setting="display_type" operator="is">ax206</dependency>
+          </dependencies>
           <control type="slider" format="integer">
             <popup>true</popup>
           </control>
@@ -157,6 +211,9 @@
           </constraints>
           <dependencies>
             <dependency type="enable" setting="dim_on_screensaver" operator="is">true</dependency>
+          </dependencies>
+          <dependencies>
+            <dependency type="visible" setting="display_type" operator="is">ax206</dependency>
           </dependencies>
           <control type="slider" format="integer">
             <popup>true</popup>

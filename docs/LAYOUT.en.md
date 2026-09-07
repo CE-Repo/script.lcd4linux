@@ -15,6 +15,12 @@ After editing, choose *Reload service* from the add-on menu.
 Layout files are read as **UTF-8**; a byte order mark, as written by some
 Windows editors, is tolerated.
 
+The `size` field has to match the display. Each bundled layout exists for both
+supported sizes: if the selected layout is `default.json` and an 800x480 panel
+is attached, the add-on automatically uses `default-800x480.json` when that
+file exists. Your own layouts follow the same rule - `mine-800x480.json` next
+to `mine.json`.
+
 ---
 
 ## 1. Skeleton
@@ -416,3 +422,8 @@ Operators: `==`, `!=`, `>`, `<`, `>=`, `<=`, ` contains `, ` startswith `,
 * **Test pattern** (menu → *Test pattern*) verifies resolution, rotation and
   byte order: the red frame must touch all four edges and the grey wedge must
   be smooth.
+* **Samsung frames**: every frame travels as a complete JPEG, but only what
+  changed is re-encoded. Large flat areas are almost free, a full screen photo
+  costs the most on the first frame. If it is too slow, lower the *JPEG
+  quality*, leave *reduced colour resolution* on and pick a layout without a
+  background image.

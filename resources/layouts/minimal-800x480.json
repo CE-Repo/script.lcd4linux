@@ -1,0 +1,51 @@
+{
+  "name": "Minimal (800x480)",
+  "size": [800, 480],
+  "background": "#000000",
+  "defaults": {"font": "sans", "size": 24, "color": "#ffffff"},
+
+  "pages": [
+    {
+      "name": "Playing",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {"type": "text", "x": 40, "y": 56, "w": 720, "h": 120,
+         "text": "${player.title}", "size": 48, "bold": true,
+         "wrap": true, "lines": 2, "color": "#ffffff"},
+
+        {"type": "text", "x": 40, "y": 196, "w": 720, "h": 44,
+         "text": "${player.artist}${player.showtitle}", "size": 32,
+         "color": "#00d5ff", "scroll": "bounce"},
+
+        {"type": "text", "x": 40, "y": 248, "w": 720, "h": 34,
+         "text": "${player.album}${player.episodelabel}", "size": 24,
+         "color": "#8b93a8"},
+
+        {"type": "progress", "x": 40, "y": 336, "w": 720, "h": 22,
+         "value": "${player.percent}", "color": "#00d5ff",
+         "background": "#111111", "style": "segments", "segments": 45,
+         "gap": 4, "inactivecolor": "#1f2933"},
+
+        {"type": "text", "x": 40, "y": 382, "w": 300, "h": 44,
+         "text": "${player.time}", "font": "mono", "size": 34},
+        {"type": "text", "x": 460, "y": 382, "w": 300, "h": 44,
+         "text": "${player.duration}", "font": "mono", "size": 34,
+         "align": "right", "color": "#8b93a8"}
+      ]
+    },
+
+    {
+      "name": "Clock",
+      "condition": "!active",
+      "widgets": [
+        {"type": "text", "x": 0, "y": 130, "w": 800, "h": 160,
+         "text": "${system.timesec}", "font": "mono", "size": 110,
+         "bold": true, "align": "center"},
+        {"type": "text", "x": 0, "y": 300, "w": 800, "h": 44,
+         "text": "${system.date}", "size": 30, "align": "center",
+         "color": "#8b93a8"}
+      ]
+    }
+  ]
+}

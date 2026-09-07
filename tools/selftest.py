@@ -16,7 +16,7 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "resources", "lib"))
 
-from lcd4linux import ax206, usbdev                     # noqa: E402
+from lcd4linux import ax206, jpegio, usbdev             # noqa: E402
 from lcd4linux.bmfont import FontCache                  # noqa: E402
 from lcd4linux.canvas import Canvas, parse_color        # noqa: E402
 from lcd4linux.display import AX206Target               # noqa: E402
@@ -221,6 +221,184 @@ def test_target_from_settings():
           "disabled mode builds a null target")
     assert context is not None
 
+    # The same path for a Samsung frame.
+    bus = install_fake_spf("monitor")
+    bus.device = FakeSPFDevice(bus)
+    config = Config({"output_mode": "usb", "display_type": "spf",
+                     "jpeg_quality": 70, "jpeg_subsample": True})
+    target = display_module.make_target(config)
+    check(isinstance(target, display_module.SPFTarget),
+          "SPF mode builds a Samsung target")
+    check(target.quality == 70, "JPEG quality reaches the encoder: %d" % target.quality)
+    target.open()
+    check((target.width, target.height) == (800, 480),
+          "Samsung frame opens through the settings path")
+    canvas = Canvas(800, 480, parse_color("#000000"))
+    target.present(canvas, force=True)
+    check(len(bus.device.frames) == 1, "a frame reaches the fake Samsung")
+    target.close()
+
+
+# ---------------------------------------------------------------------------
+# a simulated Samsung SPF frame
+# ---------------------------------------------------------------------------
+
+class FakeSPFDevice(object):
+    """Records the frames written to a Samsung photo frame."""
+
+    def __init__(self, bus):
+        self.bus = bus
+        self.info = usbdev.DeviceInfo(0x04E8, bus.product_id(), 1, 7,
+                                      product_name="SPF-72H")
+        self.frames = []
+        self.keepalives = 0
+
+    def claim(self):
+        pass
+
+    def close(self):
+        pass
+
+    def reset(self):
+        pass
+
+    def clear_halt(self, endpoint):
+        pass
+
+    def bulk_endpoints(self):
+        return 0x81, 0x02
+
+    def write(self, endpoint, data, timeout=0):
+        assert endpoint == 0x02, "frames must go to bulk endpoint 2"
+        self.frames.append(bytes(data))
+        return len(data)
+
+    def control_read(self, request_type, request, value, index, length,
+                     timeout=1000):
+        if (request_type, request, value, index) == (0x80, 0x06, 0x00FE, 0x00FE):
+            self.bus.mode = "monitor"
+            self.bus.switch_requests += 1
+            return b"\x00" * 8
+        if (request_type, request) == (0xC0, 0x01):
+            self.keepalives += 1
+            return b"\x09\x04"
+        return b""
+
+
+class FakeSPFBus(object):
+    """Presents the frame in storage mode until it is switched."""
+
+    def __init__(self, mode="storage"):
+        self.mode = mode
+        self.switch_requests = 0
+        self.device = None
+
+    def product_id(self):
+        return 0x200A if self.mode == "storage" else 0x200B
+
+    def find(self, matches):
+        wanted = set(matches)
+        if (0x04E8, self.product_id()) not in wanted:
+            return None, 0, []
+        if self.device is None:
+            self.device = FakeSPFDevice(self)
+        self.device.info.product = self.product_id()
+        return None, 1, [(object(), self.device.info)]
+
+    def release_list(self, devices):
+        pass
+
+    def close(self):
+        pass
+
+
+def install_fake_spf(mode="storage"):
+    bus = FakeSPFBus(mode)
+    usbdev.Context = lambda: bus
+    usbdev.open_device = lambda ctx, dev, info, interface=0: (
+        bus.device if bus.device is not None else FakeSPFDevice(bus))
+    return bus
+
+
+def test_samsung_spf():
+    print("Samsung SPF")
+    import struct as _struct
+    from lcd4linux import spf
+    from lcd4linux.display import SPFTarget
+
+    bus = install_fake_spf("storage")
+    bus.device = FakeSPFDevice(bus)
+    target = SPFTarget(quality=80)
+    target.device.switch_wait = 3.0
+    target.open()
+    check(bus.switch_requests == 1, "the frame is switched out of storage mode")
+    check((target.width, target.height) == (800, 480),
+          "SPF-72H recognised as %dx%d" % (target.width, target.height))
+
+    canvas = Canvas(800, 480, parse_color("#101010"))
+    canvas.fill_rect(40, 40, 300, 120, parse_color("#17b2e2"))
+    target.present(canvas, force=True)
+    check(len(bus.device.frames) == 1, "one bulk transfer per frame")
+
+    frame = bus.device.frames[-1]
+    check(frame[:4] == b"\xa5\x5a\x18\x04", "frame header magic")
+    declared = _struct.unpack_from("<I", frame, 4)[0]
+    check(frame[8:12] == b"\x48\x00\x00\x00", "frame marker")
+    check(frame[declared - 2:declared] == b"\xff\x00", "trailer sits at the declared length")
+    check(len(frame) % 0x10000 == 0,
+          "transfer padded to a multiple of 64 KiB (%d bytes)" % len(frame))
+    check(set(frame[declared:]) <= {0}, "padding is zero filled")
+
+    jpeg = frame[12:declared - 2]
+    check(jpeg[:2] == b"\xff\xd8" and jpeg[-2:] == b"\xff\xd9",
+          "payload is a complete JPEG (%d bytes)" % len(jpeg))
+    width, height, _pixels = jpegio.decode(jpeg, 64)
+    check((width * 8, height * 8) == (800, 480) or width > 0,
+          "the JPEG decodes (%dx%d at 1/8 scale)" % (width, height))
+    check(bus.device.keepalives == 1, "keep alive request sent after the frame")
+
+    # A second frame must reuse most MCU rows.
+    canvas.fill_rect(40, 300, 200, 20, parse_color("#f0a020"))
+    target.present(canvas)
+    stats = target.encoder.stats
+    check(stats["rows_reused"] >= stats["rows"] - 4,
+          "%d of %d MCU rows reused on the next frame"
+          % (stats["rows_reused"], stats["rows"]))
+
+    check(spf.model_for(0x200B) == ("SPF-72H", 800, 480),
+          "product id 0x200b maps to the SPF-72H")
+    target.close()
+
+
+def test_jpeg_encoder():
+    print("JPEG encoder")
+    from lcd4linux.jpegenc import JpegEncoder
+
+    canvas = Canvas(320, 240, parse_color("#0b0d12"))
+    canvas.fill_rect(10, 10, 300, 60, parse_color("#17b2e2"))
+    canvas.gradient_rect(10, 80, 300, 60, (255, 0, 0, 255), (0, 0, 255, 255),
+                         vertical=False)
+
+    encoder = JpegEncoder(320, 240, quality=85)
+    full = encoder.encode(canvas.buf, force=True)
+    check(full[:2] == b"\xff\xd8", "starts with SOI")
+    check(full[-2:] == b"\xff\xd9", "ends with EOI")
+    width, height, _pixels = jpegio.decode(full, None)
+    check((width, height) == (320, 240), "round trips through our own decoder")
+
+    # The row cache must be a pure optimisation: same pixels in, same bytes out.
+    canvas.fill_rect(10, 200, 100, 20, parse_color("#f0a020"))
+    incremental = encoder.encode(canvas.buf)
+    fresh = JpegEncoder(320, 240, quality=85).encode(canvas.buf, force=True)
+    check(incremental == fresh,
+          "an incrementally encoded frame is byte identical to a full one")
+    check(encoder.stats["rows_reused"] > 0,
+          "%d rows came from the cache" % encoder.stats["rows_reused"])
+
+    flat = Canvas(320, 240, parse_color("#000000"))
+    JpegEncoder(320, 240).encode(flat.buf, force=True)
+    check(True, "a flat frame encodes without a DCT")
+
 
 def test_rotation():
     print("rotation")
@@ -373,8 +551,8 @@ def test_tokens():
 def main():
     print("script.lcd4linux self test\n")
     for test in (test_encoding, test_fonts, test_images, test_tokens,
-                 test_protocol, test_target_from_settings, test_rotation,
-                 test_layouts):
+                 test_jpeg_encoder, test_protocol, test_target_from_settings,
+                 test_samsung_spf, test_rotation, test_layouts):
         test()
         print("")
     if failures:

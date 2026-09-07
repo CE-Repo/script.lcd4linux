@@ -1,10 +1,13 @@
 # LCD4Linux für CoreELEC / Kodi
 
-Kodi-Add-on für die 3,5" USB-Displays mit **AX206**-Controller (480×320) – also
-die Panels, die als **AIDA64-Displays**, „SmartDisplay" oder „USB Mini Screen"
-verkauft werden und aus den Projekten
-[dpf-ax](http://dpf-ax.sourceforge.net/) und
-[lcd4linux](https://lcd4linux.bulix.org/) bekannt sind.
+Kodi-Add-on für zwei Familien von USB-Displays:
+
+* die 3,5" Panels mit **AX206**-Controller (480×320) – als **AIDA64-Displays**,
+  „SmartDisplay" oder „USB Mini Screen" verkauft und aus den Projekten
+  [dpf-ax](http://dpf-ax.sourceforge.net/) und
+  [lcd4linux](https://lcd4linux.bulix.org/) bekannt;
+* die **Samsung-SPF-Bilderrahmen** (SPF-72H, SPF-87H, SPF-107H und Verwandte,
+  800×480 bis 1024×600) im „Mini-Monitor"-Modus.
 
 Das Add-on zeigt, was Kodi gerade abspielt – Titel, Interpret, Album, Cover,
 Fortschrittsbalken mit gespielter und verbleibender Zeit – dazu Uhr,
@@ -17,14 +20,20 @@ kann frei angepasst werden.
 ![Großes Cover](resources/screenshots/bigcover.png)
 ![Dashboard](resources/screenshots/dashboard.png)
 
+Und auf dem 800×480-Rahmen:
+
+![Samsung Musik](resources/screenshots/spf-music.png)
+![Samsung Dashboard](resources/screenshots/spf-dashboard.png)
+
 ---
 
 ## Eigenschaften
 
-* **Direkter USB-Zugriff** auf den AX206 über `libusb` (ctypes) – keine
-  zusätzlichen Python-Module, kein `pyusb`, kein Compiler nötig.
-* **Nur geänderte Bildbereiche** werden übertragen. Ein tickender
-  Sekundenzeiger kostet ein paar hundert Bytes statt 300 kB pro Bild.
+* **Direkter USB-Zugriff** über `libusb` (ctypes) – keine zusätzlichen
+  Python-Module, kein `pyusb`, kein Compiler nötig.
+* **Nur geänderte Bildbereiche** werden übertragen. Beim AX206 kostet ein
+  tickender Sekundenzeiger ein paar hundert Bytes statt 300 kB pro Bild; beim
+  Samsung werden nur die geänderten JPEG-Blockzeilen neu kodiert.
 * **Frei anpassbare Layouts** als JSON: Seiten, Widgets, Positionen, Farben,
   Schriftgrößen, Bedingungen und Datenquellen.
 * **Alle Kodi-InfoLabels** sind verwendbar (`${info:MusicPlayer.Album}`),
@@ -61,25 +70,47 @@ git clone https://github.com/CE-Repo/script.lcd4linux.git
 systemctl restart kodi
 ```
 
-### Hardware
+### Unterstützte Hardware
+
+Der **Displaytyp** wird in den Einstellungen gewählt – die beiden Familien
+sprechen völlig verschiedene Protokolle.
+
+#### AX206 (AIDA64-Typ)
 
 | | |
 |---|---|
 | Controller | AX206 (mit dpf-ax-Firmware) |
 | USB-ID | `1908:0102` |
 | Auflösung | wird vom Display gemeldet, typisch 480×320 |
-| Farbformat | RGB565, höherwertiges Byte zuerst |
-
-Ob das Display erkannt wird, zeigt auf der Box:
+| Übertragung | rohe RGB565-Pixel, nur der geänderte Ausschnitt |
+| Helligkeit | 8 Stufen, vom Add-on steuerbar |
 
 ```sh
 lsusb | grep 1908
 ```
 
-CoreELEC lädt für dieses Gerät kein `usb-storage`-Modul, das den Zugriff
-blockieren würde; sollte doch ein Kerneltreiber daran hängen, löst das Add-on
-ihn selbst ab. Kodi läuft auf CoreELEC als `root`, zusätzliche udev-Regeln sind
-daher nicht nötig.
+#### Samsung SPF
+
+| | |
+|---|---|
+| Modelle | SPF-72H, SPF-75H/76H, SPF-83H/83M, SPF-85H/85P, SPF-86H/86P, SPF-87H, SPF-105P, SPF-107H, SPF-700T, SPF-800P, SPF-1000P |
+| USB-ID | `04e8:200a` (Massenspeicher) → `04e8:200b` (Monitor), je nach Modell |
+| Auflösung | 800×480 (SPF-72H), 800×600 oder 1024×600 je nach Modell |
+| Übertragung | vollständiges JPEG pro Bild, kein Teilbereich möglich |
+| Helligkeit | **nicht** über USB steuerbar – nur am Gerät |
+
+```sh
+lsusb | grep 04e8
+```
+
+Der Rahmen meldet sich zunächst als USB-Massenspeicher. Das Add-on schickt die
+Umschaltanforderung selbst, der Rahmen verschwindet dann kurz vom Bus und
+kommt mit einer neuen Produkt-ID im Monitor-Modus zurück – das dauert ein bis
+drei Sekunden und passiert bei jedem Einschalten neu. `usb_modeswitch` wird
+nicht benötigt.
+
+Kodi läuft auf CoreELEC als `root`, zusätzliche udev-Regeln sind für beide
+Displays nicht nötig. Hängt ein Kerneltreiber am Gerät, löst das Add-on ihn ab.
 
 ---
 
@@ -95,6 +126,19 @@ daher nicht nötig.
 | USB-Gerät zurücksetzen | hilft, wenn ein anderes Programm das Display hängen ließ |
 | Wiederverbindungsintervall | Wartezeit, bis nach einem abgezogenen Display erneut gesucht wird |
 
+**Anzeige → Verbindung → Displaytyp**
+
+Wählt zwischen `AX206-USB-LCD (AIDA64-Typ)` und `Samsung-SPF-Bilderrahmen`.
+Je nach Auswahl blendet der Dialog die passenden Optionen ein.
+
+**Anzeige → Samsung-Bilderrahmen**
+
+| Einstellung | Bedeutung |
+|---|---|
+| Samsung-Modell | leer lassen für automatische Erkennung, sonst z. B. `SPF-72H` |
+| JPEG-Qualität | 40–100, Standard 85. Niedriger = schneller und weniger Daten |
+| Reduzierte Farbauflösung (4:2:0) | an: schneller und kleiner; aus: schärfere farbige Schrift, etwa doppelte Kodierzeit |
+
 **Anzeige → Bild**
 
 | Einstellung | Bedeutung |
@@ -107,7 +151,9 @@ daher nicht nötig.
 **Anzeige → Hintergrundbeleuchtung**
 
 Helligkeit 0–7, Dimmen beim Bildschirmschoner, Abschalten bei Inaktivität,
-Display beim Beenden von Kodi löschen.
+Display beim Beenden von Kodi löschen. Die Helligkeitsregler gelten nur für den
+AX206; Samsung-Rahmen kennen keine Helligkeitssteuerung über USB, dort zeigt
+„Bei Inaktivität ausschalten" stattdessen ein schwarzes Bild.
 
 **Layout**
 
@@ -124,12 +170,16 @@ Kodi-Benachrichtigungen auf dem Display, Debug-Protokollierung.
 
 ## Mitgelieferte Layouts
 
+Jedes Layout gibt es für beide Displaygrößen. Ausgewählt wird nur der Name
+(z. B. `default.json`) – passt die Größe nicht, nimmt das Add-on automatisch
+die Variante `default-800x480.json`.
+
 | Datei | Beschreibung |
 |---|---|
-| `default.json` | Vier Seiten: Musik (mit Cover), Video (mit Poster), Uhr, Systemwerte |
-| `bigcover.json` | Bildschirmfüllendes Cover mit Infoleiste unten |
-| `minimal.json` | Große Schrift, Segment-Fortschrittsbalken, keine Bilder – sehr sparsam |
-| `dashboard.json` | Analoguhr, CPU, Temperatur, RAM und Verlaufsdiagramm |
+| `default.json` / `default-800x480.json` | Vier Seiten: Musik (mit Cover), Video (mit Poster), Uhr, Systemwerte |
+| `bigcover.json` / `bigcover-800x480.json` | Bildschirmfüllendes Cover mit Infoleiste unten |
+| `minimal.json` / `minimal-800x480.json` | Große Schrift, Segment-Fortschrittsbalken, keine Bilder – sehr sparsam |
+| `dashboard.json` / `dashboard-800x480.json` | Analoguhr, CPU, Temperatur, RAM und Verlaufsdiagramm |
 
 ---
 
@@ -240,7 +290,20 @@ Auflösung eintragen.
 **Ruckelnde Anzeige, hohe CPU-Last**
 *Aktualisierungen pro Sekunde bei Wiedergabe* verringern (2 reicht meist),
 *Bilder weich skalieren* abschalten oder `minimal.json` verwenden, das ohne
-Bilder auskommt.
+Bilder auskommt. Beim Samsung zusätzlich die *JPEG-Qualität* senken; Layouts
+mit großen einfarbigen Flächen kodieren deutlich schneller als solche mit
+bildschirmfüllendem Hintergrundbild (siehe Tabelle unten).
+
+**Samsung: Rahmen bleibt im Massenspeicher-Modus**
+Im Protokoll steht dann „the frame did not come back in monitor mode".
+Rahmen einmal aus- und wieder einstecken. Manche Modelle schalten nur um, wenn
+sie eingeschaltet sind und nicht gerade eine Diashow abspielen.
+
+**Samsung: Bild bleibt stehen**
+Der Rahmen fällt ohne den Keep-Alive nach einiger Zeit aus dem Monitor-Modus.
+Das Add-on schickt ihn nach jedem Bild; steht die Bildrate auf 1/s und das
+Layout ändert sich nie (z. B. eine Uhr ohne Sekunden), wird trotzdem jedes
+Bild gesendet, damit der Rahmen wach bleibt.
 
 **Display bleibt nach dem Beenden von Kodi an**
 *Display beim Beenden von Kodi löschen* aktivieren.
@@ -258,6 +321,24 @@ python3 /storage/.kodi/addons/script.lcd4linux/tools/selftest.py
 
 ---
 
+## Rechenaufwand beim Samsung
+
+Der Rahmen nimmt nur vollständige JPEG-Bilder an. Das Add-on kodiert deshalb
+nur die Blockzeilen neu, die sich geändert haben – gemessen auf einem
+Arbeitsplatzrechner bei 800×480 und Qualität 85 (auf einer Amlogic-Box etwa
+Faktor 4–6 langsamer):
+
+| Layout | erstes Bild | laufende Aktualisierung | JPEG-Größe |
+|---|---|---|---|
+| `minimal-800x480` | 113 ms | 9 ms | 23 kB |
+| `dashboard-800x480` | 137 ms | 30 ms | 27 kB |
+| `default-800x480` | 166 ms | 22 ms | 38 kB |
+| `bigcover-800x480` | 168 ms | 12 ms | 28 kB |
+
+Ein voll­flächiges Bild kostet vor allem beim ersten Bild; danach bleiben nur
+die Zeilen mit Uhr und Fortschrittsbalken übrig. Für langsame Boxen ist
+`minimal` die sparsamste Wahl.
+
 ## Aufbau
 
 ```
@@ -270,6 +351,8 @@ resources/fonts/*.l4f         vorgerenderte Bitmap-Schriften
 resources/lib/lcd4linux/
     usbdev.py                 libusb-1.0 über ctypes
     ax206.py                  AX206-Protokoll (SCSI über USB)
+    spf.py                    Samsung-SPF-Protokoll (Mode-Switch, JPEG-Frames)
+    jpegenc.py                JPEG-Encoder mit Blockzeilen-Cache
     display.py                Ausgabeziele, Drehung, Teilaktualisierung
     canvas.py                 RGB565-Framebuffer und Zeichenprimitive
     bmfont.py                 Bitmap-Schriften
@@ -291,18 +374,21 @@ tools/mkfont.py               Schriften neu erzeugen (benötigt Pillow)
 
 ## English summary
 
-Kodi/CoreELEC add-on for the 3.5" 480×320 USB LCD panels based on the **AX206**
-controller – the displays sold as AIDA64 screens and known from the `dpf-ax`
-and `lcd4linux` projects.
+Kodi/CoreELEC add-on for two families of USB display: the 3.5" 480×320 panels
+based on the **AX206** controller (sold as AIDA64 screens, known from `dpf-ax`
+and `lcd4linux`), and the **Samsung SPF** photo frames (SPF-72H, SPF-87H,
+SPF-107H and relatives) in their mini monitor mode.
 
 It shows what Kodi is playing (title, artist, album, cover art, a progress bar
 with elapsed and remaining time) plus clock, CPU load, temperature and any Kodi
 InfoLabel. Everything on screen is defined by JSON layout files, so pages,
 widgets, colours, fonts, positions and data sources are fully customisable.
 
-USB access uses `libusb` through `ctypes`; the PNG/JPEG decoders and the font
-renderer are part of the add-on, so **no extra Python modules are required**.
-Only the changed part of each frame is sent to the panel.
+USB access uses `libusb` through `ctypes`; the PNG/JPEG decoders, the JPEG
+*encoder* the Samsung frames need, and the font renderer are all part of the
+add-on, so **no extra Python modules are required**. On the AX206 only the
+changed rectangle is transferred; on the Samsung, which accepts complete JPEG
+images only, only the MCU rows that changed are re-encoded.
 
 * Layout reference: [docs/LAYOUT.en.md](docs/LAYOUT.en.md)
 * Design layouts without hardware: `python3 tools/preview.py --out preview.png`
@@ -322,4 +408,6 @@ Die mitgelieferten Schriften stammen aus den
 [resources/fonts/LICENSE-DejaVu.txt](resources/fonts/LICENSE-DejaVu.txt).
 
 Das AX206-Protokoll folgt den Projekten `dpf-ax` und dem AX206-Treiber von
-`lcd4linux` (`drv_dpf.c`).
+`lcd4linux` (`drv_dpf.c`). Das Samsung-SPF-Protokoll folgt dem Treiber
+`drv_SamsungSPF.c` von lcd4linux, der auf `playusb` von Andre Puschmann und
+den Arbeiten von Grace Woo aufbaut.

@@ -20,6 +20,10 @@ ADDON_ID = "script.lcd4linux"
 
 DEFAULTS = {
     "output_mode": "usb",
+    "display_type": "ax206",
+    "spf_model": "",
+    "jpeg_quality": 85,
+    "jpeg_subsample": True,
     "device_ids": "1908:0102",
     "device_index": 0,
     "device_serial": "",
@@ -191,8 +195,9 @@ class Config(object):
         return 1.0 / max(1, int(self._values["fps_idle"]))
 
     def describe(self):
-        keys = ("output_mode", "device_ids", "rotation", "mirror", "byte_order",
-                "layout", "brightness", "fps_playing", "fps_idle")
+        keys = ("display_type", "output_mode", "device_ids", "rotation",
+                "mirror", "byte_order", "layout", "brightness", "fps_playing",
+                "fps_idle")
         return ", ".join("%s=%s" % (key, self._values[key]) for key in keys)
 
 

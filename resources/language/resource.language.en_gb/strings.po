@@ -391,3 +391,51 @@ msgstr ""
 msgctxt "#32335"
 msgid "Display status"
 msgstr ""
+
+msgctxt "#32027"
+msgid "Samsung photo frame"
+msgstr ""
+
+msgctxt "#32170"
+msgid "Display type"
+msgstr ""
+
+msgctxt "#32171"
+msgid "Which panel is connected. The AX206 type is the 3.5\" 480x320 LCD sold as an AIDA64 display; Samsung SPF frames are the 7\" and larger photo frames."
+msgstr ""
+
+msgctxt "#32172"
+msgid "AX206 USB LCD (AIDA64 type)"
+msgstr ""
+
+msgctxt "#32173"
+msgid "Samsung SPF photo frame"
+msgstr ""
+
+msgctxt "#32174"
+msgid "Samsung model"
+msgstr ""
+
+msgctxt "#32175"
+msgid "Leave empty to use whichever frame is found, or enter a model such as SPF-72H."
+msgstr ""
+
+msgctxt "#32176"
+msgid "JPEG quality"
+msgstr ""
+
+msgctxt "#32177"
+msgid "Samsung frames accept complete JPEG images only. Lower values encode faster and send less data."
+msgstr ""
+
+msgctxt "#32178"
+msgid "Reduced colour resolution (4:2:0)"
+msgstr ""
+
+msgctxt "#32179"
+msgid "Faster and smaller. Switch it off for sharper coloured text at the cost of about twice the encoding time."
+msgstr ""
+
+msgctxt "#32336"
+msgid "No Samsung photo frame detected"
+msgstr ""

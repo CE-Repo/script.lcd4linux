@@ -16,6 +16,13 @@ Nach dem Bearbeiten: *Dienst neu laden* im Menü (oder Layout neu auswählen).
 Layoutdateien werden als **UTF-8** gelesen; eine Byte-Reihenfolge-Markierung
 (BOM), wie sie manche Windows-Editoren schreiben, wird toleriert.
 
+Die Größe im Feld `size` muss zum Display passen. Für die beiden
+unterstützten Displaygrößen gibt es jeweils eigene Dateien: heißt das
+ausgewählte Layout `default.json` und ist ein 800×480-Panel angeschlossen,
+verwendet das Add-on automatisch `default-800x480.json`, sofern vorhanden.
+Eigene Layouts folgen derselben Regel – `meins-800x480.json` neben
+`meins.json`.
+
 ---
 
 ## 1. Grundgerüst
@@ -418,3 +425,9 @@ Operatoren: `==`, `!=`, `>`, `<`, `>=`, `<=`, ` contains `, ` startswith `,
 * **Testbild** (Menü → *Testbild*) prüft Auflösung, Drehung und
   Byte-Reihenfolge: Der rote Rahmen muss alle vier Kanten berühren, der
   Graukeil muss gleichmäßig verlaufen.
+* **Samsung-Rahmen**: Jedes Bild geht als vollständiges JPEG über den Bus, es
+  wird aber nur neu kodiert, was sich geändert hat. Große einfarbige Flächen
+  sind praktisch gratis, ein bildschirmfüllendes Foto kostet beim ersten Bild
+  am meisten. Wenn es zu langsam ist: *JPEG-Qualität* senken, die
+  *reduzierte Farbauflösung* eingeschaltet lassen und ein Layout ohne
+  Hintergrundbild wählen.

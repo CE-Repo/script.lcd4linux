@@ -10,6 +10,7 @@ import time
 
 from . import ax206
 from . import display as display_module
+from .errors import DisplayError
 from . import layout as layout_module
 from . import localize
 from .bmfont import FontCache
@@ -17,6 +18,7 @@ from .images import ImageCache
 from .kodidata import make_provider
 from .logger import debug, error, log
 from .settings import Config, addon_path, ensure_user_directories, profile_path
+from .usbdev import USBError
 from .canvas import parse_color
 
 try:
@@ -366,7 +368,7 @@ class Service(object):
             started = time.time()
             try:
                 self._tick(started)
-            except ax206.DisplayError as err:
+            except (DisplayError, USBError) as err:
                 error("display error: %s" % err)
                 self._handle_disconnect()
             except Exception as err:
@@ -396,25 +398,37 @@ class Service(object):
     def _tick(self, now):
         if self.target is None:
             return
-        if isinstance(self.target, display_module.AX206Target) and not self.target.is_open:
+        if getattr(self.target, "is_open", True) is False:
             if now < self._next_open_attempt:
                 return
             if not self._open_target():
                 return
             log("display reconnected")
 
+        was_blanked = self._blanked
         self._update_idle(now)
         self._apply_brightness()
         if self._blanked and self.config.off_on_idle:
+            if not was_blanked:
+                # A Samsung frame has no backlight to switch off, so show a
+                # black picture once instead of repainting it every tick.
+                blank = getattr(self.target, "blank", None)
+                if blank is not None:
+                    blank()
             return
+        if was_blanked and not self._blanked:
+            force_redraw = True
+        else:
+            force_redraw = False
 
         if now < self._test_until:
             canvas = self.renderer.canvas
             self._draw_test_pattern(canvas)
+            force_redraw = True
         else:
             canvas = self.renderer.render(now)
             self._draw_notification(canvas, now)
-        self.target.present(canvas)
+        self.target.present(canvas, force=force_redraw)
 
     def _draw_test_pattern(self, canvas):
         """A calibration image: colour bars, a grid and the panel geometry."""
@@ -451,7 +465,7 @@ class Service(object):
                          16, height // 2 + 82, parse_color("#9aa3b5"))
 
     def _handle_disconnect(self):
-        if isinstance(self.target, display_module.AX206Target):
+        if hasattr(self.target, "is_open"):
             try:
                 self.target.close()
             except Exception:
@@ -476,6 +490,8 @@ class Service(object):
                 if isinstance(self.target, display_module.AX206Target) and self.target.is_open:
                     self.target.set_brightness(0)
                     self.target.device.clear(byte_order=self.config.byte_order)
+                elif isinstance(self.target, display_module.SPFTarget) and self.target.is_open:
+                    self.target.blank()
             except Exception as err:
                 debug("cannot clear the display: %s" % err)
         self._close_target()

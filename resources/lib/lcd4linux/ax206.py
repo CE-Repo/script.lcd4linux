@@ -16,6 +16,7 @@ import threading
 import time
 
 from . import usbdev
+from .errors import DisplayError
 from .logger import debug, error, log
 from .usbdev import USBError
 
@@ -38,10 +39,6 @@ DIR_IN = 0
 DIR_OUT = 1
 
 MAX_BRIGHTNESS = 7
-
-
-class DisplayError(Exception):
-    pass
 
 
 def parse_id_list(text, default=KNOWN_DEVICES):
