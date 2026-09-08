@@ -11,6 +11,7 @@ from . import ax206
 from . import layout as layout_module
 from . import spf
 from . import localize
+from . import thumbs
 from .logger import log
 from .settings import ADDON_ID, Config, profile_path
 
@@ -52,32 +53,113 @@ def _toast(message, heading=None):
                         xbmcgui.NOTIFICATION_INFO, 4000)
 
 
+def _layout_designs(available):
+    """The layout files grouped by design: ``[(name, [variants])]``.
+
+    ``default.json`` and ``default-800x480.json`` are one design drawn for
+    two panels, so they share an entry.  The name without the size is what
+    the setting stores; :func:`~.layout.load_layout` then picks the variant
+    that fits the display.
+    """
+    designs = {}
+    for name in sorted(available):
+        designs.setdefault(thumbs.design_name(name), []).append(name)
+    entries = []
+    for design in sorted(designs):
+        variants = designs[design]
+        name = design + ".json"
+        entries.append((name if name in available else variants[0], variants))
+    return entries
+
+
+def _layout_pictures(entries, available, config):
+    """The preview picture of every design, rendering the user's own once."""
+    pictures = [thumbs.shipped_path(name) for name, _variants in entries]
+    todo = [index for index, picture in enumerate(pictures) if picture is None]
+    slow = [index for index in todo
+            if not thumbs.cached_is_fresh(entries[index][0],
+                                          available[entries[index][0]])]
+    progress = None
+    if slow and xbmcgui is not None:
+        try:
+            progress = xbmcgui.DialogProgressBG()
+            progress.create(localize.text(32000, "LCD4Linux"),
+                            localize.text(32327, "Rendering layout previews"))
+        except Exception as error:
+            log("no progress dialog: %s" % error)
+            progress = None
+    for step, index in enumerate(todo):
+        name = entries[index][0]
+        if progress is not None:
+            progress.update(int(100.0 * step / len(todo)), message=name)
+        pictures[index] = thumbs.cached_path(name, available[name],
+                                             config.font_directories)
+    if progress is not None:
+        progress.close()
+    return pictures
+
+
+def _select_layout(dialog, heading, labels, details, pictures, current):
+    """The select dialog with a picture per layout, plain list as fallback."""
+    if xbmcgui is not None and any(pictures):
+        try:
+            items = []
+            for label, detail, picture in zip(labels, details, pictures):
+                item = xbmcgui.ListItem(label, detail)
+                if picture:
+                    item.setArt({"icon": picture, "thumb": picture})
+                items.append(item)
+            return dialog.select(heading, items, useDetails=True,
+                                 preselect=current)
+        except Exception as error:
+            log("cannot show the previews: %s" % error)
+    return dialog.select(heading,
+                         ["%s  (%s)" % pair for pair in zip(labels, details)],
+                         preselect=current)
+
+
 def choose_layout():
-    """Let the user pick one of the available layout files."""
+    """Let the user pick one of the available layouts, shown as pictures."""
     config = Config()
     available = layout_module.discover(config.layout_directories)
     if not available:
         _toast(localize.text(32321, "No layout files found"))
         return
-    names = sorted(available)
-    labels = []
-    for name in names:
-        try:
-            parsed = layout_module.Layout.load(available[name])
-            labels.append("%s  (%s)" % (parsed.name, name))
-        except Exception as error:
-            labels.append("%s  [%s]" % (name, error))
     dialog = _dialog()
     if dialog is None:
         return
-    current = names.index(config.layout) if config.layout in names else 0
-    choice = dialog.select(localize.text(32320, "Choose layout"), labels,
-                           preselect=current)
+
+    loaded = {}
+    for name, path in available.items():
+        try:
+            loaded[name] = layout_module.Layout.load(path)
+        except Exception as error:
+            log("cannot read the layout %s: %s" % (name, error))
+
+    entries = _layout_designs(available)
+    labels, details = [], []
+    for name, variants in entries:
+        parsed = loaded.get(name)
+        labels.append(parsed.name if parsed is not None else name)
+        sizes = sorted(set("%dx%d" % (loaded[variant].width,
+                                      loaded[variant].height)
+                           for variant in variants if variant in loaded))
+        details.append("%s   %s" % (name, ", ".join(sizes)) if sizes else name)
+
+    current = 0
+    for index, (name, variants) in enumerate(entries):
+        if config.layout == name or config.layout in variants:
+            current = index
+            break
+
+    pictures = _layout_pictures(entries, available, config)
+    choice = _select_layout(dialog, localize.text(32320, "Choose layout"),
+                            labels, details, pictures, current)
     if choice < 0:
         return
-    config.set("layout", names[choice])
+    config.set("layout", entries[choice][0])
     notify_service("reload")
-    _toast(labels[choice])
+    _toast("%s  (%s)" % (labels[choice], entries[choice][0]))
 
 
 def show_status():

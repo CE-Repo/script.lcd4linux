@@ -69,8 +69,8 @@ msgid "Where the rendered frames are sent. \"Preview file only\" writes preview.
 msgstr "Wohin die gerenderten Bilder gehen. \"Nur Vorschaudatei\" schreibt preview.png in den Add-on-Datenordner, statt das USB-Display zu verwenden."
 
 msgctxt "#32102"
-msgid "AX206 USB display"
-msgstr "AX206-USB-Display"
+msgid "USB display"
+msgstr "USB-Display"
 
 msgctxt "#32103"
 msgid "Preview file only"
@@ -348,6 +348,10 @@ msgctxt "#32326"
 msgid "Settings"
 msgstr "Einstellungen"
 
+msgctxt "#32327"
+msgid "Rendering layout previews"
+msgstr "Layout-Vorschauen werden gerendert"
+
 msgctxt "#32330"
 msgid "Service"
 msgstr "Dienst"
@@ -397,8 +401,8 @@ msgid "Samsung model"
 msgstr "Samsung-Modell"
 
 msgctxt "#32175"
-msgid "Leave empty to use whichever frame is found, or enter a model such as SPF-72H."
-msgstr "Leer lassen, um den gefundenen Rahmen zu verwenden, oder ein Modell wie SPF-72H eintragen."
+msgid "Which frame to talk to. \"Automatic\" takes the first Samsung frame on the bus, which is all that is needed for a single frame; pick a model to select one when several are connected."
+msgstr "Mit welchem Rahmen gesprochen wird. \"Automatisch\" nimmt den ersten Samsung-Rahmen am Bus, was bei nur einem Rahmen genügt; ein Modell auswählen, um bei mehreren angeschlossenen Rahmen einen bestimmten zu wählen."
 
 msgctxt "#32176"
 msgid "JPEG quality"
@@ -475,6 +479,78 @@ msgstr "Helligkeitsstufe, solange nichts abgespielt wird."
 msgctxt "#32192"
 msgid "How far the picture is darkened while nothing is playing. 0% shows a black picture."
 msgstr "Wie stark das Bild abgedunkelt wird, solange nichts abgespielt wird. 0 % zeigt ein schwarzes Bild."
+
+msgctxt "#32193"
+msgid "Automatic (use the frame that is found)"
+msgstr "Automatisch (gefundenen Rahmen verwenden)"
+
+msgctxt "#32194"
+msgid "SPF-72H (800x480)"
+msgstr "SPF-72H (800x480)"
+
+msgctxt "#32195"
+msgid "SPF-75H (800x480)"
+msgstr "SPF-75H (800x480)"
+
+msgctxt "#32196"
+msgid "SPF-76H (800x480)"
+msgstr "SPF-76H (800x480)"
+
+msgctxt "#32197"
+msgid "SPF-83H (800x600)"
+msgstr "SPF-83H (800x600)"
+
+msgctxt "#32198"
+msgid "SPF-83M (800x600)"
+msgstr "SPF-83M (800x600)"
+
+msgctxt "#32199"
+msgid "SPF-85H (800x600)"
+msgstr "SPF-85H (800x600)"
+
+msgctxt "#32200"
+msgid "SPF-85P (800x600)"
+msgstr "SPF-85P (800x600)"
+
+msgctxt "#32201"
+msgid "SPF-86H (800x600)"
+msgstr "SPF-86H (800x600)"
+
+msgctxt "#32202"
+msgid "SPF-86P (800x600)"
+msgstr "SPF-86P (800x600)"
+
+msgctxt "#32203"
+msgid "SPF-87H (800x480)"
+msgstr "SPF-87H (800x480)"
+
+msgctxt "#32204"
+msgid "SPF-87H-v2 (800x480)"
+msgstr "SPF-87H-v2 (800x480)"
+
+msgctxt "#32205"
+msgid "SPF-105P (1024x600)"
+msgstr "SPF-105P (1024x600)"
+
+msgctxt "#32206"
+msgid "SPF-107H (1024x600)"
+msgstr "SPF-107H (1024x600)"
+
+msgctxt "#32207"
+msgid "SPF-107H-v2 (1024x600)"
+msgstr "SPF-107H-v2 (1024x600)"
+
+msgctxt "#32208"
+msgid "SPF-700T (800x600)"
+msgstr "SPF-700T (800x600)"
+
+msgctxt "#32209"
+msgid "SPF-800P (800x480)"
+msgstr "SPF-800P (800x480)"
+
+msgctxt "#32210"
+msgid "SPF-1000P (1024x600)"
+msgstr "SPF-1000P (1024x600)"
 
 msgctxt "#32340"
 msgid "{weekday}, {day} {month} {year}"

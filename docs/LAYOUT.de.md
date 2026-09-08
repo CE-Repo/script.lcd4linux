@@ -13,6 +13,11 @@ Eigene Layouts gehören nach
 Dateien dort haben Vorrang vor den mitgelieferten und überleben Updates.
 Nach dem Bearbeiten: *Dienst neu laden* im Menü (oder Layout neu auswählen).
 
+In der Layout-Auswahl bekommt ein eigenes Layout automatisch ein
+Vorschaubild: Es wird beim ersten Öffnen der Liste einmal gerendert und in
+`addon_data/script.lcd4linux/thumbs/` abgelegt. Wird die Layoutdatei
+geändert, entsteht das Bild beim nächsten Öffnen neu.
+
 Layoutdateien werden als **UTF-8** gelesen; eine Byte-Reihenfolge-Markierung
 (BOM), wie sie manche Windows-Editoren schreiben, wird toleriert.
 

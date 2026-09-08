@@ -313,6 +313,22 @@ class FakeSPFBus(object):
         pass
 
 
+class FakeListItem(object):
+    """Just enough of xbmcgui.ListItem for the layout chooser."""
+
+    def __init__(self, label="", label2=""):
+        self.label = label
+        self.label2 = label2
+        self.art = {}
+
+    def setArt(self, art):
+        self.art.update(art)
+
+
+class FakeGui(object):
+    ListItem = FakeListItem
+
+
 def install_fake_spf(mode="storage"):
     bus = FakeSPFBus(mode)
     usbdev.Context = lambda: bus
@@ -368,6 +384,15 @@ def test_samsung_spf():
 
     check(spf.model_for(0x200B) == ("SPF-72H", 800, 480),
           "product id 0x200b maps to the SPF-72H")
+    check(spf.model_by_name("SPF-72H")[0] == "SPF-72H",
+          "a configured model name finds its entry")
+    check(spf.model_by_name(spf.MODEL_AUTO) is None
+          and spf.model_by_name("") is None
+          and spf.model_by_name("SPF-nonsense") is None,
+          "auto, empty and unknown model names all mean any frame")
+    check(spf.SamsungSPF(model=spf.MODEL_AUTO).model is None
+          and spf.SamsungSPF(model="spf-72h").model == "SPF-72H",
+          "the driver normalises the configured model")
     target.close()
 
 
@@ -748,6 +773,149 @@ def test_encoding():
         Layout.load(path)
 
 
+def test_layout_chooser():
+    """The layout picker offers one entry per design, each with a picture."""
+    print("layout chooser")
+    import tempfile
+    from lcd4linux import thumbs
+    from lcd4linux.images import ImageCache
+    from lcd4linux.layout import discover, load_layout
+    from lcd4linux.ui import _layout_designs
+
+    directory = os.path.join(ROOT, "resources", "layouts")
+    available = discover([directory])
+    entries = _layout_designs(available)
+    names = [name for name, _variants in entries]
+
+    check(len(names) == len(set(names)),
+          "%d designs out of %d layout files" % (len(names), len(available)))
+    check(all(name in available for name in names),
+          "every entry names a layout file that exists")
+    check(dict(entries).get("default.json")
+          == ["default-800x480.json", "default.json"],
+          "the size variants of a design share one entry")
+    # Storing the name without the size is only safe because loading picks
+    # the variant that fits the panel.
+    check(tuple(load_layout("default.json", [directory], (800, 480)).size)
+          == (800, 480),
+          "the stored name still resolves to the 800x480 variant")
+
+    unpictured = [name for name in names if thumbs.shipped_path(name) is None]
+    check(not unpictured, "every bundled design ships a preview (%s)"
+          % (unpictured or "none",))
+
+    cache = ImageCache()
+    box = thumbs.THUMB_BOX
+    oversized = []
+    for name in names:
+        picture = cache.get(thumbs.shipped_path(name))
+        if picture is None or picture.width > box[0] or picture.height > box[1]:
+            oversized.append(name)
+    check(not oversized, "every preview decodes and fits %dx%d (%s)"
+          % (box[0], box[1], oversized or "none"))
+
+    # A layout the add-on does not ship is rendered on demand.
+    out = os.path.join(tempfile.mkdtemp(), "rendered.png")
+    thumbs.render(available["minimal.json"], out,
+                  [os.path.join(ROOT, "resources", "fonts")])
+    rendered = ImageCache().get(out)
+    check(rendered is not None and rendered.width > 0,
+          "a layout without a shipped preview can be rendered on demand")
+
+    # What the dialog is handed, without Kodi: list items carrying a picture.
+    from lcd4linux import ui
+    pictures = [thumbs.shipped_path(name) for name in names]
+    calls = []
+
+    class FakeDialog(object):
+        def select(self, heading, items, useDetails=False, preselect=-1):
+            calls.append((heading, items, useDetails, preselect))
+            return 1
+
+    original = ui.xbmcgui
+    try:
+        ui.xbmcgui = FakeGui
+        ui._select_layout(FakeDialog(), "Choose layout", names, names,
+                          pictures, 3)
+        _heading, items, details, preselect = calls[-1]
+        check(details and preselect == 3,
+              "the picture dialog is asked for details, preselecting the "
+              "current layout")
+        check(len(items) == len(names)
+              and all(item.art.get("thumb") for item in items),
+              "every entry goes into the dialog with a picture")
+        ui.xbmcgui = None
+        ui._select_layout(FakeDialog(), "Choose layout", names, names,
+                          pictures, 3)
+        _heading, items, details, _preselect = calls[-1]
+        check(not details and isinstance(items[0], str),
+              "without the GUI the chooser falls back to plain labels")
+    finally:
+        ui.xbmcgui = original
+
+
+def test_settings_xml():
+    """The settings dialog must match the code behind it."""
+    print("settings dialog")
+    import re
+    import xml.etree.ElementTree as ElementTree
+    from lcd4linux import spf
+    from lcd4linux.settings import DEFAULTS
+
+    tree = ElementTree.parse(os.path.join(ROOT, "resources", "settings.xml"))
+    settings = dict((element.get("id"), element)
+                    for element in tree.iter("setting"))
+
+    unknown = sorted(key for key in settings
+                     if key not in DEFAULTS and not key.startswith("action_"))
+    check(not unknown, "every setting in the dialog is known to the add-on (%s)"
+          % (unknown or "none",))
+
+    path = os.path.join(ROOT, "resources", "language",
+                        "resource.language.en_gb", "strings.po")
+    with open(path, "r", encoding="utf-8") as handle:
+        known_strings = set(int(number)
+                            for number in re.findall(r'msgctxt "#(\d+)"',
+                                                     handle.read()))
+    missing = []
+    for element in tree.iter():
+        for attribute in ("label", "help"):
+            value = element.get(attribute)
+            if value and value.isdigit() and int(value) not in known_strings:
+                missing.append(value)
+    check(not missing, "every label in the dialog has a string (%s)"
+          % (sorted(set(missing)) or "none",))
+
+    for key, element in sorted(settings.items()):
+        options = [option.text for option in element.iter("option")]
+        if not options:
+            continue
+        default = element.find("default")
+        value = default.text if default is not None and default.text else ""
+        check(value in options,
+              "the default of %s is one of its options" % key)
+
+    models = settings["spf_model"]
+    check([option.text for option in models.iter("option")]
+          == [spf.MODEL_AUTO] + [entry[0] for entry in spf.MODELS],
+          "the Samsung model list matches the driver (%d frames)"
+          % len(spf.MODELS))
+
+    # Options that only one display type understands must be hidden for the
+    # other one, otherwise the dialog offers AX206 settings for a Samsung
+    # frame and the other way round.
+    for key, display_type in (("device_ids", "ax206"), ("byte_order", "ax206"),
+                              ("reset_on_open", "ax206"), ("brightness", "ax206"),
+                              ("dim_brightness", "ax206"), ("spf_model", "spf"),
+                              ("jpeg_quality", "spf"), ("jpeg_subsample", "spf"),
+                              ("spf_brightness", "spf"),
+                              ("spf_dim_brightness", "spf")):
+        visible = [element.text for element in settings[key].iter("dependency")
+                   if element.get("type") == "visible"]
+        check(visible == [display_type],
+              "%s is only shown for %s displays" % (key, display_type))
+
+
 def test_tokens():
     print("tokens")
     from lcd4linux import tokens
@@ -768,6 +936,7 @@ def main():
     for test in (test_encoding, test_fonts, test_images, test_tokens,
                  test_jpeg_encoder, test_protocol, test_target_from_settings,
                  test_samsung_spf, test_brightness, test_localisation,
+                 test_settings_xml, test_layout_chooser,
                  test_power_hooks, test_rotation,
                  test_layouts):
         test()

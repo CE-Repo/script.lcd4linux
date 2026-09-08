@@ -1,3 +1,23 @@
+v1.6.0
+- "Choose layout..." shows a picture of every design instead of a list of
+  file names; the bundled previews ship with the add-on, layouts from the
+  user's own folder are rendered once and cached
+- The settings no longer close when a layout is picked: the chooser is a
+  dialog on top of them and the picked layout lands in the row above
+- One entry per design instead of one per file: the size variants of a
+  layout (default.json and default-800x480.json) are shown together, since
+  the variant that fits the panel is picked when the layout is loaded
+- tools/make_thumbs.py renders the preview pictures
+
+v1.5.1
+- The Samsung model is chosen from a list of the known frames instead of a
+  blank text field; "Automatic" keeps the previous behaviour and uses
+  whichever frame is on the bus
+- The output setting is no longer labelled "AX206 USB display": the same
+  setting drives Samsung frames
+- Settings only the AX206 panels understand (USB device IDs, byte order,
+  reset on connect) are hidden while a Samsung frame is selected
+
 v1.5.0
 - The display now follows Kodi's language: every fixed word in the bundled
   layouts, the page banners, the test pattern and the day and month names
