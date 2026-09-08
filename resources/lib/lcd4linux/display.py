@@ -58,6 +58,12 @@ class Target(object):
     height = 0
     rotation = 0
 
+    #: How :meth:`set_brightness` reads its argument.  ``"level"`` is the
+    #: AX206 backlight, 0 (off) to 7 (brightest); ``"percent"`` is software
+    #: dimming from 0 (black) to 100 (untouched), used by every target that
+    #: has no backlight to control.
+    brightness_unit = "percent"
+
     def open(self):
         return True
 
@@ -68,7 +74,8 @@ class Target(object):
         raise NotImplementedError
 
     def set_brightness(self, level):
-        pass
+        """Apply a brightness; ``True`` when the display accepted it."""
+        return True
 
     @property
     def logical_size(self):
@@ -76,6 +83,12 @@ class Target(object):
         if self.rotation in (90, 270):
             return self.height, self.width
         return self.width, self.height
+
+
+def _gain_table(percent):
+    """256 entry byte table that scales an 8 bit channel to ``percent``."""
+    percent = max(0, min(100, int(percent)))
+    return bytes(bytearray((value * percent) // 100 for value in range(256)))
 
 
 class NullTarget(Target):
@@ -99,6 +112,23 @@ class PreviewTarget(Target):
         self.height = height
         self.rotation = rotation
         self.frames = 0
+        self.brightness = 100
+        self._gain = None
+
+    def set_brightness(self, value):
+        """Dim the preview the way the configured panel would be dimmed.
+
+        ``brightness_unit`` is set from the display type, so a preview of an
+        AX206 setup is darkened by its backlight level and a Samsung one by
+        its percentage.
+        """
+        if self.brightness_unit == "level":
+            percent = int(round(max(0, min(7, int(value))) * 100.0 / 7.0))
+        else:
+            percent = max(0, min(100, int(value)))
+        self.brightness = percent
+        self._gain = None if percent >= 100 else _gain_table(percent)
+        return True
 
     def present(self, canvas, force=False):
         frame = canvas.rotated(self.rotation) if self.rotation else canvas
@@ -108,7 +138,10 @@ class PreviewTarget(Target):
                 os.makedirs(directory)
             except OSError:
                 pass
-        data = pngio.encode_rgb(frame.width, frame.height, frame.to_rgb888())
+        pixels = frame.to_rgb888()
+        if self._gain is not None:
+            pixels = pixels.translate(self._gain)
+        data = pngio.encode_rgb(frame.width, frame.height, pixels)
         tmp = self.path + ".tmp"
         with open(tmp, "wb") as handle:
             handle.write(data)
@@ -119,6 +152,8 @@ class PreviewTarget(Target):
 
 class AX206Target(Target):
     """The real panel."""
+
+    brightness_unit = "level"
 
     def __init__(self, device_ids=ax206.KNOWN_DEVICES, index=0, serial=None,
                  rotation=0, mirror=False, byte_order="big", timeout=3000,
@@ -158,10 +193,18 @@ class AX206Target(Target):
         return self.device.is_open
 
     def set_brightness(self, level):
+        """Set the backlight, 0 (off) to 7 (brightest).
+
+        A rejected command is reported instead of only being logged, so the
+        service can try again on the next frame rather than believing a
+        level that never reached the panel.
+        """
         try:
             self.device.set_brightness(level)
         except Exception as err:
             error("cannot set brightness: %s" % err)
+            return False
+        return True
 
     def describe(self):
         info = self.device.info
@@ -269,6 +312,8 @@ class SPFTarget(Target):
         self.height = 0
         self.encoder = None
         self.last_frame_bytes = 0
+        self.brightness = 100
+        self._redraw = False
 
     def open(self):
         self.device.open()
@@ -282,6 +327,8 @@ class SPFTarget(Target):
                 self.width, self.height = override_w, override_h
         self.encoder = JpegEncoder(self.width, self.height, self.quality,
                                    self.subsample)
+        self.encoder.set_gain(self.brightness)
+        self._redraw = True
         return True
 
     def close(self):
@@ -296,10 +343,22 @@ class SPFTarget(Target):
         info = self.device.info
         return "%s %s" % (self.device.name, info) if info else "Samsung SPF"
 
-    def set_brightness(self, level):
-        # No backlight control in this protocol; a level of 0 blanks the
-        # picture instead so "off when idle" still does something useful.
-        return
+    def set_brightness(self, percent):
+        """Dim in software, 0 (black) to 100 (untouched).
+
+        The mini monitor protocol has no backlight command at all, so the
+        only way to darken a Samsung frame is to send a darker picture.  The
+        scaling happens inside the encoder's colour table, which costs
+        nothing per frame; only the next frame has to be re-encoded in full
+        because the cached rows still carry the old brightness.
+        """
+        percent = max(0, min(100, int(percent)))
+        if percent == self.brightness and self.encoder is not None:
+            return True
+        self.brightness = percent
+        if self.encoder is not None and self.encoder.set_gain(percent):
+            self._redraw = True
+        return True
 
     def present(self, canvas, force=False):
         frame = canvas
@@ -311,7 +370,8 @@ class SPFTarget(Target):
             raise DisplayError(
                 "frame is %dx%d but the display is %dx%d"
                 % (frame.width, frame.height, self.width, self.height))
-        jpeg = self.encoder.encode(frame.buf, force=force)
+        jpeg = self.encoder.encode(frame.buf, force=force or self._redraw)
+        self._redraw = False
         self.last_frame_bytes = len(jpeg)
         self.device.send_image(jpeg)
         return True
@@ -323,6 +383,7 @@ class SPFTarget(Target):
         dark = Canvas(self.width, self.height, (0, 0, 0, 255))
         jpeg = self.encoder.encode(dark.buf)
         self.device.send_image(jpeg)
+        self._redraw = True
 
 
 def _mirror(canvas):
@@ -342,6 +403,8 @@ def make_target(config):
     if config.output_mode == "preview":
         target = PreviewTarget(config.preview_path, config.width,
                                config.height, config.rotation)
+        if config.display_type == "ax206":
+            target.brightness_unit = "level"
         log("preview mode: frames are written to %s" % config.preview_path)
         return target
     if config.output_mode == "none":

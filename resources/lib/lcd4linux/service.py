@@ -1,8 +1,8 @@
 """The background service.
 
 Renders the active layout at a modest frame rate, pushes only the changed
-part of the frame to the panel and reacts to Kodi events (playback, screen
-saver, settings changes, notifications).
+part of the frame to the panel and reacts to Kodi events (playback, settings
+changes, notifications).
 """
 
 import os
@@ -18,7 +18,8 @@ from .bmfont import FontCache
 from .images import ImageCache
 from .kodidata import make_provider
 from .logger import debug, error, log
-from .settings import Config, addon_path, ensure_user_directories, profile_path
+from .settings import (Config, DEFAULTS, addon_path, ensure_user_directories,
+                       profile_path)
 from .usbdev import USBError
 from .canvas import parse_color
 
@@ -30,6 +31,17 @@ except ImportError:
     xbmc = None
     xbmcaddon = None
     xbmcgui = None
+
+#: Settings that can only take effect by re-opening the panel or rebuilding
+#: the renderer.  Everything else is applied in place: Kodi reports a change
+#: for every step of a slider, and tearing the USB link down for each of them
+#: is what used to make the brightness setting look like it did nothing.
+RELOAD_SETTINGS = frozenset((
+    "output_mode", "display_type", "spf_model", "device_ids", "device_index",
+    "device_serial", "byte_order", "rotation", "mirror", "force_size",
+    "width", "height", "usb_timeout", "reset_on_open", "jpeg_quality",
+    "jpeg_subsample", "layout", "layout_dir",
+))
 
 #: Commands accepted through ``NotifyAll(script.lcd4linux, <command>)``.
 CONTROL_COMMANDS = ("reload", "next_page", "test_pattern", "message",
@@ -68,20 +80,9 @@ class Monitor(xbmc.Monitor if xbmc is not None else object):
         self.service = service
 
     def onSettingsChanged(self):
-        log("settings changed, reloading")
-        self.service.request_reload()
-
-    def onScreensaverActivated(self):
-        self.service.set_screensaver(True)
-
-    def onScreensaverDeactivated(self):
-        self.service.set_screensaver(False)
-
-    def onDPMSActivated(self):
-        self.service.set_screensaver(True)
-
-    def onDPMSDeactivated(self):
-        self.service.set_screensaver(False)
+        # Handled by the service thread so nothing touches the USB link from
+        # Kodi's callback thread.
+        self.service.request_settings_refresh()
 
     def onNotification(self, sender, method, data):
         self.service.on_notification(sender, method, data)
@@ -102,11 +103,10 @@ class Service(object):
         self.renderer = None
         self.layout = None
         self._reload_requested = False
+        self._settings_dirty = False
         self._stop = False
-        self._screensaver = False
         self._notification = None
-        self._last_activity = time.time()
-        self._blanked = False
+        self._idle = True
         self._brightness = None
         self._next_open_attempt = 0.0
         self._open_failures = 0
@@ -126,10 +126,35 @@ class Service(object):
     def request_reload(self):
         self._reload_requested = True
 
-    def set_screensaver(self, active):
-        self._screensaver = bool(active)
-        if not active:
-            self._last_activity = time.time()
+    def request_settings_refresh(self):
+        self._settings_dirty = True
+
+    def refresh_settings(self):
+        """Pick up changed settings without disturbing the display.
+
+        Only a change that the panel or the renderer was built from asks for
+        a full reload; a brightness, notification or frame rate change is
+        applied to the running service, so the USB connection stays up.
+        """
+        try:
+            config = Config(self._overrides)
+        except Exception as err:
+            error("cannot read the settings: %s" % err)
+            return
+        changed = sorted(key for key in DEFAULTS
+                         if self.config.get(key) != config.get(key))
+        if not changed:
+            return
+        if RELOAD_SETTINGS.intersection(changed):
+            log("settings changed (%s), reloading" % ", ".join(changed))
+            self.request_reload()
+            return
+        log("settings changed (%s), applying them in place" % ", ".join(changed))
+        self.config = config
+        if self.renderer is not None:
+            self.renderer.default_interval = float(config.page_interval)
+            self.renderer.smooth_images = bool(config.smooth_images)
+        self._apply_brightness(force=True)
 
     def on_notification(self, sender, method, data):
         """Mirror the Kodi events that are worth putting on the panel."""
@@ -138,7 +163,6 @@ class Service(object):
             return
         if method in ("Player.OnPlay", "Player.OnResume", "Player.OnStop",
                       "Player.OnAVStart", "Player.OnPause"):
-            self._last_activity = time.time()
             return
         if not self.config.notifications:
             return
@@ -170,13 +194,9 @@ class Service(object):
         elif command == "test_pattern":
             self._test_until = time.time() + 10.0
         elif command == "brightness_up":
-            self.config.set("brightness",
-                            min(ax206.MAX_BRIGHTNESS,
-                                int(self.config.brightness) + 1))
-            self._apply_brightness(force=True)
+            self._step_brightness(1)
         elif command == "brightness_down":
-            self.config.set("brightness", max(0, int(self.config.brightness) - 1))
-            self._apply_brightness(force=True)
+            self._step_brightness(-1)
         elif command == "message":
             heading = message = ""
             try:
@@ -298,6 +318,9 @@ class Service(object):
             self.target.open()
             self._open_failures = 0
             self._brightness = None
+            # Before the first level is sent, not after the first frame: the
+            # panel would otherwise start at the idle brightness.
+            self._update_idle()
             self._apply_brightness(force=True)
             if isinstance(self.target, display_module.AX206Target):
                 self._publish_status("%s | %dx%d" % (self.target.describe(),
@@ -338,36 +361,51 @@ class Service(object):
                 debug("error closing target: %s" % err)
             self.target = None
 
-    # -- brightness / blanking -------------------------------------------
+    # -- brightness / dimming ---------------------------------------------
+    def _brightness_pair(self):
+        """``(normal, idle)`` brightness in the unit the target expects.
+
+        The AX206 has a real backlight and is driven with its 0-7 level; a
+        Samsung frame has none, so it gets a percentage and darkens the
+        picture itself.
+        """
+        if self.target is not None and self.target.brightness_unit == "level":
+            return int(self.config.brightness), int(self.config.dim_brightness)
+        return int(self.config.spf_brightness), int(self.config.spf_dim_brightness)
+
     def _wanted_brightness(self):
-        if self._blanked:
-            return 0
-        if self._screensaver:
-            if self.config.off_on_screensaver:
-                return 0
-            if self.config.dim_on_screensaver:
-                return int(self.config.dim_brightness)
-        return int(self.config.brightness)
+        normal, dim = self._brightness_pair()
+        if self._idle and self.config.dim_on_idle:
+            return dim
+        return normal
 
     def _apply_brightness(self, force=False):
-        level = self._wanted_brightness()
-        if force or level != self._brightness:
-            self.target.set_brightness(level)
-            self._brightness = level
-
-    def _update_idle(self, now):
-        if not self.config.off_on_idle:
-            self._blanked = False
+        if self.target is None:
             return
-        idle = now - self._last_activity
-        if xbmc is not None:
-            try:
-                idle = min(idle, xbmc.getGlobalIdleTime())
-            except Exception:
-                pass
-        limit = max(1, int(self.config.idle_minutes)) * 60
-        playing = str(self.provider.value("player.state")) in ("playing", "paused")
-        self._blanked = (not playing) and idle >= limit
+        level = self._wanted_brightness()
+        if not force and level == self._brightness:
+            return
+        if self.target.set_brightness(level):
+            self._brightness = level
+        else:
+            # Do not remember a level the panel never took - the next frame
+            # tries again instead of assuming it arrived.
+            self._brightness = None
+
+    def _step_brightness(self, direction):
+        """The ``brightness_up``/``brightness_down`` commands."""
+        if self.target is not None and self.target.brightness_unit == "level":
+            key, step, low, high = "brightness", 1, 0, ax206.MAX_BRIGHTNESS
+        else:
+            key, step, low, high = "spf_brightness", 10, 10, 100
+        value = int(self.config.get(key, high)) + direction * step
+        self.config.set(key, max(low, min(high, value)))
+        self._apply_brightness(force=True)
+
+    def _update_idle(self):
+        """Idle simply means nothing is playing; a pause still counts."""
+        state = str(self.provider.value("player.state"))
+        self._idle = state not in ("playing", "paused")
 
     # -- notification overlay ---------------------------------------------
     def _draw_notification(self, canvas, now):
@@ -417,6 +455,10 @@ class Service(object):
                     import traceback
                     error(traceback.format_exc())
 
+            if self._settings_dirty:
+                self._settings_dirty = False
+                self.refresh_settings()
+
             if self._reload_requested:
                 self._reload_requested = False
                 try:
@@ -445,22 +487,10 @@ class Service(object):
                 return
             log("display reconnected")
 
-        was_blanked = self._blanked
-        self._update_idle(now)
+        self._update_idle()
         self._apply_brightness()
-        if self._blanked and self.config.off_on_idle:
-            if not was_blanked:
-                # A Samsung frame has no backlight to switch off, so show a
-                # black picture once instead of repainting it every tick.
-                blank = getattr(self.target, "blank", None)
-                if blank is not None:
-                    blank()
-            return
-        if was_blanked and not self._blanked:
-            force_redraw = True
-        else:
-            force_redraw = False
 
+        force_redraw = False
         if now < self._test_until:
             canvas = self.renderer.canvas
             self._draw_test_pattern(canvas)

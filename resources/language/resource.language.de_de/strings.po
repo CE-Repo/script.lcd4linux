@@ -184,29 +184,9 @@ msgctxt "#32131"
 msgid "0 switches the backlight off, 7 is the brightest setting."
 msgstr "0 schaltet die Hintergrundbeleuchtung aus, 7 ist die hellste Stufe."
 
-msgctxt "#32132"
-msgid "Dim while the screensaver is active"
-msgstr "Während des Bildschirmschoners dimmen"
-
 msgctxt "#32133"
-msgid "Dimmed brightness"
-msgstr "Gedimmte Helligkeit"
-
-msgctxt "#32134"
-msgid "Switch backlight off with the screensaver"
-msgstr "Beleuchtung mit dem Bildschirmschoner ausschalten"
-
-msgctxt "#32135"
-msgid "Switch off when idle"
-msgstr "Bei Inaktivität ausschalten"
-
-msgctxt "#32136"
-msgid "Turns the backlight off after the idle timeout, unless something is playing."
-msgstr "Schaltet die Beleuchtung nach der Wartezeit aus, sofern nichts abgespielt wird."
-
-msgctxt "#32137"
-msgid "Idle timeout (minutes)"
-msgstr "Wartezeit bei Inaktivität (Minuten)"
+msgid "Idle brightness"
+msgstr "Helligkeit im Leerlauf"
 
 msgctxt "#32138"
 msgid "Clear the display when Kodi stops"
@@ -467,3 +447,31 @@ msgstr "Zeitlimit für Befehle (s)"
 msgctxt "#32185"
 msgid "How long to wait for a command before giving up."
 msgstr "Wie lange auf einen Befehl gewartet wird, bevor abgebrochen wird."
+
+msgctxt "#32186"
+msgid "Dim while idle"
+msgstr "Während des Leerlaufs dimmen"
+
+msgctxt "#32187"
+msgid "Dims the display whenever nothing is playing. Paused playback still counts as playing."
+msgstr "Dimmt das Display, sobald nichts abgespielt wird. Pause zählt weiterhin als Wiedergabe."
+
+msgctxt "#32188"
+msgid "Brightness (software)"
+msgstr "Helligkeit (Software)"
+
+msgctxt "#32189"
+msgid "Samsung frames have no backlight control over USB, so the picture is darkened in software before it is sent. 100% leaves it untouched."
+msgstr "Samsung-Rahmen bieten keine Helligkeitssteuerung über USB. Das Bild wird deshalb vor dem Senden softwareseitig abgedunkelt. 100 % lässt es unverändert."
+
+msgctxt "#32190"
+msgid "Idle brightness (software)"
+msgstr "Helligkeit im Leerlauf (Software)"
+
+msgctxt "#32191"
+msgid "Backlight level while nothing is playing."
+msgstr "Helligkeitsstufe, solange nichts abgespielt wird."
+
+msgctxt "#32192"
+msgid "How far the picture is darkened while nothing is playing. 0% shows a black picture."
+msgstr "Wie stark das Bild abgedunkelt wird, solange nichts abgespielt wird. 0 % zeigt ein schwarzes Bild."

@@ -1,3 +1,12 @@
+v1.4.0
+- Backlight settings reworked: the display now dims while nothing is playing
+  instead of following the screensaver and an idle timer
+- Samsung SPF frames got a brightness setting of their own - the picture is
+  darkened in software, because the frames have no backlight command
+- Fixed the AX206 brightness setting having no effect: every settings change
+  used to close and re-open the USB panel, and a rejected level was recorded
+  as if the panel had taken it
+
 v1.3.1
 - tools/contact_sheet.py renders every bundled layout into one labelled
   overview image, in whichever state you ask for (video, series, music, idle),
