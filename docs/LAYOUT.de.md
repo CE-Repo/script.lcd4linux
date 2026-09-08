@@ -14,7 +14,7 @@ Dateien dort haben Vorrang vor den mitgelieferten und überleben Updates.
 Nach dem Bearbeiten: *Dienst neu laden* im Menü (oder Layout neu auswählen).
 
 > **Mit der Maus statt im Texteditor:** Der **Layout-Baukasten** unter
-> `http://<IP-der-Box>:8099/` (*Add-ons → LCD4Linux → Web-Editor*) setzt
+> `http://<IP-der-Box>:8050/` (*Add-ons → LCD4Linux → Web-Editor*) setzt
 > dieselben Dateien zusammen – Elemente ziehen, Eigenschaften in Listen
 > wählen, Datenfelder aus einem Katalog einfügen, mit einer Vorschau, die
 > derselbe Renderer zeichnet wie das Display. Diese Referenz beschreibt, was

@@ -336,7 +336,7 @@
         </setting>
         <setting id="web_port" type="integer" label="32213" help="32214">
           <level>1</level>
-          <default>8099</default>
+          <default>8050</default>
           <constraints>
             <minimum>1024</minimum>
             <step>1</step>

@@ -270,7 +270,7 @@ Eintrag, weil beim Laden ohnehin die zum Panel passende Fassung genommen wird.
 |---|---|
 | Layout-Editor im Browser | schaltet den Webserver ein und aus (Standard: an) |
 | Web-Editor öffnen | zeigt die Adresse, unter der der Editor erreichbar ist |
-| Port | Standard 8099 |
+| Port | Standard 8050 |
 | Erreichbar von | `dem ganzen Netzwerk` oder `nur dieser Box` (dann nur über einen Browser auf der Box selbst) |
 | Passwort | leer = keine Abfrage; sonst fragt der Browser danach, der Benutzername ist beliebig |
 
@@ -399,7 +399,7 @@ Dienst bringt einen kleinen Webserver mit, der einen Editor ausliefert.
 *Add-ons → LCD4Linux → Web-Editor* zeigt die Adresse an, meist
 
 ```
-http://<IP-der-Box>:8099/
+http://<IP-der-Box>:8050/
 ```
 
 Die Adresse steht auch in den Einstellungen unter *Layout → Web-Editor*. Der
@@ -441,8 +441,8 @@ kommt zurück, sobald die Kopie gelöscht wird.
 **Ohne Box, nur am PC**
 
 ```sh
-python3 tools/webeditor.py            # http://127.0.0.1:8099/
-python3 tools/webeditor.py --bind all --port 8099 --password geheim
+python3 tools/webeditor.py            # http://127.0.0.1:8050/
+python3 tools/webeditor.py --bind all --port 8050 --password geheim
 ```
 
 **Sicherheit**
@@ -691,7 +691,7 @@ images only, only the MCU rows that changed are re-encoded.
 
 * Layout reference: [docs/LAYOUT.en.md](docs/LAYOUT.en.md)
 * **Layout editor in the browser**: the service serves a drag and drop editor
-  at `http://<box>:8099/` (*Add-ons → LCD4Linux → Web editor* shows the
+  at `http://<box>:8050/` (*Add-ons → LCD4Linux → Web editor* shows the
   address). Pages, widgets, colours and data fields are edited with the
   mouse, and the preview next to them is drawn by the add-on's own renderer,
   so it is exactly what the panel will show. On a PC without Kodi:

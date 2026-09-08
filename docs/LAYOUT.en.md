@@ -13,7 +13,7 @@ Files there take precedence over the bundled ones and survive updates.
 After editing, choose *Reload service* from the add-on menu.
 
 > **With the mouse instead of a text editor:** the **layout editor** at
-> `http://<box>:8099/` (*Add-ons → LCD4Linux → Web editor*) builds the very
+> `http://<box>:8050/` (*Add-ons → LCD4Linux → Web editor*) builds the very
 > same files - drag the elements, pick properties from lists, insert data
 > fields from a catalogue, with a preview drawn by the same renderer that
 > feeds the panel. This reference describes what is behind those fields; the

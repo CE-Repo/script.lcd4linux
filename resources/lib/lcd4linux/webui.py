@@ -502,7 +502,7 @@ class WebEditor(object):
     # -- server -----------------------------------------------------------
     @property
     def port(self):
-        return int(self.config.get("web_port", 8099) or 8099)
+        return int(self.config.get("web_port", 8050) or 8050)
 
     @property
     def host(self):

@@ -3,7 +3,7 @@
 
     python3 tools/webeditor.py
 
-Then open http://127.0.0.1:8099/ .  Layouts are read from the add-on's
+Then open http://127.0.0.1:8050/ .  Layouts are read from the add-on's
 ``resources/layouts`` folder and saved to ``~/.lcd4linux/layouts`` (or to
 ``--layout-dir``), exactly as they are on the box; copy the file over
 afterwards, or edit straight on the box with the editor the service runs.
@@ -23,7 +23,7 @@ from lcd4linux.settings import Config            # noqa: E402
 def main():
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--port", type=int, default=8099)
+    parser.add_argument("--port", type=int, default=8050)
     parser.add_argument("--bind", default="local", choices=("local", "all"),
                         help="'local' only serves 127.0.0.1 (default)")
     parser.add_argument("--password", default="",

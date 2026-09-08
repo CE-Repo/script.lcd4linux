@@ -222,7 +222,7 @@ def show_web_editor():
         # The service is not up (yet); show where it will be listening.
         host = "127.0.0.1" if config.get("web_bind") == "local" else "0.0.0.0"
         url = "http://%s:%d/" % (webui.local_address(host),
-                                 int(config.get("web_port", 8099)))
+                                 int(config.get("web_port", 8050)))
     lines = [localize.text(32345, "Open this address in a browser:"), "", url, ""]
     if not running:
         lines.append(localize.text(32344, "The web editor is not running yet"))

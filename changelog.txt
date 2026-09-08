@@ -1,6 +1,6 @@
 v1.7.0
 - Layout editor in the browser: the service serves a drag and drop editor at
-  http://<box>:8099/ where pages and widgets are placed with the mouse
+  http://<box>:8050/ where pages and widgets are placed with the mouse
 - The preview beside it is drawn by the add-on's own renderer, so it shows
   exactly what the panel will show, with demo or live data
 - Every widget property, data field and filter is offered in a catalogue

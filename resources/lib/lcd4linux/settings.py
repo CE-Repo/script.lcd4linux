@@ -46,7 +46,7 @@ DEFAULTS = {
     "layout_dir": "",
     "page_interval": 15,
     "web_enabled": True,
-    "web_port": 8099,
+    "web_port": 8050,
     "web_bind": "all",
     "web_password": "",
     "fps_playing": 4,

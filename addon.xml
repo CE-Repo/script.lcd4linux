@@ -33,7 +33,7 @@ Zusätzliche Python-Module werden nicht benötigt: Der USB-Zugriff läuft über 
     <source>https://github.com/CE-Repo/script.lcd4linux</source>
     <news>v1.7.0
 - A layout editor in the browser: place pages and widgets with the mouse at
-  http://&lt;box&gt;:8099/, with a preview drawn by the add-on's own renderer
+  http://&lt;box&gt;:8050/, with a preview drawn by the add-on's own renderer
 - Layouts can be saved and sent to the panel straight from the editor
 - New settings for the editor: on/off, port, reach and an optional password
 
