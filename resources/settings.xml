@@ -318,7 +318,65 @@
         </setting>
       </group>
 
-      <group id="2" label="32024">
+      <group id="2" label="32013">
+        <setting id="web_enabled" type="boolean" label="32211" help="32212">
+          <level>0</level>
+          <default>true</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="action_webeditor" type="action" label="32221">
+          <level>0</level>
+          <data>RunScript(script.lcd4linux,webeditor)</data>
+          <dependencies>
+            <dependency type="enable" setting="web_enabled" operator="is">true</dependency>
+          </dependencies>
+          <control type="button" format="action">
+            <close>false</close>
+          </control>
+        </setting>
+        <setting id="web_port" type="integer" label="32213" help="32214">
+          <level>1</level>
+          <default>8050</default>
+          <constraints>
+            <minimum>1024</minimum>
+            <step>1</step>
+            <maximum>65535</maximum>
+          </constraints>
+          <dependencies>
+            <dependency type="enable" setting="web_enabled" operator="is">true</dependency>
+          </dependencies>
+          <control type="edit" format="integer"/>
+        </setting>
+        <setting id="web_bind" type="string" label="32215" help="32216">
+          <level>1</level>
+          <default>all</default>
+          <constraints>
+            <options>
+              <option label="32217">all</option>
+              <option label="32218">local</option>
+            </options>
+          </constraints>
+          <dependencies>
+            <dependency type="enable" setting="web_enabled" operator="is">true</dependency>
+          </dependencies>
+          <control type="list" format="string"/>
+        </setting>
+        <setting id="web_password" type="string" label="32219" help="32220">
+          <level>1</level>
+          <default></default>
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <dependencies>
+            <dependency type="enable" setting="web_enabled" operator="is">true</dependency>
+          </dependencies>
+          <control type="edit" format="string">
+            <hidden>true</hidden>
+          </control>
+        </setting>
+      </group>
+
+      <group id="3" label="32024">
         <setting id="action_preview" type="action" label="32147">
           <level>0</level>
           <data>RunScript(script.lcd4linux,preview)</data>

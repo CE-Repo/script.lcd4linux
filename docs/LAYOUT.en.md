@@ -12,6 +12,13 @@ Put your own layouts in
 Files there take precedence over the bundled ones and survive updates.
 After editing, choose *Reload service* from the add-on menu.
 
+> **With the mouse instead of a text editor:** the **layout editor** at
+> `http://<box>:8050/` (*Add-ons → LCD4Linux → Web editor*) builds the very
+> same files - drag the elements, pick properties from lists, insert data
+> fields from a catalogue, with a preview drawn by the same renderer that
+> feeds the panel. This reference describes what is behind those fields; the
+> two mix freely, and the editor has a JSON view as well.
+
 Your own layouts get a picture in the layout chooser as well: it is rendered
 once the first time the list is opened and kept in
 `addon_data/script.lcd4linux/thumbs/`. Editing the layout file makes the

@@ -43,6 +43,12 @@ RELOAD_SETTINGS = frozenset((
     "jpeg_subsample", "layout", "layout_dir",
 ))
 
+#: Settings the web editor is built from.  They only restart the little
+#: HTTP server, never the USB link, so changing the port does not blank the
+#: panel.
+WEB_SETTINGS = frozenset(("web_enabled", "web_port", "web_bind",
+                          "web_password"))
+
 #: Commands accepted through ``NotifyAll(script.lcd4linux, <command>)``.
 CONTROL_COMMANDS = ("reload", "next_page", "test_pattern", "message",
                     "brightness_up", "brightness_down")
@@ -102,6 +108,8 @@ class Service(object):
         self.target = None
         self.renderer = None
         self.layout = None
+        self.web = None
+        self._web_signature = None
         self._reload_requested = False
         self._settings_dirty = False
         self._stop = False
@@ -151,6 +159,8 @@ class Service(object):
             return
         log("settings changed (%s), applying them in place" % ", ".join(changed))
         self.config = config
+        if WEB_SETTINGS.intersection(changed):
+            self.start_web_editor()
         if self.renderer is not None:
             self.renderer.default_interval = float(config.page_interval)
             self.renderer.smooth_images = bool(config.smooth_images)
@@ -249,7 +259,61 @@ class Service(object):
             self.layout, self.provider, self.fonts, self.images,
             float(self.config.page_interval), bool(self.config.smooth_images),
             size=(width, height))
+        self.start_web_editor()
         return opened
+
+    # -- web editor -------------------------------------------------------
+    def start_web_editor(self):
+        """(Re)start the browser based layout editor if it is switched on.
+
+        Imported here rather than at the top: a box that never opens the
+        editor should not pay for the HTTP server module, and a failure to
+        start one must never keep the display from working.
+
+        A reload triggered from the editor itself must not pull the server
+        out from under the browser, so an already running editor whose
+        settings did not change is left alone.
+        """
+        signature = tuple(self.config.get(key) for key in sorted(WEB_SETTINGS))
+        if self.web is not None and signature == self._web_signature:
+            return True
+        self.stop_web_editor()
+        self._web_signature = signature
+        if not self.config.web_enabled:
+            self._publish_web_url("")
+            return False
+        try:
+            from . import webui
+            editor = webui.WebEditor(self.config, self)
+            if not editor.start():
+                self._publish_web_url("")
+                return False
+            self.web = editor
+            self._publish_web_url(editor.url())
+            return True
+        except Exception as err:
+            error("cannot start the web editor: %s" % err)
+            self._publish_web_url("")
+            return False
+
+    def stop_web_editor(self):
+        if self.web is None:
+            return
+        self._web_signature = None
+        try:
+            self.web.stop()
+        except Exception as err:
+            debug("cannot stop the web editor: %s" % err)
+        self.web = None
+
+    def _publish_web_url(self, url):
+        """Let the add-on menu show where the editor is listening."""
+        if xbmcgui is None:
+            return
+        try:
+            xbmcgui.Window(10000).setProperty("lcd4linux.weburl", url)
+        except Exception:
+            pass
 
     def run_hook(self, name, command):
         """Run a user configured shell command, e.g. to switch a smart plug.
@@ -557,6 +621,8 @@ class Service(object):
 
     def shutdown(self):
         log("stopping")
+        self.stop_web_editor()
+        self._publish_web_url("")
         if self.target is not None and self.config.clear_on_exit:
             try:
                 if isinstance(self.target, display_module.AX206Target) and self.target.is_open:

@@ -203,6 +203,39 @@ def show_status():
     dialog.textviewer(localize.text(32335, "Display status"), "\n".join(lines))
 
 
+def show_web_editor():
+    """Tell the user where the browser based layout editor is listening."""
+    from . import webui
+
+    config = Config()
+    if not config.get("web_enabled", True):
+        _toast(localize.text(32346, "The web editor is switched off"))
+        return
+    url = ""
+    if xbmcgui is not None:
+        try:
+            url = xbmcgui.Window(10000).getProperty("lcd4linux.weburl")
+        except Exception:
+            url = ""
+    running = bool(url)
+    if not url:
+        # The service is not up (yet); show where it will be listening.
+        host = "127.0.0.1" if config.get("web_bind") == "local" else "0.0.0.0"
+        url = "http://%s:%d/" % (webui.local_address(host),
+                                 int(config.get("web_port", 8050)))
+    lines = [localize.text(32345, "Open this address in a browser:"), "", url, ""]
+    if not running:
+        lines.append(localize.text(32344, "The web editor is not running yet"))
+        lines.append("")
+    lines.append("%s: %s" % (localize.text(32334, "Layout folder"),
+                             profile_path("layouts")))
+    dialog = _dialog()
+    if dialog is None:
+        print("\n".join(lines))
+        return
+    dialog.textviewer(localize.text(32343, "Web editor"), "\n".join(lines))
+
+
 def open_settings():
     if xbmcaddon is None:
         return
@@ -241,6 +274,7 @@ def show_preview():
 
 ACTIONS = {
     "layout": choose_layout,
+    "webeditor": show_web_editor,
     "status": show_status,
     "settings": open_settings,
     "preview": show_preview,
@@ -255,6 +289,7 @@ ACTIONS = {
 
 MENU = (
     ("layout", 32320, "Choose layout"),
+    ("webeditor", 32343, "Web editor"),
     ("preview", 32324, "Preview layout"),
     ("next_page", 32325, "Next page"),
     ("test_pattern", 32323, "Test pattern"),

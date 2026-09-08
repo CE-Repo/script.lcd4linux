@@ -1,3 +1,16 @@
+v1.7.0
+- Layout editor in the browser: the service serves a drag and drop editor at
+  http://<box>:8050/ where pages and widgets are placed with the mouse
+- The preview beside it is drawn by the add-on's own renderer, so it shows
+  exactly what the panel will show, with demo or live data
+- Every widget property, data field and filter is offered in a catalogue
+  generated from the renderer itself, in German and English
+- Layouts are saved to the user's folder and can be sent to the panel from
+  the editor; the bundled ones are shadowed, never overwritten
+- New settings: editor on/off, port, reachable from the network or the box
+  only, and an optional password
+- tools/webeditor.py runs the same editor on a PC without Kodi
+
 v1.6.0
 - "Choose layout..." shows a picture of every design instead of a list of
   file names; the bundled previews ship with the add-on, layouts from the

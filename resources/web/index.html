@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LCD4Linux · Layout-Baukasten</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230b0d12'/><rect x='5' y='8' width='22' height='16' rx='2' fill='%2317b2e2'/></svg>">
+<link rel="stylesheet" href="/static/editor.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="logo"></span>
+    <span>LCD4Linux</span>
+    <em data-i18n="kit">Baukasten</em>
+  </div>
+
+  <div class="filebar">
+    <select id="file-select" title="Layout"></select>
+    <button id="btn-open" data-i18n="open">Öffnen</button>
+    <button id="btn-new" data-i18n="new">Neu</button>
+    <button id="btn-save" class="primary" data-i18n="save">Speichern</button>
+    <button id="btn-saveas" data-i18n="saveas">Speichern unter</button>
+    <button id="btn-activate" data-i18n="activate">Aufs Display</button>
+    <span class="sep"></span>
+    <button id="btn-undo" title="Ctrl+Z">↶</button>
+    <button id="btn-redo" title="Ctrl+Y">↷</button>
+    <span class="sep"></span>
+    <details class="menu">
+      <summary>⋯</summary>
+      <div class="menu-body">
+        <button id="btn-download" data-i18n="download">Als Datei laden</button>
+        <button id="btn-import" data-i18n="import">Datei einlesen</button>
+        <button id="btn-delete" data-i18n="delete">Layout löschen</button>
+        <hr>
+        <button id="btn-reload" data-i18n="reloadservice">Dienst neu laden</button>
+        <button id="btn-testpattern" data-i18n="testpattern">Testbild</button>
+        <button id="btn-nextpage" data-i18n="nextpage">Nächste Seite</button>
+        <hr>
+        <button id="btn-json" data-i18n="jsonview">JSON bearbeiten</button>
+        <button id="btn-lang">English</button>
+      </div>
+    </details>
+  </div>
+
+  <div class="state">
+    <span id="dirty" class="dot" hidden></span>
+    <span id="status-line"></span>
+  </div>
+</header>
+
+<main>
+  <aside class="left">
+    <section>
+      <h2 data-i18n="pages">Seiten</h2>
+      <div id="page-chips" class="chips"></div>
+      <div id="page-list" class="list"></div>
+      <div class="row">
+        <button id="btn-page-add" data-i18n="pageadd">+ Seite</button>
+        <button id="btn-page-copy" data-i18n="pagecopy">Kopieren</button>
+        <button id="btn-page-del" data-i18n="pagedel">Löschen</button>
+      </div>
+    </section>
+
+    <section>
+      <h2 data-i18n="elements">Elemente</h2>
+      <div id="palette" class="palette"></div>
+      <p class="hint" data-i18n="palettehint">Auf die Fläche ziehen oder anklicken</p>
+    </section>
+
+    <section class="grow">
+      <h2 data-i18n="layers">Ebenen</h2>
+      <div id="layer-list" class="list layers"></div>
+    </section>
+  </aside>
+
+  <section class="stage">
+    <div class="stagebar">
+      <label><span data-i18n="zoom">Zoom</span>
+        <select id="zoom">
+          <option value="fit" data-i18n="fit" selected>passend</option>
+          <option value="0.5">50 %</option>
+          <option value="1">100 %</option>
+          <option value="1.5">150 %</option>
+          <option value="2">200 %</option>
+          <option value="3">300 %</option>
+        </select>
+      </label>
+      <label><span data-i18n="grid">Raster</span>
+        <select id="grid">
+          <option value="1" data-i18n="gridoff">aus</option>
+          <option value="2">2</option>
+          <option value="4" selected>4</option>
+          <option value="8">8</option>
+          <option value="16">16</option>
+        </select>
+      </label>
+      <label class="check"><input type="checkbox" id="show-grid"><span data-i18n="showgrid">Gitter</span></label>
+      <label class="check"><input type="checkbox" id="show-boxes" checked><span data-i18n="showboxes">Rahmen</span></label>
+      <span class="sep"></span>
+      <label><span data-i18n="scenario">Vorschau</span>
+        <select id="scenario">
+          <option value="music" data-i18n="scmusic">Musik läuft</option>
+          <option value="video" data-i18n="scvideo">Video läuft</option>
+          <option value="paused" data-i18n="scpaused">Pausiert</option>
+          <option value="idle" data-i18n="scidle">Nichts läuft</option>
+          <option value="live" data-i18n="sclive">Echte Daten</option>
+        </select>
+      </label>
+      <button id="btn-refresh" title="F5">⟳</button>
+      <span class="sep"></span>
+      <span id="canvas-size" class="muted"></span>
+    </div>
+
+    <div class="scroller" id="scroller">
+      <div class="canvas-wrap" id="canvas-wrap">
+        <img id="shot" alt="">
+        <div class="grid-overlay" id="grid-overlay" hidden></div>
+        <div class="boxes" id="boxes"></div>
+        <div class="guides" id="guides"></div>
+      </div>
+    </div>
+
+    <div class="stagefoot">
+      <span id="hover-info" class="muted"></span>
+      <span class="grow"></span>
+      <span id="align-tools" class="aligns">
+        <button data-align="left" title="links">⇤</button>
+        <button data-align="hcenter" title="mittig">↔</button>
+        <button data-align="right" title="rechts">⇥</button>
+        <button data-align="top" title="oben">⇧</button>
+        <button data-align="vcenter" title="mittig">↕</button>
+        <button data-align="bottom" title="unten">⇩</button>
+        <button data-align="fitwidth" title="Breite füllen">⇔</button>
+      </span>
+    </div>
+  </section>
+
+  <aside class="right">
+    <div class="tabs" id="inspector-tabs">
+      <button data-tab="widget" class="active" data-i18n="tabelement">Element</button>
+      <button data-tab="page" data-i18n="tabpage">Seite</button>
+      <button data-tab="layout" data-i18n="tablayout">Layout</button>
+    </div>
+    <div class="inspector" id="inspector"></div>
+  </aside>
+</main>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-card">
+    <div class="modal-head">
+      <strong id="modal-title"></strong>
+      <button id="modal-close">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-foot" id="modal-foot"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+<input type="file" id="file-input" accept=".json,application/json" hidden>
+
+<script src="/static/editor.js"></script>
+</body>
+</html>

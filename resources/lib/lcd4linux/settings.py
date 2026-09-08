@@ -45,6 +45,10 @@ DEFAULTS = {
     "layout": "default.json",
     "layout_dir": "",
     "page_interval": 15,
+    "web_enabled": True,
+    "web_port": 8050,
+    "web_bind": "all",
+    "web_password": "",
     "fps_playing": 4,
     "fps_idle": 1,
     "smooth_images": True,
@@ -201,7 +205,7 @@ class Config(object):
                       else "brightness")
         keys = ("display_type", "output_mode", "device_ids", "rotation",
                 "mirror", "byte_order", "layout", brightness, "fps_playing",
-                "fps_idle")
+                "fps_idle", "web_enabled", "web_port")
         return ", ".join("%s=%s" % (key, self._values[key]) for key in keys)
 
 
