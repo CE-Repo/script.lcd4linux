@@ -25,6 +25,9 @@ API
 ``POST /api/activate``   make a layout the one shown on the panel
 ``POST /api/preview``    render a layout to a PNG
 ``POST /api/command``    reload, next page or test pattern
+``GET  /display``        the wall panel page for a tablet or browser
+``GET  /display/stream`` the live frames as an MJPEG stream
+``GET  /display/frame.jpg`` the frame on screen right now
 ======================== ========================================
 """
 
@@ -35,9 +38,11 @@ import re
 import threading
 import time
 
+from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, quote, urlparse
 
+from . import display as display_module
 from . import layout as layout_module
 from . import pngio
 from . import webschema
@@ -69,6 +74,52 @@ CONTENT_TYPES = {
 #: Uploaded layouts larger than this are refused; the biggest bundled one is
 #: about 12 kB, so this is roomy without letting a stray POST eat the box.
 MAX_BODY = 2 * 1024 * 1024
+
+#: Separator between the JPEGs of the MJPEG stream.
+STREAM_BOUNDARY = "lcd4linuxframe"
+
+#: The wall panel page.  Deliberately tiny and dependency free: the whole
+#: point of MJPEG in an ``<img>`` is that it renders on a ten year old
+#: tablet whose browser knows neither WebSocket nor ``object-fit``, so the
+#: centring is done with flexbox and max-width and the script only adds a
+#: reconnect after the box reboots.
+DISPLAY_PAGE = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, \
+user-scalable=no">
+<title>LCD4Linux</title>
+<style>
+html, body { margin: 0; padding: 0; height: 100%%; background: #000;
+             overflow: hidden; }
+body { display: -webkit-box; display: flex;
+       -webkit-box-align: center; align-items: center;
+       -webkit-box-pack: center; justify-content: center; }
+img { display: block; margin: auto; max-width: 100%%; max-height: 100%%;
+      width: auto; height: auto; }
+img.fill { width: 100%%; height: 100%%; max-width: none; max-height: none; }
+</style>
+</head>
+<body>
+<img id="panel" class="%(css)s" src="%(src)s" alt="">
+<script>
+(function () {
+  var panel = document.getElementById('panel');
+  var src = %(json)s;
+  // The stream dies whenever the box reboots or the Wi-Fi drops.  Come
+  // back on our own so nobody has to walk to the tablet and reload it.
+  panel.onerror = function () {
+    setTimeout(function () {
+      panel.src = src + (src.indexOf('?') < 0 ? '?' : '&') + 't=' +
+                  (new Date()).getTime();
+    }, 3000);
+  };
+})();
+</script>
+</body>
+</html>
+"""
 
 
 class EditorError(Exception):
@@ -331,10 +382,15 @@ class Handler(BaseHTTPRequestHandler):
         except ValueError as err:
             raise EditorError("invalid JSON: %s" % err)
 
-    def _authorised(self):
+    def _authorised(self, path="/", query=None):
         password = self.editor.password
         if not password:
             return True
+        # The wall panel is a bare <img> in a kiosk browser and cannot answer
+        # a Basic auth challenge for a sub resource, so the read only display
+        # endpoints take the password as a query parameter instead.
+        if path == "/display" or path.startswith("/display/"):
+            return (query or {}).get("key") == password
         header = self.headers.get("Authorization") or ""
         if header.startswith("Basic "):
             try:
@@ -355,14 +411,14 @@ class Handler(BaseHTTPRequestHandler):
         self._dispatch("POST")
 
     def _dispatch(self, method):
-        if not self._authorised():
-            self._send(401, "authentication required",
-                       headers={"WWW-Authenticate": 'Basic realm="LCD4Linux"'})
-            return
         parsed = urlparse(self.path)
         path = parsed.path.rstrip("/") or "/"
         query = dict((key, values[0])
                      for key, values in parse_qs(parsed.query).items())
+        if not self._authorised(path, query):
+            self._send(401, "authentication required",
+                       headers={"WWW-Authenticate": 'Basic realm="LCD4Linux"'})
+            return
         try:
             if method == "GET":
                 self._get(path, query)
@@ -397,10 +453,88 @@ class Handler(BaseHTTPRequestHandler):
             width = int(size[0]) if size[0].isdigit() else 480
             height = int(size[1]) if len(size) > 1 and size[1].isdigit() else 320
             self._send_json({"spec": webschema.blank_layout(width, height)})
+        elif path == "/display":
+            self._display_page(query)
+        elif path == "/display/frame.jpg":
+            self._display_frame()
+        elif path == "/display/stream":
+            self._display_stream()
         elif path.startswith("/static/"):
             self._send_file(path[len("/static/"):])
         else:
             self._send(404, "not found")
+
+    # -- wall panel -------------------------------------------------------
+    def _display_page(self, query):
+        """The page an old tablet keeps open in its kiosk browser."""
+        source = "/display/stream"
+        key = query.get("key")
+        if key:
+            source += "?key=" + quote(key, safe="")
+        # quote() already percent-encodes anything that could break out of
+        # the attribute or the <script>, but escaping here too means the
+        # page stays safe if the URL is ever built differently.
+        literal = json.dumps(source).replace("<", "\\u003c")
+        self._send(200, DISPLAY_PAGE % {
+            "src": escape(source, quote=True),
+            "css": "fill" if query.get("fit") == "fill" else "",
+            "json": literal,
+        }, "text/html; charset=utf-8")
+
+    def _display_frame(self):
+        """A single still, for anything that cannot read a stream."""
+        target = self.editor.display_target()
+        if target is None:
+            self._send(503, "no network display is active")
+            return
+        frame = target.latest()[0]
+        if not frame:
+            self._send(503, "no frame has been rendered yet")
+            return
+        self._send(200, frame, "image/jpeg")
+
+    def _display_stream(self):
+        """Push frames as ``multipart/x-mixed-replace`` for as long as the
+        browser keeps reading.
+
+        Handled here rather than through :meth:`_send` because the response
+        has no length: it ends when the client goes away.
+        """
+        target = self.editor.display_target()
+        if target is None:
+            self._send(503, "no network display is active")
+            return
+        self.close_connection = True
+        self.send_response(200)
+        self.send_header("Content-Type",
+                         "multipart/x-mixed-replace; boundary=%s"
+                         % STREAM_BOUNDARY)
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("Connection", "close")
+        self.end_headers()
+        if self.command == "HEAD":
+            return
+        frame, seen = target.latest()
+        try:
+            while True:
+                if frame:
+                    self.wfile.write(
+                        ("--%s\r\nContent-Type: image/jpeg\r\n"
+                         "Content-Length: %d\r\n\r\n"
+                         % (STREAM_BOUNDARY, len(frame))).encode("ascii"))
+                    self.wfile.write(frame)
+                    self.wfile.write(b"\r\n")
+                    self.wfile.flush()
+                if not target.is_open:
+                    # The service closed the display, so no frame will ever
+                    # follow.  End the response and let the page's onerror
+                    # handler reconnect instead of holding the thread.
+                    break
+                frame, seen = target.wait(seen)
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        except OSError as err:
+            debug("display stream ended: %s" % err)
 
     def _send_file(self, relative):
         relative = relative.replace("\\", "/").lstrip("/")
@@ -553,6 +687,24 @@ class WebEditor(object):
     def url(self, address=None):
         return "http://%s:%d/" % (address or local_address(self.host), self.port)
 
+    def display_url(self, address=None):
+        """Where a tablet should point its kiosk browser."""
+        url = self.url(address) + "display"
+        if self.password:
+            url += "?key=" + quote(self.password, safe="")
+        return url
+
+    def display_target(self):
+        """The live :class:`~.display.NetworkTarget`, or ``None``.
+
+        Only the service owns a target; without one - the editor opened
+        from the settings dialog, say - there is nothing to stream.
+        """
+        target = getattr(self.service, "target", None)
+        if isinstance(target, display_module.NetworkTarget):
+            return target
+        return None
+
     # -- data for the handlers --------------------------------------------
     def schema(self):
         if self._schema is None:
@@ -576,6 +728,9 @@ class WebEditor(object):
             "kodi": xbmc is not None,
             "userdir": user_directory(config),
             "live": xbmc is not None,
+            "output": config.output_mode,
+            "display_url": (self.display_url()
+                            if config.output_mode == "network" else ""),
         }
 
     def activate(self, name):

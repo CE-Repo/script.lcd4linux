@@ -1,3 +1,22 @@
+v1.8.0
+- New output mode "Network display": the service serves the rendered frames
+  over HTTP instead of a USB panel, so any browser in full screen can be the
+  display - a wall mounted tablet, a phone, a second monitor
+- The page at /display is a plain <img> fed by a multipart/x-mixed-replace
+  MJPEG stream: no WebSocket and no canvas, so it works on the old WebKit of
+  an Android 4.x tablet; a little script only reconnects after a reboot
+- /display/stream and /display/frame.jpg serve the raw stream and a single
+  still; ?fit=fill stretches the picture to the whole screen
+- The web interface password is accepted as ?key=... on the display
+  endpoints, because a kiosk browser cannot answer a Basic auth challenge
+  for a sub resource; the layout editor keeps its Basic auth
+- The HTTP server always runs in network mode, independent of the editor
+  switch, and the display size can be set without "override display size"
+- Kodi shutdown pushes a black frame before the server stops, so a browser
+  that stays open does not freeze on the last picture
+- The JPEG encoder, the software dimming and their settings are shared with
+  the Samsung frames
+
 v1.7.0
 - Layout editor in the browser: the service serves a drag and drop editor at
   http://<box>:8050/ where pages and widgets are placed with the mouse

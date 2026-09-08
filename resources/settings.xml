@@ -21,6 +21,7 @@
           <constraints>
             <options>
               <option label="32102">usb</option>
+              <option label="32520">network</option>
               <option label="32103">preview</option>
               <option label="32104">none</option>
             </options>
@@ -148,30 +149,40 @@
           <control type="toggle"/>
         </setting>
         <setting id="width" type="integer" label="32127">
-          <level>2</level>
+          <level>1</level>
           <default>480</default>
           <constraints>
             <minimum>64</minimum>
             <step>16</step>
-            <maximum>1024</maximum>
+            <maximum>1920</maximum>
           </constraints>
           <dependencies>
-            <dependency type="enable" setting="force_size" operator="is">true</dependency>
+            <dependency type="enable">
+              <or>
+                <condition setting="force_size" operator="is">true</condition>
+                <condition setting="output_mode" operator="is">network</condition>
+              </or>
+            </dependency>
           </dependencies>
           <control type="slider" format="integer">
             <popup>true</popup>
           </control>
         </setting>
         <setting id="height" type="integer" label="32128">
-          <level>2</level>
+          <level>1</level>
           <default>320</default>
           <constraints>
             <minimum>64</minimum>
             <step>16</step>
-            <maximum>1024</maximum>
+            <maximum>1920</maximum>
           </constraints>
           <dependencies>
-            <dependency type="enable" setting="force_size" operator="is">true</dependency>
+            <dependency type="enable">
+              <or>
+                <condition setting="force_size" operator="is">true</condition>
+                <condition setting="output_mode" operator="is">network</condition>
+              </or>
+            </dependency>
           </dependencies>
           <control type="slider" format="integer">
             <popup>true</popup>
@@ -189,7 +200,12 @@
             <maximum>100</maximum>
           </constraints>
           <dependencies>
-            <dependency type="visible" setting="display_type" operator="is">spf</dependency>
+            <dependency type="visible">
+              <or>
+                <condition setting="display_type" operator="is">spf</condition>
+                <condition setting="output_mode" operator="is">network</condition>
+              </or>
+            </dependency>
           </dependencies>
           <control type="slider" format="integer">
             <popup>true</popup>
@@ -199,7 +215,12 @@
           <level>1</level>
           <default>true</default>
           <dependencies>
-            <dependency type="visible" setting="display_type" operator="is">spf</dependency>
+            <dependency type="visible">
+              <or>
+                <condition setting="display_type" operator="is">spf</condition>
+                <condition setting="output_mode" operator="is">network</condition>
+              </or>
+            </dependency>
           </dependencies>
           <control type="toggle"/>
         </setting>
@@ -215,7 +236,12 @@
             <maximum>7</maximum>
           </constraints>
           <dependencies>
-            <dependency type="visible" setting="display_type" operator="is">ax206</dependency>
+            <dependency type="visible">
+              <and>
+                <condition setting="display_type" operator="is">ax206</condition>
+                <condition setting="output_mode" operator="!is">network</condition>
+              </and>
+            </dependency>
           </dependencies>
           <control type="slider" format="integer">
             <popup>true</popup>
@@ -230,7 +256,12 @@
             <maximum>100</maximum>
           </constraints>
           <dependencies>
-            <dependency type="visible" setting="display_type" operator="is">spf</dependency>
+            <dependency type="visible">
+              <or>
+                <condition setting="display_type" operator="is">spf</condition>
+                <condition setting="output_mode" operator="is">network</condition>
+              </or>
+            </dependency>
           </dependencies>
           <control type="slider" format="percentage"/>
         </setting>
@@ -248,7 +279,12 @@
             <maximum>7</maximum>
           </constraints>
           <dependencies>
-            <dependency type="visible" setting="display_type" operator="is">ax206</dependency>
+            <dependency type="visible">
+              <and>
+                <condition setting="display_type" operator="is">ax206</condition>
+                <condition setting="output_mode" operator="!is">network</condition>
+              </and>
+            </dependency>
             <dependency type="enable" setting="dim_on_idle" operator="is">true</dependency>
           </dependencies>
           <control type="slider" format="integer">
@@ -264,7 +300,12 @@
             <maximum>100</maximum>
           </constraints>
           <dependencies>
-            <dependency type="visible" setting="display_type" operator="is">spf</dependency>
+            <dependency type="visible">
+              <or>
+                <condition setting="display_type" operator="is">spf</condition>
+                <condition setting="output_mode" operator="is">network</condition>
+              </or>
+            </dependency>
             <dependency type="enable" setting="dim_on_idle" operator="is">true</dependency>
           </dependencies>
           <control type="slider" format="percentage"/>

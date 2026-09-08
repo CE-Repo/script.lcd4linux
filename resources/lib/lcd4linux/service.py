@@ -47,7 +47,7 @@ RELOAD_SETTINGS = frozenset((
 #: HTTP server, never the USB link, so changing the port does not blank the
 #: panel.
 WEB_SETTINGS = frozenset(("web_enabled", "web_port", "web_bind",
-                          "web_password"))
+                          "web_password", "output_mode"))
 
 #: Commands accepted through ``NotifyAll(script.lcd4linux, <command>)``.
 CONTROL_COMMANDS = ("reload", "next_page", "test_pattern", "message",
@@ -279,7 +279,9 @@ class Service(object):
             return True
         self.stop_web_editor()
         self._web_signature = signature
-        if not self.config.web_enabled:
+        # In network mode the server is not an optional design tool, it is
+        # the display; the switch cannot turn it off.
+        if not self.config.web_enabled and self.config.output_mode != "network":
             self._publish_web_url("")
             return False
         try:
@@ -621,8 +623,9 @@ class Service(object):
 
     def shutdown(self):
         log("stopping")
-        self.stop_web_editor()
-        self._publish_web_url("")
+        # Clearing comes first: a network display is cleared *through* the
+        # web server, so stopping that before the black frame would leave
+        # the tablet frozen on the last picture.
         if self.target is not None and self.config.clear_on_exit:
             try:
                 if isinstance(self.target, display_module.AX206Target) and self.target.is_open:
@@ -630,8 +633,14 @@ class Service(object):
                     self.target.device.clear(byte_order=self.config.byte_order)
                 elif isinstance(self.target, display_module.SPFTarget) and self.target.is_open:
                     self.target.blank()
+                elif isinstance(self.target, display_module.NetworkTarget) and self.target.is_open:
+                    self.target.blank()
+                    # Give the streaming threads their turn on the socket.
+                    time.sleep(0.5)
             except Exception as err:
                 debug("cannot clear the display: %s" % err)
+        self.stop_web_editor()
+        self._publish_web_url("")
         self._close_target()
         # Last, so the power can be cut once the USB connection is closed.
         self.run_hook("stop", self.config.stop_command)
