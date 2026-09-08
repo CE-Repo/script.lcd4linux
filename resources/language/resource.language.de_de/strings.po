@@ -439,3 +439,31 @@ msgstr "Schneller und kleiner. Abschalten für schärfere farbige Schrift, koste
 msgctxt "#32336"
 msgid "No Samsung photo frame detected"
 msgstr "Kein Samsung-Bilderrahmen gefunden"
+
+msgctxt "#32028"
+msgid "Power hooks"
+msgstr "Schaltbefehle"
+
+msgctxt "#32180"
+msgid "Command when the service starts"
+msgstr "Befehl beim Start des Dienstes"
+
+msgctxt "#32181"
+msgid "Shell command run before the display is opened, for example to switch on a smart plug. Leave empty to do nothing."
+msgstr "Shell-Befehl, der ausgeführt wird, bevor das Display geöffnet wird – zum Beispiel um eine schaltbare Steckdose einzuschalten. Leer lassen für keine Aktion."
+
+msgctxt "#32182"
+msgid "Command when the service stops"
+msgstr "Befehl beim Beenden des Dienstes"
+
+msgctxt "#32183"
+msgid "Shell command run after the display has been released, for example to switch off a smart plug. Samsung frames cannot be switched off over USB, so cutting their power is the only way."
+msgstr "Shell-Befehl, der nach dem Freigeben des Displays ausgeführt wird – zum Beispiel um eine Steckdose auszuschalten. Samsung-Rahmen lassen sich nicht über USB abschalten, nur über die Stromversorgung."
+
+msgctxt "#32184"
+msgid "Command timeout (s)"
+msgstr "Zeitlimit für Befehle (s)"
+
+msgctxt "#32185"
+msgid "How long to wait for a command before giving up."
+msgstr "Wie lange auf einen Befehl gewartet wird, bevor abgebrochen wird."

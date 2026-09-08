@@ -6,6 +6,7 @@ saver, settings changes, notifications).
 """
 
 import os
+import subprocess
 import time
 
 from . import ax206
@@ -110,6 +111,7 @@ class Service(object):
         self._next_open_attempt = 0.0
         self._open_failures = 0
         self._test_until = 0.0
+        self._start_command_done = False
 
     # -- helpers ----------------------------------------------------------
     @staticmethod
@@ -205,6 +207,10 @@ class Service(object):
         log("starting with %s" % self.config.describe())
 
         self._close_target()
+        # Runs before the display is opened, so it can switch the power on.
+        if not self._start_command_done:
+            self.run_hook("start", self.config.start_command)
+            self._start_command_done = True
         self.target = display_module.make_target(self.config)
         opened = self._open_target()
 
@@ -224,6 +230,40 @@ class Service(object):
             float(self.config.page_interval), bool(self.config.smooth_images),
             size=(width, height))
         return opened
+
+    def run_hook(self, name, command):
+        """Run a user configured shell command, e.g. to switch a smart plug.
+
+        Samsung frames have no power control in their USB protocol, so the
+        only way to really switch one off is to cut its mains supply; this
+        hook is how the add-on asks something else to do that.
+        """
+        command = (command or "").strip()
+        if not command:
+            return None
+        timeout = max(1, int(self.config.command_timeout))
+        log("running %s command: %s" % (name, command))
+        try:
+            process = subprocess.Popen(command, shell=True,
+                                       stdout=subprocess.PIPE,
+                                       stderr=subprocess.STDOUT)
+        except Exception as err:
+            error("cannot run the %s command: %s" % (name, err))
+            return None
+        try:
+            output = process.communicate(timeout=timeout)[0]
+        except Exception:
+            process.kill()
+            error("the %s command did not finish within %d s" % (name, timeout))
+            return None
+        if process.returncode != 0:
+            error("the %s command failed with code %d: %s"
+                  % (name, process.returncode,
+                     (output or b"").decode("utf-8", "replace").strip()))
+        elif output:
+            debug("%s command output: %s"
+                  % (name, output.decode("utf-8", "replace").strip()))
+        return process.returncode
 
     def _install_example_layout(self):
         """Drop a copy of the default layout into the user directory once."""
@@ -495,6 +535,8 @@ class Service(object):
             except Exception as err:
                 debug("cannot clear the display: %s" % err)
         self._close_target()
+        # Last, so the power can be cut once the USB connection is closed.
+        self.run_hook("stop", self.config.stop_command)
 
 
 def main():

@@ -439,3 +439,31 @@ msgstr ""
 msgctxt "#32336"
 msgid "No Samsung photo frame detected"
 msgstr ""
+
+msgctxt "#32028"
+msgid "Power hooks"
+msgstr ""
+
+msgctxt "#32180"
+msgid "Command when the service starts"
+msgstr ""
+
+msgctxt "#32181"
+msgid "Shell command run before the display is opened, for example to switch on a smart plug. Leave empty to do nothing."
+msgstr ""
+
+msgctxt "#32182"
+msgid "Command when the service stops"
+msgstr ""
+
+msgctxt "#32183"
+msgid "Shell command run after the display has been released, for example to switch off a smart plug. Samsung frames cannot be switched off over USB, so cutting their power is the only way."
+msgstr ""
+
+msgctxt "#32184"
+msgid "Command timeout (s)"
+msgstr ""
+
+msgctxt "#32185"
+msgid "How long to wait for a command before giving up."
+msgstr ""

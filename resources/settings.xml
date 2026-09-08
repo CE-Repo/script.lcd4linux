@@ -350,6 +350,37 @@
         </setting>
       </group>
 
+      <group id="3" label="32028">
+        <setting id="start_command" type="string" label="32180" help="32181">
+          <level>1</level>
+          <default></default>
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string"/>
+        </setting>
+        <setting id="stop_command" type="string" label="32182" help="32183">
+          <level>1</level>
+          <default></default>
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string"/>
+        </setting>
+        <setting id="command_timeout" type="integer" label="32184" help="32185">
+          <level>2</level>
+          <default>15</default>
+          <constraints>
+            <minimum>1</minimum>
+            <step>1</step>
+            <maximum>60</maximum>
+          </constraints>
+          <control type="slider" format="integer">
+            <popup>true</popup>
+          </control>
+        </setting>
+      </group>
+
       <group id="2" label="32026">
         <setting id="notifications" type="boolean" label="32165" help="32166">
           <level>0</level>

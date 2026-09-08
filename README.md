@@ -109,6 +109,83 @@ kommt mit einer neuen Produkt-ID im Monitor-Modus zurück – das dauert ein bis
 drei Sekunden und passiert bei jedem Einschalten neu. `usb_modeswitch` wird
 nicht benötigt.
 
+##### Anschluss Schritt für Schritt
+
+1. **Netzteil des Rahmens anschließen.** Ein 7"-Rahmen zieht mehr Strom, als
+   ein USB-Port liefern darf – das mitgelieferte Netzteil ist Pflicht, der
+   Rahmen läuft nicht über das USB-Kabel allein.
+2. **USB-Kabel in den *Upstream*-Anschluss des Rahmens** (im Handbuch
+   „up stream terminal", der Anschluss für die PC-Verbindung). Der Rahmen hat
+   daneben noch einen USB-Host-Anschluss für Sticks – der funktioniert dafür
+   nicht. Am besten das mitgelieferte Kabel verwenden.
+3. **Anderes Ende an einen USB-2.0-Port der CoreELEC-Box.** Kein USB-Hub
+   dazwischen, wenn es sich vermeiden lässt.
+4. **Rahmen einschalten.** Fragt er auf dem Bildschirm nach der Betriebsart
+   („Mass Storage" / „Mini Monitor" / Diashow), einmal **Mini Monitor**
+   auswählen. Bleibt die Abfrage aus, macht das Add-on die Umschaltung selbst.
+5. Auf der Box prüfen:
+
+   ```sh
+   lsusb | grep 04e8
+   ```
+
+   `04e8:200a` = Massenspeicher-Modus (noch nicht umgeschaltet),
+   `04e8:200b` = Monitor-Modus (fertig). Im Add-on-Menü zeigt
+   *Anzeigestatus* dasselbe im Klartext.
+6. Im Add-on: *Einstellungen → Anzeige → Verbindung → Displaytyp* auf
+   **Samsung-SPF-Bilderrahmen** stellen, dann *Dienst neu laden*.
+
+##### Ein- und Ausschalten mit CoreELEC
+
+Ehrliche Einordnung vorweg: **Das Mini-Monitor-Protokoll kennt keinen Befehl
+für Helligkeit oder Ausschalten.** Der Rahmen nimmt ausschließlich Bilder
+entgegen. Was das Add-on kann und was nicht:
+
+| | |
+|---|---|
+| Beim Start von Kodi | Rahmen wird in den Monitor-Modus geschaltet, Bild erscheint – das läuft automatisch |
+| Beim Herunterfahren | Das Add-on zeigt ein **schwarzes Bild** (Einstellung *Display beim Beenden von Kodi löschen*). Die Hintergrundbeleuchtung bleibt an |
+| Danach | Ohne Keep-Alive fällt der Rahmen nach kurzer Zeit in seine eigene Diashow zurück |
+| Wirklich aus | Nur durch **Stromtrennung** – das kann kein USB-Befehl |
+
+Für „wirklich aus" hängt man das Netzteil des Rahmens an eine schaltbare
+Steckdose und lässt das Add-on sie mitschalten. Dafür gibt es
+*Einstellungen → Verhalten → Schaltbefehle*:
+
+| Einstellung | Wann |
+|---|---|
+| Befehl beim Start des Dienstes | läuft, **bevor** das Display geöffnet wird – also zum Einschalten |
+| Befehl beim Beenden des Dienstes | läuft, **nachdem** die USB-Verbindung freigegeben wurde – also zum Ausschalten |
+
+Beispiele, je nach Steckdose:
+
+```sh
+# Tasmota / Shelly per HTTP
+curl -s "http://192.168.1.50/cm?cmnd=Power%20On"
+curl -s "http://192.168.1.50/cm?cmnd=Power%20Off"
+
+# Home Assistant
+curl -s -X POST -H "Authorization: Bearer TOKEN"      -H "Content-Type: application/json"      -d '{"entity_id":"switch.bilderrahmen"}'      http://192.168.1.10:8123/api/services/switch/turn_on
+
+# MQTT
+mosquitto_pub -h 192.168.1.10 -t cmnd/rahmen/POWER -m ON
+```
+
+Zwei Dinge dazu:
+
+* Der Rahmen braucht nach dem Einschalten einige Sekunden, bis er am USB-Bus
+  erscheint. Das ist kein Problem – das Add-on sucht ihn im Abstand von
+  *Wiederverbindungsintervall* (Standard 20 s) erneut und verbindet sich dann
+  von selbst. Wer es eiliger hat, stellt den Wert auf 5 s.
+* Ob der Rahmen nach dem Wiedereinschalten von allein hochfährt oder eine
+  Taste braucht, hängt vom Gerät ab – einmal ausprobieren. Viele SPF gehen bei
+  anliegendem Strom automatisch an; manche haben zusätzlich einen
+  Auto-Ein/Aus-Zeitplan im eigenen Menü.
+
+Ohne schaltbare Steckdose bleibt als Kompromiss: *Bei Inaktivität ausschalten*
+aktivieren – dann zeigt der Rahmen ein schwarzes Bild, statt in die Diashow zu
+wechseln, solange die Box läuft.
+
 Kodi läuft auf CoreELEC als `root`, zusätzliche udev-Regeln sind für beide
 Displays nicht nötig. Hängt ein Kerneltreiber am Gerät, löst das Add-on ihn ab.
 
@@ -164,7 +241,9 @@ sowie die Aktionsknöpfe *Vorschau*, *Testbild*, *Anzeigestatus* und
 **Verhalten**
 
 Bildwiederholrate bei Wiedergabe und im Leerlauf, weiche Bildskalierung,
-Kodi-Benachrichtigungen auf dem Display, Debug-Protokollierung.
+Kodi-Benachrichtigungen auf dem Display, Debug-Protokollierung sowie die
+**Schaltbefehle**, mit denen beim Start und beim Beenden ein beliebiger
+Shell-Befehl ausgeführt wird (siehe *Ein- und Ausschalten mit CoreELEC*).
 
 ---
 

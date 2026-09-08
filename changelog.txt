@@ -1,3 +1,11 @@
+v1.1.1
+- Start and stop commands: a shell command can be run when the service starts
+  (before the display is opened) and when it stops (after the USB connection
+  is released). Samsung frames have no power control in their protocol, so
+  this is how a smart plug can switch them with the box
+- Documented how to connect a Samsung frame and what can and cannot be done
+  about switching it off
+
 v1.1.0
 - Samsung SPF photo frame support: SPF-72H, SPF-75H/76H, SPF-83H/83M,
   SPF-85H/85P, SPF-86H/86P, SPF-87H, SPF-105P, SPF-107H, SPF-700T, SPF-800P

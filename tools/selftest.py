@@ -400,6 +400,37 @@ def test_jpeg_encoder():
     check(True, "a flat frame encodes without a DCT")
 
 
+def test_power_hooks():
+    """The start/stop commands that switch a smart plug."""
+    print("power hooks")
+    import tempfile
+    from lcd4linux.service import Service
+
+    directory = tempfile.mkdtemp()
+    started = os.path.join(directory, "started")
+    stopped = os.path.join(directory, "stopped")
+    bus = install_fake_spf("monitor")
+    bus.device = FakeSPFDevice(bus)
+
+    service = Service(overrides={
+        "output_mode": "usb", "display_type": "spf",
+        "start_command": "touch '%s'" % started,
+        "stop_command": "touch '%s'" % stopped,
+    })
+    service.setup()
+    check(os.path.exists(started), "the start command runs before the display opens")
+    check(not os.path.exists(stopped), "the stop command has not run yet")
+    service.shutdown()
+    check(os.path.exists(stopped), "the stop command runs on shutdown")
+
+    # A failing command must not take the service down.
+    service = Service(overrides={"output_mode": "none",
+                                 "start_command": "exit 3"})
+    service.setup()
+    check(True, "a failing command is logged, not fatal")
+    check(service.run_hook("start", "") is None, "an empty command does nothing")
+
+
 def test_rotation():
     print("rotation")
     context = install_fake_usb()
@@ -552,7 +583,8 @@ def main():
     print("script.lcd4linux self test\n")
     for test in (test_encoding, test_fonts, test_images, test_tokens,
                  test_jpeg_encoder, test_protocol, test_target_from_settings,
-                 test_samsung_spf, test_rotation, test_layouts):
+                 test_samsung_spf, test_power_hooks, test_rotation,
+                 test_layouts):
         test()
         print("")
     if failures:
