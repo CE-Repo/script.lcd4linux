@@ -348,6 +348,10 @@ msgctxt "#32326"
 msgid "Settings"
 msgstr ""
 
+msgctxt "#32327"
+msgid "Rendering layout previews"
+msgstr ""
+
 msgctxt "#32330"
 msgid "Service"
 msgstr ""

@@ -252,6 +252,15 @@ Aktives Layout, Layout-Auswahl, eigener Layout-Ordner, Seitenwechselintervall
 sowie die Aktionsknöpfe *Vorschau*, *Testbild*, *Anzeigestatus* und
 *Dienst neu laden*.
 
+*Layout auswählen …* öffnet eine Liste mit einem Vorschaubild pro Design; die
+Einstellungen bleiben dabei geöffnet, das gewählte Layout steht danach in der
+Zeile darüber. Die Bilder liegen als `resources/thumbs/<design>.png` bei.
+Layouts aus dem eigenen Ordner haben kein mitgeliefertes Bild – sie werden
+beim ersten Öffnen der Liste einmal gerendert und in
+`<Add-on-Daten>/thumbs/` zwischengespeichert. Mehrere Größen desselben
+Designs (`default.json` und `default-800x480.json`) erscheinen als ein
+Eintrag, weil beim Laden ohnehin die zum Panel passende Fassung genommen wird.
+
 **Sprache**
 
 Es gibt nichts einzustellen: Das Add-on folgt der Sprache von Kodi. Die
@@ -565,9 +574,11 @@ resources/lib/lcd4linux/
     settings.py               Einstellungen
     service.py                Hauptschleife
     ui.py                     Menü
+    thumbs.py                 Vorschaubilder für die Layout-Auswahl
 tools/preview.py              Layout-Vorschau als PNG
 tools/scale_layout.py         Layout auf eine andere Displaygröße umrechnen
 tools/contact_sheet.py        Übersichtsbild aller Layouts erzeugen
+tools/make_thumbs.py          Vorschaubilder für die Layout-Auswahl erzeugen
 tools/selftest.py             Selbsttest ohne Hardware
 tools/mkfont.py               Schriften neu erzeugen (benötigt Pillow)
 ```

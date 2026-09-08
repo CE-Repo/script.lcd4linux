@@ -287,8 +287,10 @@
         <setting id="action_layout" type="action" label="32142">
           <level>0</level>
           <data>RunScript(script.lcd4linux,layout)</data>
+          <!-- The picker is a dialog, so the settings can stay open behind
+               it; the chosen layout lands in the row above. -->
           <control type="button" format="action">
-            <close>true</close>
+            <close>false</close>
           </control>
         </setting>
         <setting id="layout_dir" type="path" label="32143" help="32144">
