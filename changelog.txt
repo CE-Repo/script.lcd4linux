@@ -1,3 +1,22 @@
+v1.2.0
+- Five new layouts built for reading from a distance, in both display sizes:
+  xl-player (40 px title, 38 px times), xl-remaining (the remaining time at
+  96 px, the one number that matters during a film), xl-clock (128 px clock
+  with what is playing underneath), xl-system (clock plus CPU, temperature
+  and RAM as three large figures) and cover-full (artwork edge to edge with a
+  slim info strip)
+- Bundled font sizes up to 128 px, so large type stays crisp instead of being
+  resampled from 64 px
+- tools/scale_layout.py rescales a layout for a different display size,
+  positions per axis and type sizes by height
+- Fixed the IP address: some Kodi builds return the label name instead of an
+  address, so the socket lookup is used first
+- Fixed free space, which reported "0 MB" because the info label follows the
+  GUI context; it is now read from the filesystem, with usedspace, totalspace
+  and freespace_percent alongside it
+- Demo data separates a film (director, no show title) from a TV episode
+  (show title and S..E.., no director), so previews match reality
+
 v1.1.1
 - Start and stop commands: a shell command can be run when the service starts
   (before the display is opened) and when it stops (after the USB connection

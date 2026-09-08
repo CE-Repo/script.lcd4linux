@@ -1,0 +1,132 @@
+{
+  "name": "XL Restzeit (800x480)",
+  "size": [
+    800,
+    480
+  ],
+  "background": "#000000",
+  "accent": "auto:${player.thumb}",
+  "defaults": {
+    "font": "sans",
+    "size": 36,
+    "color": "#ffffff"
+  },
+  "pages": [
+    {
+      "name": "Remaining",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {
+          "type": "text",
+          "x": 30,
+          "y": 21,
+          "w": 740,
+          "h": 54,
+          "text": "${player.title}",
+          "size": 42,
+          "bold": true,
+          "scroll": "marquee",
+          "scrollspeed": 36,
+          "color": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 81,
+          "w": 740,
+          "h": 42,
+          "text": "${player.showtitle}${player.artist}",
+          "size": 32,
+          "color": "accent"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 147,
+          "w": 800,
+          "h": 159,
+          "text": "-${player.remaining}",
+          "font": "mono-bold",
+          "size": 144,
+          "align": "center",
+          "color": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 306,
+          "w": 800,
+          "h": 42,
+          "text": "verbleibend  ·  Ende ${player.finishtime}",
+          "size": 30,
+          "align": "center",
+          "color": "#a8b0c0"
+        },
+        {
+          "type": "progress",
+          "x": 30,
+          "y": 375,
+          "w": 740,
+          "h": 39,
+          "value": "${player.percent}",
+          "radius": 20,
+          "color": "accent",
+          "background": "#262b36"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 426,
+          "w": 333,
+          "h": 45,
+          "text": "${player.time}",
+          "font": "mono",
+          "size": 33,
+          "color": "#a8b0c0"
+        },
+        {
+          "type": "text",
+          "x": 437,
+          "y": 426,
+          "w": 333,
+          "h": 45,
+          "text": "${player.duration}",
+          "font": "mono",
+          "size": 33,
+          "align": "right",
+          "color": "#a8b0c0"
+        }
+      ]
+    },
+    {
+      "name": "Idle",
+      "condition": "!active",
+      "widgets": [
+        {
+          "type": "text",
+          "x": 0,
+          "y": 102,
+          "w": 800,
+          "h": 198,
+          "text": "${system.time}",
+          "size": 192,
+          "bold": true,
+          "align": "center",
+          "color": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 318,
+          "w": 800,
+          "h": 51,
+          "text": "${system.weekday}, ${system.date}",
+          "size": 36,
+          "align": "center",
+          "color": "#a8b0c0"
+        }
+      ]
+    }
+  ]
+}

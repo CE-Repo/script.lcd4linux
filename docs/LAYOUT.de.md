@@ -23,6 +23,31 @@ verwendet das Add-on automatisch `default-800x480.json`, sofern vorhanden.
 Eigene Layouts folgen derselben Regel – `meins-800x480.json` neben
 `meins.json`.
 
+Umrechnen muss man nicht von Hand:
+
+```sh
+python3 tools/scale_layout.py meins.json 800 480
+```
+
+### Aus der Ferne lesbar
+
+Auf einem 3,5"-Display entscheidet die Schriftgröße darüber, ob man etwas
+erkennt oder nicht. Als Anhaltspunkte für 480×320:
+
+* Wichtigste Information: 40–130 px. Ein Titel in 40 px ist aus zwei bis drei
+  Metern lesbar, eine Uhrzeit in 128 px quer durchs Zimmer.
+* Nebeninformation: nicht unter 20 px. Alles darunter ist aus der Ferne nur
+  noch eine graue Linie.
+* Kontrast schlägt Feinheit: Weiß auf Schwarz. Dunkelgraue Schrift auf fast
+  schwarzem Grund (etwa `#4a5266` auf `#0b0d12`) sieht am Schreibtisch gut
+  aus und verschwindet aus drei Metern vollständig – für Nebeninformation
+  lieber `#a8b0c0`.
+* Wenige Elemente: drei bis fünf pro Seite. Was übrig bleibt, darf groß sein.
+* Balken dick machen: 18–26 px statt 8–12 px.
+
+Die mitgelieferten `xl-*`-Layouts sind nach diesen Regeln gebaut und ein
+guter Ausgangspunkt zum Abkupfern.
+
 ---
 
 ## 1. Grundgerüst

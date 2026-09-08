@@ -1,0 +1,57 @@
+{
+  "name": "XL System",
+  "size": [480, 320],
+  "background": "#000000",
+  "defaults": {"font": "sans", "size": 22, "color": "#ffffff"},
+
+  "pages": [
+    {
+      "name": "System",
+      "widgets": [
+        {"type": "text", "x": 18, "y": 10, "w": 250, "h": 60,
+         "text": "${system.time}", "size": 52, "bold": true,
+         "color": "#ffffff"},
+        {"type": "text", "x": 250, "y": 22, "w": 212, "h": 32,
+         "text": "${system.date_short}", "size": 24, "align": "right",
+         "color": "#a8b0c0"},
+        {"type": "line", "x": 18, "y": 82, "w": 444, "h": 2,
+         "color": "#262b36"},
+
+        {"type": "text", "x": 18, "y": 96, "w": 140, "h": 26,
+         "text": "CPU", "size": 20, "color": "#8b93a8"},
+        {"type": "text", "x": 18, "y": 118, "w": 140, "h": 60,
+         "text": "${system.cpu}%", "size": 48, "bold": true},
+        {"type": "progress", "x": 18, "y": 178, "w": 130, "h": 12,
+         "value": "${system.cpu}", "radius": 6, "color": "#00d5ff",
+         "background": "#262b36"},
+
+        {"type": "text", "x": 172, "y": 96, "w": 140, "h": 26,
+         "text": "TEMP", "size": 20, "color": "#8b93a8"},
+        {"type": "text", "x": 172, "y": 118, "w": 150, "h": 60,
+         "text": "${system.cputemp}°", "size": 48, "bold": true},
+        {"type": "progress", "x": 172, "y": 178, "w": 130, "h": 12,
+         "value": "${system.cputemp}", "max": 90, "radius": 6,
+         "color": "#ffab00", "background": "#262b36"},
+
+        {"type": "text", "x": 326, "y": 96, "w": 140, "h": 26,
+         "text": "RAM", "size": 20, "color": "#8b93a8"},
+        {"type": "text", "x": 326, "y": 118, "w": 140, "h": 60,
+         "text": "${system.memory}%", "size": 48, "bold": true},
+        {"type": "progress", "x": 326, "y": 178, "w": 130, "h": 12,
+         "value": "${system.memory}", "radius": 6, "color": "#b388ff",
+         "background": "#262b36"},
+
+        {"type": "graph", "x": 18, "y": 206, "w": 444, "h": 58,
+         "value": "${system.cpu}", "points": 74, "interval": 2,
+         "color": "#00d5ff", "fill": "#3300d5ff", "background": "#0b0e14",
+         "thickness": 2},
+
+        {"type": "text", "x": 18, "y": 276, "w": 250, "h": 30,
+         "text": "${system.ip}", "size": 21, "color": "#a8b0c0"},
+        {"type": "text", "x": 262, "y": 276, "w": 200, "h": 30,
+         "text": "${system.freespace|suffix: frei}", "size": 21,
+         "align": "right", "color": "#a8b0c0"}
+      ]
+    }
+  ]
+}

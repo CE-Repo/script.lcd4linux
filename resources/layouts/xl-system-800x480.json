@@ -1,0 +1,179 @@
+{
+  "name": "XL System (800x480)",
+  "size": [
+    800,
+    480
+  ],
+  "background": "#000000",
+  "defaults": {
+    "font": "sans",
+    "size": 33,
+    "color": "#ffffff"
+  },
+  "pages": [
+    {
+      "name": "System",
+      "widgets": [
+        {
+          "type": "text",
+          "x": 30,
+          "y": 15,
+          "w": 417,
+          "h": 90,
+          "text": "${system.time}",
+          "size": 78,
+          "bold": true,
+          "color": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 417,
+          "y": 33,
+          "w": 353,
+          "h": 48,
+          "text": "${system.date_short}",
+          "size": 36,
+          "align": "right",
+          "color": "#a8b0c0"
+        },
+        {
+          "type": "line",
+          "x": 30,
+          "y": 123,
+          "w": 740,
+          "h": 3,
+          "color": "#262b36"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 144,
+          "w": 233,
+          "h": 39,
+          "text": "CPU",
+          "size": 30,
+          "color": "#8b93a8"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 177,
+          "w": 233,
+          "h": 90,
+          "text": "${system.cpu}%",
+          "size": 72,
+          "bold": true
+        },
+        {
+          "type": "progress",
+          "x": 30,
+          "y": 267,
+          "w": 217,
+          "h": 18,
+          "value": "${system.cpu}",
+          "radius": 9,
+          "color": "#00d5ff",
+          "background": "#262b36"
+        },
+        {
+          "type": "text",
+          "x": 287,
+          "y": 144,
+          "w": 233,
+          "h": 39,
+          "text": "TEMP",
+          "size": 30,
+          "color": "#8b93a8"
+        },
+        {
+          "type": "text",
+          "x": 287,
+          "y": 177,
+          "w": 250,
+          "h": 90,
+          "text": "${system.cputemp}°",
+          "size": 72,
+          "bold": true
+        },
+        {
+          "type": "progress",
+          "x": 287,
+          "y": 267,
+          "w": 217,
+          "h": 18,
+          "value": "${system.cputemp}",
+          "max": 90,
+          "radius": 9,
+          "color": "#ffab00",
+          "background": "#262b36"
+        },
+        {
+          "type": "text",
+          "x": 543,
+          "y": 144,
+          "w": 233,
+          "h": 39,
+          "text": "RAM",
+          "size": 30,
+          "color": "#8b93a8"
+        },
+        {
+          "type": "text",
+          "x": 543,
+          "y": 177,
+          "w": 233,
+          "h": 90,
+          "text": "${system.memory}%",
+          "size": 72,
+          "bold": true
+        },
+        {
+          "type": "progress",
+          "x": 543,
+          "y": 267,
+          "w": 217,
+          "h": 18,
+          "value": "${system.memory}",
+          "radius": 9,
+          "color": "#b388ff",
+          "background": "#262b36"
+        },
+        {
+          "type": "graph",
+          "x": 30,
+          "y": 309,
+          "w": 740,
+          "h": 87,
+          "value": "${system.cpu}",
+          "points": 123,
+          "interval": 2,
+          "color": "#00d5ff",
+          "fill": "#3300d5ff",
+          "background": "#0b0e14",
+          "thickness": 3
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 414,
+          "w": 417,
+          "h": 45,
+          "text": "${system.ip}",
+          "size": 32,
+          "color": "#a8b0c0"
+        },
+        {
+          "type": "text",
+          "x": 437,
+          "y": 414,
+          "w": 333,
+          "h": 45,
+          "text": "${system.freespace|suffix: frei}",
+          "size": 32,
+          "align": "right",
+          "color": "#a8b0c0"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,56 @@
+{
+  "name": "XL Restzeit",
+  "size": [480, 320],
+  "background": "#000000",
+  "accent": "auto:${player.thumb}",
+  "defaults": {"font": "sans", "size": 24, "color": "#ffffff"},
+
+  "pages": [
+    {
+      "name": "Remaining",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {"type": "text", "x": 18, "y": 14, "w": 444, "h": 36,
+         "text": "${player.title}", "size": 28, "bold": true,
+         "scroll": "marquee", "scrollspeed": 24, "color": "#ffffff"},
+
+        {"type": "text", "x": 18, "y": 54, "w": 444, "h": 28,
+         "text": "${player.showtitle}${player.artist}", "size": 21,
+         "color": "accent"},
+
+        {"type": "text", "x": 0, "y": 98, "w": 480, "h": 106,
+         "text": "-${player.remaining}", "font": "mono-bold", "size": 96,
+         "align": "center", "color": "#ffffff"},
+
+        {"type": "text", "x": 0, "y": 204, "w": 480, "h": 28,
+         "text": "verbleibend  ·  Ende ${player.finishtime}", "size": 20,
+         "align": "center", "color": "#a8b0c0"},
+
+        {"type": "progress", "x": 18, "y": 250, "w": 444, "h": 26,
+         "value": "${player.percent}", "radius": 13, "color": "accent",
+         "background": "#262b36"},
+
+        {"type": "text", "x": 18, "y": 284, "w": 200, "h": 30,
+         "text": "${player.time}", "font": "mono", "size": 22,
+         "color": "#a8b0c0"},
+        {"type": "text", "x": 262, "y": 284, "w": 200, "h": 30,
+         "text": "${player.duration}", "font": "mono", "size": 22,
+         "align": "right", "color": "#a8b0c0"}
+      ]
+    },
+
+    {
+      "name": "Idle",
+      "condition": "!active",
+      "widgets": [
+        {"type": "text", "x": 0, "y": 68, "w": 480, "h": 132,
+         "text": "${system.time}", "size": 128, "bold": true,
+         "align": "center", "color": "#ffffff"},
+        {"type": "text", "x": 0, "y": 212, "w": 480, "h": 34,
+         "text": "${system.weekday}, ${system.date}", "size": 24,
+         "align": "center", "color": "#a8b0c0"}
+      ]
+    }
+  ]
+}

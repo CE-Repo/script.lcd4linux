@@ -21,6 +21,29 @@ is attached, the add-on automatically uses `default-800x480.json` when that
 file exists. Your own layouts follow the same rule - `mine-800x480.json` next
 to `mine.json`.
 
+Rescaling does not have to be done by hand:
+
+```sh
+python3 tools/scale_layout.py mine.json 800 480
+```
+
+### Readable from a distance
+
+On a 3.5" panel the font size decides whether something can be read at all.
+Rules of thumb for 480x320:
+
+* Primary information: 40-130 px. A title at 40 px reads from two or three
+  metres, a clock at 128 px across the room.
+* Secondary information: not below 20 px. Anything smaller turns into a grey
+  smudge from a distance.
+* Contrast beats subtlety: white on black. Dark grey on near black (say
+  `#4a5266` on `#0b0d12`) looks good at the desk and disappears completely
+  from three metres - use `#a8b0c0` for secondary text instead.
+* Few elements: three to five per page. What is left may then be large.
+* Make bars thick: 18-26 px instead of 8-12 px.
+
+The bundled `xl-*` layouts follow these rules and are a good starting point.
+
 ---
 
 ## 1. Skeleton

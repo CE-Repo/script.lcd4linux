@@ -7,6 +7,7 @@ the keys implemented here.
 """
 
 import math
+import os
 import socket
 import time
 
@@ -39,6 +40,32 @@ def _read_first(paths):
         except (IOError, OSError):
             continue
     return ""
+
+
+def format_size(number_of_bytes):
+    """Human readable size, e.g. ``412.7 GB``."""
+    try:
+        value = float(number_of_bytes)
+    except (TypeError, ValueError):
+        return ""
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if value < 1024 or unit == "TB":
+            if unit in ("B", "KB", "MB") and value >= 100:
+                return "%.0f %s" % (value, unit)
+            return "%.1f %s" % (value, unit)
+        value /= 1024.0
+    return ""
+
+
+def _looks_like_address(text):
+    """True for something that could be an IPv4/IPv6 address."""
+    text = (text or "").strip()
+    if not text:
+        return False
+    if text.count(".") == 3 and all(
+            part.isdigit() and int(part) < 256 for part in text.split(".")):
+        return True
+    return ":" in text and text.replace(":", "").replace(".", "").isalnum()
 
 
 def format_time(seconds, force_hours=False):
@@ -160,6 +187,31 @@ class BaseProvider(object):
         except (IOError, OSError, ValueError, IndexError):
             return None
         return fields
+
+    #: Checked in order; the first one that exists is reported.
+    STORAGE_PATHS = ("/storage", "/var/media", "/home", "/")
+
+    def _disk(self, what):
+        """Free/used/total space of the data partition."""
+        for path in self.STORAGE_PATHS:
+            try:
+                stats = os.statvfs(path)
+            except (OSError, AttributeError):
+                continue
+            block = stats.f_frsize or stats.f_bsize
+            total = stats.f_blocks * block
+            free = stats.f_bavail * block
+            if not total:
+                continue
+            if what == "free":
+                return format_size(free)
+            if what == "used":
+                return format_size(total - free)
+            if what == "total":
+                return format_size(total)
+            if what == "free_percent":
+                return "%.0f" % (100.0 * free / total)
+        return ""
 
     @staticmethod
     def _hostname():
@@ -500,13 +552,25 @@ class KodiProvider(BaseProvider):
         if name == "hostname":
             return self._hostname()
         if name in ("ip", "ipaddress"):
-            return self._info("System.IPAddress") or self._ip_address()
+            # Some Kodi builds hand back the label name instead of an address,
+            # so the socket lookup wins and the info label is only a fallback.
+            address = self._ip_address()
+            if address:
+                return address
+            reported = self._info("System.IPAddress")
+            return reported if _looks_like_address(reported) else ""
         if name == "kodiversion":
             return self._info("System.BuildVersion").split(" ")[0]
         if name == "buildversion":
             return self._info("System.BuildVersion")
         if name == "freespace":
-            return self._info("System.FreeSpace")
+            return self._disk("free")
+        if name == "freespace_percent":
+            return self._disk("free_percent")
+        if name == "usedspace":
+            return self._disk("used")
+        if name == "totalspace":
+            return self._disk("total")
         if name == "volume":
             return self._info("Player.Volume")
         if name == "muted":
@@ -560,7 +624,15 @@ class DemoProvider(BaseProvider):
             "title": "The Dark Knight", "artist": "Christopher Nolan",
             "album": "", "year": "2008", "genre": "Action",
             "duration": 9120, "mediatype": "video", "track": "",
-            "codec": "h264", "resolution": "1080", "channels": "6",
+            "codec": "h264", "resolution": "2160", "channels": "8",
+            "showtitle": "", "season": "", "episode": "",
+        },
+        {
+            "title": "Winter Is Coming", "artist": "",
+            "album": "", "year": "2011", "genre": "Fantasy",
+            "duration": 3720, "mediatype": "video", "track": "",
+            "codec": "h265", "resolution": "1080", "channels": "6",
+            "showtitle": "Game of Thrones", "season": "1", "episode": "1",
         },
     )
 
@@ -623,14 +695,16 @@ class DemoProvider(BaseProvider):
                 "filename": "demo.mkv", "path": "/storage/demo/",
                 "audiocodec": "dts", "aspect": "2.35",
             }
-            if self.track["mediatype"] == "video":
-                values.update({
-                    "showtitle": "Demo Show", "season": "2", "episode": "5",
-                    "episodelabel": "S02E05",
-                })
-            else:
-                values.update({"showtitle": "", "season": "", "episode": "",
-                               "episodelabel": "", "plot": ""})
+            show = self.track.get("showtitle", "")
+            season = self.track.get("season", "")
+            episode = self.track.get("episode", "")
+            values.update({
+                "showtitle": show, "season": season, "episode": episode,
+                "episodelabel": ("S%02dE%02d" % (int(season), int(episode)))
+                                if season and episode else "",
+            })
+            if self.track["mediatype"] != "video":
+                values["plot"] = ""
             values.update({
                 "title": self.track["title"], "artist": self.track["artist"],
                 "album": self.track["album"], "year": self.track["year"],
@@ -671,7 +745,9 @@ class DemoProvider(BaseProvider):
                 "hostname": self._hostname() or "coreelec",
                 "ip": self._ip_address() or "192.168.1.42",
                 "kodiversion": "21.2", "volume": "-12.0 dB",
-                "freespace": "412.7 GB", "screensaver": "0",
+                "freespace": "412.7 GB", "freespace_percent": "63",
+                "usedspace": "238.1 GB", "totalspace": "650.8 GB",
+                "screensaver": "0",
             }
             return values.get(name, "")
         if namespace == "weather":

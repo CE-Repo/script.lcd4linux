@@ -1,0 +1,135 @@
+{
+  "name": "XL Uhr (800x480)",
+  "size": [
+    800,
+    480
+  ],
+  "background": "#000000",
+  "accent": "auto:${player.thumb}",
+  "defaults": {
+    "font": "sans",
+    "size": 36,
+    "color": "#ffffff"
+  },
+  "pages": [
+    {
+      "name": "Clock",
+      "widgets": [
+        {
+          "type": "text",
+          "x": 0,
+          "y": 24,
+          "w": 800,
+          "h": 198,
+          "text": "${system.time}",
+          "size": 192,
+          "bold": true,
+          "align": "center",
+          "color": "#ffffff",
+          "condition": "active"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 78,
+          "w": 800,
+          "h": 198,
+          "text": "${system.time}",
+          "size": 192,
+          "bold": true,
+          "align": "center",
+          "color": "#ffffff",
+          "condition": "!active"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 294,
+          "w": 800,
+          "h": 54,
+          "text": "${system.date_long}",
+          "size": 39,
+          "align": "center",
+          "color": "#a8b0c0",
+          "condition": "!active"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 375,
+          "w": 800,
+          "h": 45,
+          "text": "${system.cpu}%   ·   ${system.cputemp}°C",
+          "size": 33,
+          "align": "center",
+          "color": "#6b7488",
+          "condition": "!active"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 252,
+          "w": 740,
+          "h": 54,
+          "text": "${player.title}",
+          "size": 40,
+          "bold": true,
+          "align": "center",
+          "scroll": "marquee",
+          "scrollspeed": 36,
+          "color": "#ffffff",
+          "condition": "active"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 309,
+          "w": 740,
+          "h": 45,
+          "text": "${player.artist}${player.showtitle}",
+          "size": 33,
+          "align": "center",
+          "color": "accent",
+          "condition": "active"
+        },
+        {
+          "type": "progress",
+          "x": 30,
+          "y": 375,
+          "w": 740,
+          "h": 27,
+          "value": "${player.percent}",
+          "radius": 14,
+          "color": "accent",
+          "background": "#262b36",
+          "condition": "active"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 414,
+          "w": 333,
+          "h": 45,
+          "text": "${player.time}",
+          "font": "mono",
+          "size": 33,
+          "color": "#a8b0c0",
+          "condition": "active"
+        },
+        {
+          "type": "text",
+          "x": 437,
+          "y": 414,
+          "w": 333,
+          "h": 45,
+          "text": "-${player.remaining}",
+          "font": "mono",
+          "size": 33,
+          "align": "right",
+          "color": "#a8b0c0",
+          "condition": "active"
+        }
+      ]
+    }
+  ]
+}

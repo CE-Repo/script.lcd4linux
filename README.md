@@ -249,16 +249,39 @@ Shell-Befehl ausgeführt wird (siehe *Ein- und Ausschalten mit CoreELEC*).
 
 ## Mitgelieferte Layouts
 
-Jedes Layout gibt es für beide Displaygrößen. Ausgewählt wird nur der Name
-(z. B. `default.json`) – passt die Größe nicht, nimmt das Add-on automatisch
-die Variante `default-800x480.json`.
+Ausgewählt wird nur der Name (z. B. `default.json`) – passt die Größe nicht,
+nimmt das Add-on automatisch die Variante `default-800x480.json`.
+
+**Viele Details – zum Davorsitzen**
 
 | Datei | Beschreibung |
 |---|---|
-| `default.json` / `default-800x480.json` | Vier Seiten: Musik (mit Cover), Video (mit Poster), Uhr, Systemwerte |
-| `bigcover.json` / `bigcover-800x480.json` | Bildschirmfüllendes Cover mit Infoleiste unten |
-| `minimal.json` / `minimal-800x480.json` | Große Schrift, Segment-Fortschrittsbalken, keine Bilder – sehr sparsam |
-| `dashboard.json` / `dashboard-800x480.json` | Analoguhr, CPU, Temperatur, RAM und Verlaufsdiagramm |
+| `default.json` | Vier Seiten: Musik (mit Cover), Video (mit Poster), Uhr, Systemwerte |
+| `bigcover.json` | Bildschirmfüllendes Cover mit Infoleiste unten |
+| `minimal.json` | Große Schrift, Segment-Fortschrittsbalken, keine Bilder – sehr sparsam |
+| `dashboard.json` | Analoguhr, CPU, Temperatur, RAM und Verlaufsdiagramm |
+
+**XL – aus mehreren Metern lesbar**
+
+Wenig Inhalt, sehr große Schrift, reines Schwarz als Hintergrund und kräftige
+Farben. Auf einem 3,5"-Display ist das der Unterschied zwischen „ich müsste
+aufstehen" und „sehe ich vom Sofa".
+
+| Datei | Beschreibung |
+|---|---|
+| `xl-player.json` | Titel in 40 px über zwei Zeilen, Interpret/Serie groß darunter, dicker Balken, Zeiten in 38 px |
+| `xl-remaining.json` | Die **Restzeit riesig** (96 px) in der Bildmitte – die eine Zahl, die man beim Film wirklich wissen will – plus Endzeit und Balken |
+| `xl-clock.json` | Uhrzeit in 128 px, im Leerlauf mit Datum und CPU/Temperatur, bei Wiedergabe mit Titel und Balken darunter |
+| `xl-system.json` | Uhr groß, darunter CPU, Temperatur und RAM als drei große Zahlen mit Balken und Verlaufsdiagramm |
+| `cover-full.json` | Nur das Cover, formatfüllend, mit schmaler Infoleiste und Fortschrittsbalken am unteren Rand |
+
+![XL Restzeit](resources/screenshots/xl-remaining.png)
+![XL Wiedergabe](resources/screenshots/xl-player.png)
+![XL System](resources/screenshots/xl-system.png)
+![Cover formatfüllend](resources/screenshots/cover-full.png)
+
+Von jedem Layout gibt es die 800×480-Fassung mit dem Zusatz `-800x480`; das
+Add-on wählt sie automatisch, wenn ein entsprechendes Panel angeschlossen ist.
 
 ---
 
@@ -306,6 +329,20 @@ Kurzbeispiel:
 Die vollständige Referenz – alle Widgets, Eigenschaften, Datenfelder, Filter
 und Bedingungen – steht in **[docs/LAYOUT.de.md](docs/LAYOUT.de.md)**
 (English: [docs/LAYOUT.en.md](docs/LAYOUT.en.md)).
+
+### Layout auf eine andere Displaygröße umrechnen
+
+Ein vorhandenes Layout lässt sich maßstäblich umrechnen, statt es von Hand
+neu zu setzen:
+
+```sh
+python3 tools/scale_layout.py meins.json 800 480
+# schreibt meins-800x480.json
+```
+
+Positionen und Boxen folgen dabei den beiden Achsen getrennt, Schriftgrößen,
+Radien und Linienstärken der Höhe – so bleiben die Proportionen der Schrift
+erhalten. Prozentangaben bleiben unverändert, weil sie schon relativ sind.
 
 ### Layout ohne Hardware entwerfen
 
@@ -445,6 +482,7 @@ resources/lib/lcd4linux/
     service.py                Hauptschleife
     ui.py                     Menü
 tools/preview.py              Layout-Vorschau als PNG
+tools/scale_layout.py         Layout auf eine andere Displaygröße umrechnen
 tools/selftest.py             Selbsttest ohne Hardware
 tools/mkfont.py               Schriften neu erzeugen (benötigt Pillow)
 ```

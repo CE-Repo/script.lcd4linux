@@ -21,11 +21,13 @@ MAGIC = b"L4F2"
 SOURCE_DIR = "/usr/share/fonts/truetype/dejavu"
 
 # family -> (ttf file, sizes in pixels)
+# The large sizes matter: layouts meant to be read from across the room use
+# 80 to 130 px type, and resampling that far up from 64 px looks soft.
 FAMILIES = {
-    "sans": ("DejaVuSans.ttf", (12, 16, 20, 24, 32, 48, 64)),
-    "sans-bold": ("DejaVuSans-Bold.ttf", (12, 16, 20, 24, 32, 48, 64)),
-    "mono": ("DejaVuSansMono.ttf", (12, 16, 20, 24, 32)),
-    "mono-bold": ("DejaVuSansMono-Bold.ttf", (12, 16, 20, 24, 32)),
+    "sans": ("DejaVuSans.ttf", (12, 16, 20, 24, 32, 48, 64, 96)),
+    "sans-bold": ("DejaVuSans-Bold.ttf", (12, 16, 20, 24, 32, 48, 64, 96, 128)),
+    "mono": ("DejaVuSansMono.ttf", (12, 16, 20, 24, 32, 48)),
+    "mono-bold": ("DejaVuSansMono-Bold.ttf", (12, 16, 20, 24, 32, 48, 64, 96)),
 }
 
 # Latin-1, Latin Extended-A and a curated set of symbols that layouts use.
