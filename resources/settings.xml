@@ -36,15 +36,34 @@
           <control type="edit" format="string"/>
         </setting>
         <setting id="spf_model" type="string" label="32174" help="32175">
-          <level>2</level>
-          <default></default>
+          <level>1</level>
+          <default>auto</default>
           <constraints>
-            <allowempty>true</allowempty>
+            <options>
+              <option label="32193">auto</option>
+              <option label="32194">SPF-72H</option>
+              <option label="32195">SPF-75H</option>
+              <option label="32196">SPF-76H</option>
+              <option label="32197">SPF-83H</option>
+              <option label="32198">SPF-83M</option>
+              <option label="32199">SPF-85H</option>
+              <option label="32200">SPF-85P</option>
+              <option label="32201">SPF-86H</option>
+              <option label="32202">SPF-86P</option>
+              <option label="32203">SPF-87H</option>
+              <option label="32204">SPF-87H-v2</option>
+              <option label="32205">SPF-105P</option>
+              <option label="32206">SPF-107H</option>
+              <option label="32207">SPF-107H-v2</option>
+              <option label="32208">SPF-700T</option>
+              <option label="32209">SPF-800P</option>
+              <option label="32210">SPF-1000P</option>
+            </options>
           </constraints>
           <dependencies>
             <dependency type="visible" setting="display_type" operator="is">spf</dependency>
           </dependencies>
-          <control type="edit" format="string"/>
+          <control type="list" format="string"/>
         </setting>
         <setting id="device_index" type="integer" label="32107" help="32108">
           <level>2</level>
@@ -59,6 +78,9 @@
         <setting id="reset_on_open" type="boolean" label="32109" help="32110">
           <level>2</level>
           <default>false</default>
+          <dependencies>
+            <dependency type="visible" setting="display_type" operator="is">ax206</dependency>
+          </dependencies>
           <control type="toggle"/>
         </setting>
         <setting id="usb_timeout" type="integer" label="32111">
@@ -115,6 +137,9 @@
               <option label="32124">little</option>
             </options>
           </constraints>
+          <dependencies>
+            <dependency type="visible" setting="display_type" operator="is">ax206</dependency>
+          </dependencies>
           <control type="list" format="string"/>
         </setting>
         <setting id="force_size" type="boolean" label="32125" help="32126">

@@ -202,10 +202,10 @@ Displays nicht nötig. Hängt ein Kerneltreiber am Gerät, löst das Add-on ihn 
 
 | Einstellung | Bedeutung |
 |---|---|
-| Ausgabe | `AX206-USB-Display`, `Nur Vorschaudatei` (schreibt `preview.png` in den Add-on-Datenordner) oder `Deaktiviert` |
-| USB-Geräte-IDs | Standard `1908:0102`, mehrere durch Komma getrennt |
+| Ausgabe | `USB-Display`, `Nur Vorschaudatei` (schreibt `preview.png` in den Add-on-Datenordner) oder `Deaktiviert` |
+| USB-Geräte-IDs | Standard `1908:0102`, mehrere durch Komma getrennt (nur AX206) |
 | Displaynummer | wenn mehrere Panels angeschlossen sind |
-| USB-Gerät zurücksetzen | hilft, wenn ein anderes Programm das Display hängen ließ |
+| USB-Gerät zurücksetzen | hilft, wenn ein anderes Programm das Display hängen ließ (nur AX206) |
 | Wiederverbindungsintervall | Wartezeit, bis nach einem abgezogenen Display erneut gesucht wird |
 
 **Anzeige → Verbindung → Displaytyp**
@@ -217,7 +217,7 @@ Je nach Auswahl blendet der Dialog die passenden Optionen ein.
 
 | Einstellung | Bedeutung |
 |---|---|
-| Samsung-Modell | leer lassen für automatische Erkennung, sonst z. B. `SPF-72H` |
+| Samsung-Modell | Auswahlliste: `Automatisch` nimmt den gefundenen Rahmen, sonst ein Modell wie `SPF-72H` wählen (nur nötig, wenn mehrere Rahmen angeschlossen sind) |
 | JPEG-Qualität | 40–100, Standard 85. Niedriger = schneller und weniger Daten |
 | Reduzierte Farbauflösung (4:2:0) | an: schneller und kleiner; aus: schärfere farbige Schrift, etwa doppelte Kodierzeit |
 
@@ -227,7 +227,7 @@ Je nach Auswahl blendet der Dialog die passenden Optionen ein.
 |---|---|
 | Drehung | 0/90/180/270 Grad, für Hochkant-Montage |
 | Horizontal spiegeln | für Spiegelmontage |
-| Byte-Reihenfolge | falls die Farben falsch sind – siehe *Fehlersuche* |
+| Byte-Reihenfolge | falls die Farben falsch sind – siehe *Fehlersuche* (nur AX206) |
 | Displaygröße überschreiben | nur nötig, wenn das Panel eine falsche Auflösung meldet |
 
 **Anzeige → Hintergrundbeleuchtung**

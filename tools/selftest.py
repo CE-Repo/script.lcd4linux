@@ -368,6 +368,15 @@ def test_samsung_spf():
 
     check(spf.model_for(0x200B) == ("SPF-72H", 800, 480),
           "product id 0x200b maps to the SPF-72H")
+    check(spf.model_by_name("SPF-72H")[0] == "SPF-72H",
+          "a configured model name finds its entry")
+    check(spf.model_by_name(spf.MODEL_AUTO) is None
+          and spf.model_by_name("") is None
+          and spf.model_by_name("SPF-nonsense") is None,
+          "auto, empty and unknown model names all mean any frame")
+    check(spf.SamsungSPF(model=spf.MODEL_AUTO).model is None
+          and spf.SamsungSPF(model="spf-72h").model == "SPF-72H",
+          "the driver normalises the configured model")
     target.close()
 
 
@@ -748,6 +757,68 @@ def test_encoding():
         Layout.load(path)
 
 
+def test_settings_xml():
+    """The settings dialog must match the code behind it."""
+    print("settings dialog")
+    import re
+    import xml.etree.ElementTree as ElementTree
+    from lcd4linux import spf
+    from lcd4linux.settings import DEFAULTS
+
+    tree = ElementTree.parse(os.path.join(ROOT, "resources", "settings.xml"))
+    settings = dict((element.get("id"), element)
+                    for element in tree.iter("setting"))
+
+    unknown = sorted(key for key in settings
+                     if key not in DEFAULTS and not key.startswith("action_"))
+    check(not unknown, "every setting in the dialog is known to the add-on (%s)"
+          % (unknown or "none",))
+
+    path = os.path.join(ROOT, "resources", "language",
+                        "resource.language.en_gb", "strings.po")
+    with open(path, "r", encoding="utf-8") as handle:
+        known_strings = set(int(number)
+                            for number in re.findall(r'msgctxt "#(\d+)"',
+                                                     handle.read()))
+    missing = []
+    for element in tree.iter():
+        for attribute in ("label", "help"):
+            value = element.get(attribute)
+            if value and value.isdigit() and int(value) not in known_strings:
+                missing.append(value)
+    check(not missing, "every label in the dialog has a string (%s)"
+          % (sorted(set(missing)) or "none",))
+
+    for key, element in sorted(settings.items()):
+        options = [option.text for option in element.iter("option")]
+        if not options:
+            continue
+        default = element.find("default")
+        value = default.text if default is not None and default.text else ""
+        check(value in options,
+              "the default of %s is one of its options" % key)
+
+    models = settings["spf_model"]
+    check([option.text for option in models.iter("option")]
+          == [spf.MODEL_AUTO] + [entry[0] for entry in spf.MODELS],
+          "the Samsung model list matches the driver (%d frames)"
+          % len(spf.MODELS))
+
+    # Options that only one display type understands must be hidden for the
+    # other one, otherwise the dialog offers AX206 settings for a Samsung
+    # frame and the other way round.
+    for key, display_type in (("device_ids", "ax206"), ("byte_order", "ax206"),
+                              ("reset_on_open", "ax206"), ("brightness", "ax206"),
+                              ("dim_brightness", "ax206"), ("spf_model", "spf"),
+                              ("jpeg_quality", "spf"), ("jpeg_subsample", "spf"),
+                              ("spf_brightness", "spf"),
+                              ("spf_dim_brightness", "spf")):
+        visible = [element.text for element in settings[key].iter("dependency")
+                   if element.get("type") == "visible"]
+        check(visible == [display_type],
+              "%s is only shown for %s displays" % (key, display_type))
+
+
 def test_tokens():
     print("tokens")
     from lcd4linux import tokens
@@ -768,6 +839,7 @@ def main():
     for test in (test_encoding, test_fonts, test_images, test_tokens,
                  test_jpeg_encoder, test_protocol, test_target_from_settings,
                  test_samsung_spf, test_brightness, test_localisation,
+                 test_settings_xml,
                  test_power_hooks, test_rotation,
                  test_layouts):
         test()

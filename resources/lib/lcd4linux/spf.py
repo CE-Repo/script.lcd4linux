@@ -49,6 +49,9 @@ MODELS = (
     ("SPF-1000P", 0x2039, 0x2040, 1024, 600),
 )
 
+#: Model setting value that means "whichever frame is on the bus".
+MODEL_AUTO = "auto"
+
 FRAME_HEADER = b"\xa5\x5a\x18\x04"
 FRAME_MARKER = b"\x48\x00\x00\x00"
 FRAME_TRAILER = b"\xff\x00"
@@ -84,7 +87,10 @@ def model_for(product_id):
 
 
 def model_by_name(name):
+    """The :data:`MODELS` entry for a model name, ``None`` for automatic."""
     name = (name or "").strip().lower()
+    if name in ("", MODEL_AUTO):
+        return None
     for entry in MODELS:
         if entry[0].lower() == name:
             return entry
@@ -100,7 +106,12 @@ class SamsungSPF(object):
         self.serial = serial or None
         self.timeout = int(timeout)
         self.switch_wait = float(switch_wait)
-        self.model = model or None
+        wanted = (model or "").strip()
+        entry = model_by_name(wanted)
+        if entry is None and wanted and wanted.lower() != MODEL_AUTO:
+            log("unknown Samsung model %s, using whichever frame is found"
+                % wanted)
+        self.model = entry[0] if entry else None
         self.name = ""
         self.width = 0
         self.height = 0

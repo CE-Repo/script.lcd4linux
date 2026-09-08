@@ -21,7 +21,7 @@ ADDON_ID = "script.lcd4linux"
 DEFAULTS = {
     "output_mode": "usb",
     "display_type": "ax206",
-    "spf_model": "",
+    "spf_model": "auto",
     "jpeg_quality": 85,
     "jpeg_subsample": True,
     "device_ids": "1908:0102",
