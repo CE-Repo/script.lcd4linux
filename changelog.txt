@@ -1,3 +1,9 @@
+v1.3.1
+- tools/contact_sheet.py renders every bundled layout into one labelled
+  overview image, in whichever state you ask for (video, series, music, idle),
+  showing the page each layout's own conditions select
+- Overview images for video, music and idle added to the README
+
 v1.3.0
 - Eight more layouts, each in both display sizes:
   light (dark on white, for bright rooms), terminal (green monospace console),

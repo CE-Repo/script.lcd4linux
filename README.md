@@ -247,6 +247,30 @@ Shell-Befehl ausgeführt wird (siehe *Ein- und Ausschalten mit CoreELEC*).
 
 ---
 
+## Alle Layouts auf einen Blick
+
+Jede Vorlage in drei Zuständen – so wie das Add-on sie selbst auswählt:
+
+**Video läuft**
+
+![Übersicht Video](resources/screenshots/overview-video.png)
+
+**Musik läuft**
+
+![Übersicht Musik](resources/screenshots/overview-normal.png)
+
+**Nichts läuft**
+
+![Übersicht Leerlauf](resources/screenshots/overview-idle.png)
+
+Neu erzeugen lassen sich die Übersichten mit
+
+```sh
+python3 tools/contact_sheet.py --state video --out uebersicht.png
+# --state: video | series | normal | music | idle
+# --all-sizes nimmt auch die 800x480-Fassungen mit auf
+```
+
 ## Mitgelieferte Layouts
 
 Ausgewählt wird nur der Name (z. B. `default.json`) – passt die Größe nicht,
@@ -521,6 +545,7 @@ resources/lib/lcd4linux/
     ui.py                     Menü
 tools/preview.py              Layout-Vorschau als PNG
 tools/scale_layout.py         Layout auf eine andere Displaygröße umrechnen
+tools/contact_sheet.py        Übersichtsbild aller Layouts erzeugen
 tools/selftest.py             Selbsttest ohne Hardware
 tools/mkfont.py               Schriften neu erzeugen (benötigt Pillow)
 ```

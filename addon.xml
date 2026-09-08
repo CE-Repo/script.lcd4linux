@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="script.lcd4linux"
        name="LCD4Linux"
-       version="1.3.0"
+       version="1.3.1"
        provider-name="U3knOwn">
   <requires>
     <import addon="xbmc.python" version="3.0.0"/>
@@ -31,7 +31,10 @@ Zusätzliche Python-Module werden nicht benötigt: Der USB-Zugriff läuft über 
     <platform>linux</platform>
     <license>MIT</license>
     <source>https://github.com/CE-Repo/script.lcd4linux</source>
-    <news>v1.3.0
+    <news>v1.3.1
+- Overview images of every bundled layout, and the tool that generates them
+
+v1.3.0
 - Eight more layouts: light, terminal, neon, vinyl, nextup, weather, library
   and a portrait layout for a rotated display, each in both display sizes
 - A wide flat line widget now draws a horizontal rule of that height

@@ -1,3 +1,3 @@
 """script.lcd4linux - drive an AX206 based USB LCD from Kodi/CoreELEC."""
 
-__version__ = "1.3.0"
+__version__ = "1.3.1"
