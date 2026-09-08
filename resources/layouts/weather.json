@@ -1,12 +1,12 @@
 {
-  "name": "Wetter & Uhr",
+  "name": "$LOCALIZE[32507]",
   "size": [480, 320],
   "background": "#0b1020",
   "defaults": {"font": "sans", "size": 20, "color": "#ffffff"},
 
   "pages": [
     {
-      "name": "Weather",
+      "name": "$LOCALIZE[32407]",
       "condition": "!active+${weather.temperature}",
       "widgets": [
         {"type": "text", "x": 20, "y": 30, "w": 268, "h": 88,
@@ -50,7 +50,7 @@
     },
 
     {
-      "name": "Clock",
+      "name": "$LOCALIZE[32402]",
       "condition": "!active",
       "widgets": [
         {"type": "text", "x": 0, "y": 64, "w": 480, "h": 128,
@@ -63,7 +63,7 @@
     },
 
     {
-      "name": "Playing",
+      "name": "$LOCALIZE[32400]",
       "condition": "active",
       "priority": 10,
       "widgets": [

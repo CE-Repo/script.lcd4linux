@@ -1,5 +1,5 @@
 {
-  "name": "Hochformat",
+  "name": "$LOCALIZE[32505]",
   "size": [320, 480],
   "background": "#0b0d12",
   "accent": "auto:${player.thumb}",
@@ -7,7 +7,7 @@
 
   "pages": [
     {
-      "name": "Playing",
+      "name": "$LOCALIZE[32400]",
       "condition": "active",
       "priority": 10,
       "widgets": [
@@ -39,7 +39,7 @@
     },
 
     {
-      "name": "Idle",
+      "name": "$LOCALIZE[32401]",
       "condition": "!active",
       "widgets": [
         {"type": "text", "x": 0, "y": 120, "w": 320, "h": 100,

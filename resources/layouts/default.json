@@ -1,5 +1,5 @@
 {
-  "name": "Default",
+  "name": "$LOCALIZE[32500]",
   "size": [480, 320],
   "background": "#0b0d12",
   "accent": "auto:${player.thumb}",
@@ -8,7 +8,7 @@
 
   "pages": [
     {
-      "name": "Music",
+      "name": "$LOCALIZE[32403]",
       "condition": "audio",
       "priority": 10,
       "background": "#0b0d12",
@@ -44,7 +44,7 @@
          "size": 14, "color": "#6f7891"},
 
         {"type": "text", "x": 214, "y": 172, "w": 248, "h": 20,
-         "text": "${player.next|prefix:Next: |trunc:32}", "size": 14,
+         "text": "${player.next|prefix:$LOCALIZE[32420]: |trunc:32}", "size": 14,
          "color": "#59617a"},
 
         {"type": "icon", "x": 18, "y": 212, "w": 20, "h": 20,
@@ -53,7 +53,7 @@
          "icon": "pause", "color": "#8b93a8", "condition": "paused"},
 
         {"type": "text", "x": 46, "y": 210, "w": 200, "h": 22,
-         "text": "${player.playlistposition|prefix:Track }${player.playlistlength|prefix: of }",
+         "text": "${player.playlistposition|prefix:$LOCALIZE[32422] }${player.playlistlength|prefix: $LOCALIZE[32423] }",
          "size": 15, "color": "#6f7891"},
 
         {"type": "text", "x": 262, "y": 210, "w": 200, "h": 22,
@@ -145,7 +145,7 @@
          "knob": true, "knobsize": 8},
 
         {"type": "text", "x": 18, "y": 288, "w": 240, "h": 20,
-         "text": "${player.finishtime|prefix:Ends at }", "size": 14,
+         "text": "${player.finishtime|prefix:$LOCALIZE[32426] }", "size": 14,
          "color": "#4a5266"},
 
         {"type": "text", "x": 262, "y": 288, "w": 200, "h": 20,
@@ -155,7 +155,7 @@
     },
 
     {
-      "name": "Clock",
+      "name": "$LOCALIZE[32402]",
       "condition": "!active",
       "duration": 20,
       "background": "#08090d",
@@ -209,7 +209,7 @@
          "value": "${system.cpu}", "color": "#17b2e2", "background": "#161b26"},
 
         {"type": "text", "x": 18, "y": 102, "w": 200, "h": 20,
-         "text": "Memory", "size": 15, "color": "#7c8494"},
+         "text": "$LOCALIZE[32430]", "size": 15, "color": "#7c8494"},
         {"type": "text", "x": 342, "y": 102, "w": 120, "h": 20,
          "text": "${system.memory}%", "size": 15, "align": "right",
          "color": "#e6ebf5"},
@@ -217,7 +217,7 @@
          "value": "${system.memory}", "color": "#8b5cf6", "background": "#161b26"},
 
         {"type": "text", "x": 18, "y": 142, "w": 200, "h": 20,
-         "text": "Temperature", "size": 15, "color": "#7c8494"},
+         "text": "$LOCALIZE[32431]", "size": 15, "color": "#7c8494"},
         {"type": "text", "x": 342, "y": 142, "w": 120, "h": 20,
          "text": "${system.cputemp}°C", "size": 15, "align": "right",
          "color": "#e6ebf5"},
@@ -226,13 +226,13 @@
          "background": "#161b26"},
 
         {"type": "text", "x": 18, "y": 188, "w": 200, "h": 20,
-         "text": "CPU history", "size": 13, "color": "#4a5266"},
+         "text": "$LOCALIZE[32432]", "size": 13, "color": "#4a5266"},
         {"type": "graph", "x": 18, "y": 208, "w": 444, "h": 60,
          "value": "${system.cpu}", "points": 74, "interval": 2,
          "color": "#17b2e2", "fill": "#1417b2e2", "background": "#0d1017"},
 
         {"type": "text", "x": 18, "y": 282, "w": 220, "h": 20,
-         "text": "Free ${system.freespace}", "size": 13, "color": "#4a5266"},
+         "text": "$LOCALIZE[32424] ${system.freespace}", "size": 13, "color": "#4a5266"},
         {"type": "text", "x": 262, "y": 282, "w": 200, "h": 20,
          "text": "Kodi ${system.kodiversion}", "size": 13, "align": "right",
          "color": "#4a5266"}

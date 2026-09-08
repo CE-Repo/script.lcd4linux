@@ -139,13 +139,20 @@ def _scale_quant(table, quality):
 # ---------------------------------------------------------------------------
 
 class _Component(dict):
-    """RGB565 -> one YCbCr component, computed the first time it is seen."""
+    """RGB565 -> one YCbCr component, computed the first time it is seen.
 
-    __slots__ = ("index",)
+    ``gain`` scales the RGB triple before the conversion, which is how the
+    Samsung frames are dimmed: they have no backlight control, so the
+    picture itself has to be darkened.  Folding it into this table makes the
+    dimming free - the encoder looks a sample up either way.
+    """
 
-    def __init__(self, index):
+    __slots__ = ("index", "gain")
+
+    def __init__(self, index, gain=256):
         dict.__init__(self)
         self.index = index
+        self.gain = int(gain)
 
     def __missing__(self, key):
         r = ((key >> 11) & 0x1F) << 3
@@ -154,6 +161,11 @@ class _Component(dict):
         r |= r >> 5
         g |= g >> 6
         b |= b >> 5
+        gain = self.gain
+        if gain != 256:
+            r = (r * gain) >> 8
+            g = (g * gain) >> 8
+            b = (b * gain) >> 8
         if self.index == 0:
             value = (19595 * r + 38470 * g + 7471 * b) >> 16
         elif self.index == 1:
@@ -365,6 +377,7 @@ class JpegEncoder(object):
         self.ac_codes = [_build_codes(AC_LUMA_BITS, AC_LUMA_VALS),
                          _build_codes(AC_CHROMA_BITS, AC_CHROMA_VALS)]
 
+        self.gain = 256
         self.components = (_Component(0), _Component(1), _Component(2))
 
         self.mcu_width = 16 if self.subsample else 8
@@ -586,6 +599,24 @@ class JpegEncoder(object):
                     source_x = width - 1
                 append(component[buffer[base + source_x]])
         return samples
+
+    def set_gain(self, percent):
+        """Darken every frame to ``percent`` of its original brightness.
+
+        Returns ``True`` when the gain actually changed, in which case the
+        next frame has to be encoded in full: the cached rows and blocks
+        were produced with the old gain.
+        """
+        gain = max(0, min(256, int(round(max(0.0, min(100.0, float(percent)))
+                                        * 256.0 / 100.0))))
+        if gain == self.gain:
+            return False
+        self.gain = gain
+        self.components = (_Component(0, gain), _Component(1, gain),
+                           _Component(2, gain))
+        self._block_cache = {}
+        self.reset()
+        return True
 
     def reset(self):
         """Forget the cached frame, forcing a full encode next time."""

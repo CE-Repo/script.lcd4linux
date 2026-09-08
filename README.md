@@ -47,8 +47,11 @@ Und auf dem 800×480-Rahmen:
   enthalten und laufen ohne Pillow/ffmpeg.
 * **Weichgezeichnete Schriften** (DejaVu, vorgerendert) in jeder Größe.
 * **Drehung** um 0/90/180/270 Grad, Spiegelung, einstellbare Byte-Reihenfolge.
-* **Hintergrundbeleuchtung** dimmt beim Bildschirmschoner und schaltet bei
-  Inaktivität ab.
+* **Hintergrundbeleuchtung** dimmt, solange nichts abgespielt wird – beim
+  AX206 über die Beleuchtung, beim Samsung-Rahmen softwareseitig.
+* **Deutsch und Englisch** auf dem Display: die mitgelieferten Layouts, die
+  Seitennamen sowie Wochentage und Monate folgen der Sprache von Kodi. Eigene
+  Layouts können mit `$LOCALIZE[...]` dasselbe tun.
 * **Vorschau ohne Hardware**: Layouts lassen sich als PNG rendern.
 
 ---
@@ -97,7 +100,7 @@ lsusb | grep 1908
 | USB-ID | `04e8:200a` (Massenspeicher) → `04e8:200b` (Monitor), je nach Modell |
 | Auflösung | 800×480 (SPF-72H), 800×600 oder 1024×600 je nach Modell |
 | Übertragung | vollständiges JPEG pro Bild, kein Teilbereich möglich |
-| Helligkeit | **nicht** über USB steuerbar – nur am Gerät |
+| Helligkeit | **nicht** über USB steuerbar – das Add-on dunkelt stattdessen das Bild ab |
 
 ```sh
 lsusb | grep 04e8
@@ -144,6 +147,7 @@ entgegen. Was das Add-on kann und was nicht:
 | | |
 |---|---|
 | Beim Start von Kodi | Rahmen wird in den Monitor-Modus geschaltet, Bild erscheint – das läuft automatisch |
+| Helligkeit | Das Add-on dunkelt das **Bild** ab (Einstellungen *Helligkeit (Software)* und *Helligkeit im Leerlauf (Software)*). Die Hintergrundbeleuchtung selbst bleibt unverändert |
 | Beim Herunterfahren | Das Add-on zeigt ein **schwarzes Bild** (Einstellung *Display beim Beenden von Kodi löschen*). Die Hintergrundbeleuchtung bleibt an |
 | Danach | Ohne Keep-Alive fällt der Rahmen nach kurzer Zeit in seine eigene Diashow zurück |
 | Wirklich aus | Nur durch **Stromtrennung** – das kann kein USB-Befehl |
@@ -182,9 +186,10 @@ Zwei Dinge dazu:
   anliegendem Strom automatisch an; manche haben zusätzlich einen
   Auto-Ein/Aus-Zeitplan im eigenen Menü.
 
-Ohne schaltbare Steckdose bleibt als Kompromiss: *Bei Inaktivität ausschalten*
-aktivieren – dann zeigt der Rahmen ein schwarzes Bild, statt in die Diashow zu
-wechseln, solange die Box läuft.
+Ohne schaltbare Steckdose bleibt als Kompromiss: *Während des Leerlaufs
+dimmen* aktivieren und *Helligkeit im Leerlauf (Software)* auf 0 % stellen –
+dann zeigt der Rahmen ein schwarzes Bild, statt in die Diashow zu wechseln,
+solange die Box läuft.
 
 Kodi läuft auf CoreELEC als `root`, zusätzliche udev-Regeln sind für beide
 Displays nicht nötig. Hängt ein Kerneltreiber am Gerät, löst das Add-on ihn ab.
@@ -227,16 +232,33 @@ Je nach Auswahl blendet der Dialog die passenden Optionen ein.
 
 **Anzeige → Hintergrundbeleuchtung**
 
-Helligkeit 0–7, Dimmen beim Bildschirmschoner, Abschalten bei Inaktivität,
-Display beim Beenden von Kodi löschen. Die Helligkeitsregler gelten nur für den
-AX206; Samsung-Rahmen kennen keine Helligkeitssteuerung über USB, dort zeigt
-„Bei Inaktivität ausschalten" stattdessen ein schwarzes Bild.
+| Einstellung | Bedeutung |
+|---|---|
+| Helligkeit | AX206: Stufe 0–7 der Hintergrundbeleuchtung |
+| Helligkeit (Software) | Samsung: 10–100 %, das Bild wird vor dem Senden abgedunkelt |
+| Während des Leerlaufs dimmen | dimmt, sobald nichts abgespielt wird; eine Pause zählt weiterhin als Wiedergabe |
+| Helligkeit im Leerlauf | AX206: Stufe 0–7, solange nichts läuft |
+| Helligkeit im Leerlauf (Software) | Samsung: 0–100 %, 0 % zeigt ein schwarzes Bild |
+| Display beim Beenden von Kodi löschen | schwarzes Bild beim Herunterfahren |
+
+Je nach *Displaytyp* ist immer nur das passende Paar sichtbar. Samsung-Rahmen
+haben keine Helligkeitssteuerung über USB – dort wird nicht die Beleuchtung
+geregelt, sondern das gesendete Bild abgedunkelt. Das kostet keine zusätzliche
+Rechenzeit, weil die Abdunklung in der Farbtabelle des JPEG-Encoders steckt.
 
 **Layout**
 
 Aktives Layout, Layout-Auswahl, eigener Layout-Ordner, Seitenwechselintervall
 sowie die Aktionsknöpfe *Vorschau*, *Testbild*, *Anzeigestatus* und
 *Dienst neu laden*.
+
+**Sprache**
+
+Es gibt nichts einzustellen: Das Add-on folgt der Sprache von Kodi. Die
+Einstellungen, die Meldungen auf dem Display, die mitgelieferten Layouts und
+die Namen von Wochentagen und Monaten liegen auf Deutsch und Englisch vor.
+Wie eigene Layouts mitziehen, steht in
+[docs/LAYOUT.de.md](docs/LAYOUT.de.md) unter *Feste Wörter übersetzen*.
 
 **Verhalten**
 

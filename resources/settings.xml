@@ -196,12 +196,25 @@
             <popup>true</popup>
           </control>
         </setting>
-        <setting id="dim_on_screensaver" type="boolean" label="32132">
+        <setting id="spf_brightness" type="integer" label="32188" help="32189">
+          <level>0</level>
+          <default>100</default>
+          <constraints>
+            <minimum>10</minimum>
+            <step>5</step>
+            <maximum>100</maximum>
+          </constraints>
+          <dependencies>
+            <dependency type="visible" setting="display_type" operator="is">spf</dependency>
+          </dependencies>
+          <control type="slider" format="percentage"/>
+        </setting>
+        <setting id="dim_on_idle" type="boolean" label="32186" help="32187">
           <level>0</level>
           <default>true</default>
           <control type="toggle"/>
         </setting>
-        <setting id="dim_brightness" type="integer" label="32133">
+        <setting id="dim_brightness" type="integer" label="32133" help="32191">
           <level>0</level>
           <default>1</default>
           <constraints>
@@ -210,39 +223,26 @@
             <maximum>7</maximum>
           </constraints>
           <dependencies>
-            <dependency type="enable" setting="dim_on_screensaver" operator="is">true</dependency>
-          </dependencies>
-          <dependencies>
             <dependency type="visible" setting="display_type" operator="is">ax206</dependency>
+            <dependency type="enable" setting="dim_on_idle" operator="is">true</dependency>
           </dependencies>
           <control type="slider" format="integer">
             <popup>true</popup>
           </control>
         </setting>
-        <setting id="off_on_screensaver" type="boolean" label="32134">
-          <level>1</level>
-          <default>false</default>
-          <control type="toggle"/>
-        </setting>
-        <setting id="off_on_idle" type="boolean" label="32135" help="32136">
-          <level>1</level>
-          <default>false</default>
-          <control type="toggle"/>
-        </setting>
-        <setting id="idle_minutes" type="integer" label="32137">
-          <level>1</level>
-          <default>30</default>
+        <setting id="spf_dim_brightness" type="integer" label="32190" help="32192">
+          <level>0</level>
+          <default>20</default>
           <constraints>
-            <minimum>1</minimum>
-            <step>1</step>
-            <maximum>240</maximum>
+            <minimum>0</minimum>
+            <step>5</step>
+            <maximum>100</maximum>
           </constraints>
           <dependencies>
-            <dependency type="enable" setting="off_on_idle" operator="is">true</dependency>
+            <dependency type="visible" setting="display_type" operator="is">spf</dependency>
+            <dependency type="enable" setting="dim_on_idle" operator="is">true</dependency>
           </dependencies>
-          <control type="slider" format="integer">
-            <popup>true</popup>
-          </control>
+          <control type="slider" format="percentage"/>
         </setting>
         <setting id="clear_on_exit" type="boolean" label="32138">
           <level>1</level>

@@ -49,6 +49,7 @@ class FakeDevice(object):
         self.commands = []
         self.blits = []
         self.brightness = []
+        self.opens = 0
         self.bytes_sent = 0
         self._pending_data_in = 0
         self._expect_data_out = 0
@@ -56,7 +57,7 @@ class FakeDevice(object):
 
     # -- device interface --------------------------------------------------
     def claim(self):
-        pass
+        self.opens += 1
 
     def close(self):
         pass
@@ -400,6 +401,189 @@ def test_jpeg_encoder():
     check(True, "a flat frame encodes without a DCT")
 
 
+def test_brightness():
+    """Backlight on the AX206 and software dimming on a Samsung frame."""
+    print("brightness")
+    from lcd4linux import display as display_module
+    from lcd4linux.jpegenc import JpegEncoder
+    from lcd4linux.service import Service
+    from lcd4linux.settings import Config
+
+    class FakeProvider(object):
+        """Only the one token the idle check looks at."""
+
+        def __init__(self, state="stopped"):
+            self.state = state
+
+        def value(self, key):
+            return self.state if key == "player.state" else u""
+
+    # -- the AX206 backlight ------------------------------------------------
+    context = install_fake_usb()
+    device = context.device
+    service = Service(overrides={"output_mode": "usb", "display_type": "ax206",
+                                 "brightness": 6, "dim_brightness": 2,
+                                 "dim_on_idle": True})
+    service.provider = FakeProvider("playing")
+    service.setup()
+    check(device.brightness[-1] == 6,
+          "the configured level reaches the panel when it is opened")
+
+    service._update_idle()
+    service._apply_brightness()
+    check(not service._idle and device.brightness[-1] == 6,
+          "playback keeps the normal level")
+
+    service.provider = FakeProvider("stopped")
+    service._update_idle()
+    service._apply_brightness()
+    check(service._idle and device.brightness[-1] == 2,
+          "nothing playing dims to the idle level")
+
+    service.provider = FakeProvider("paused")
+    service._update_idle()
+    service._apply_brightness()
+    check(device.brightness[-1] == 6, "a pause counts as playing, not as idle")
+
+    # A level the panel rejected must not be remembered as applied.
+    sent = len(device.brightness)
+    service.target.set_brightness = lambda level: False
+    service.config.set("brightness", 3)
+    service._apply_brightness(force=True)
+    check(service._brightness is None,
+          "a rejected level is not cached, so the next frame tries again")
+    service.target.set_brightness = display_module.AX206Target.set_brightness.__get__(
+        service.target)
+    service._apply_brightness()
+    check(len(device.brightness) > sent and device.brightness[-1] == 3,
+          "the retry sends the level the user chose")
+
+    # Changing the brightness must not tear the USB connection down.  Kodi
+    # is not around here, so the overrides stand in for the stored settings.
+    opens = device.opens
+    service._overrides["brightness"] = 1
+    service.refresh_settings()
+    check(device.opens == opens,
+          "a brightness change keeps the panel open (%d open(s))" % device.opens)
+    check(device.brightness[-1] == 1,
+          "and the new level is sent right away")
+    check(not service._reload_requested,
+          "a brightness change does not queue a reload")
+
+    service._overrides["rotation"] = 90
+    service.refresh_settings()
+    check(service._reload_requested,
+          "a change that needs the panel rebuilt still reloads")
+    service.shutdown()
+
+    # -- software dimming on a Samsung frame --------------------------------
+    grey = Canvas(64, 64, parse_color("#808080"))
+
+    def mean_luma(jpeg):
+        """Average red channel of the decoded RGBA pixels."""
+        _w, _h, pixels = jpegio.decode(jpeg, None)
+        reds = pixels[0::4]
+        return sum(reds) / float(len(reds))
+
+    bright = mean_luma(JpegEncoder(64, 64, quality=90).encode(grey.buf, force=True))
+    encoder = JpegEncoder(64, 64, quality=90)
+    check(encoder.set_gain(40) is True, "a new gain is reported as a change")
+    check(encoder.set_gain(40) is False, "the same gain again is a no-op")
+    dimmed = mean_luma(encoder.encode(grey.buf, force=True))
+    check(dimmed < bright * 0.55,
+          "40%% gain darkens grey from %d to %d" % (bright, dimmed))
+    encoder.set_gain(100)
+    check(mean_luma(encoder.encode(grey.buf, force=True)) > bright * 0.95,
+          "back at 100% the picture is untouched again")
+
+    bus = install_fake_spf("monitor")
+    bus.device = FakeSPFDevice(bus)
+    config = Config({"output_mode": "usb", "display_type": "spf",
+                     "spf_brightness": 60})
+    target = display_module.make_target(config)
+    check(target.brightness_unit == "percent",
+          "a Samsung frame is driven in percent, not in backlight steps")
+    target.open()
+    target.set_brightness(50)
+    check(target.encoder.gain == 128,
+          "50%% becomes a gain of %d/256" % target.encoder.gain)
+    target.present(Canvas(target.width, target.height, parse_color("#ffffff")))
+    check(len(bus.device.frames) >= 1, "the dimmed frame is sent")
+    target.close()
+
+
+def test_localisation():
+    """Every $LOCALIZE[...] the bundled layouts use must be translated."""
+    print("localisation")
+    import glob
+    import re
+    from lcd4linux import localize
+
+    def catalogue(language):
+        path = os.path.join(ROOT, "resources", "language",
+                            "resource.language.%s" % language, "strings.po")
+        with open(path, "r", encoding="utf-8") as handle:
+            data = handle.read()
+        found = {}
+        for number, english, translated in localize._PO_ENTRY.findall(data):
+            found[int(number)] = translated or english
+        return found
+
+    english = catalogue("en_gb")
+    german = catalogue("de_de")
+    check(sorted(english) == sorted(german),
+          "both languages define the same %d string ids" % len(english))
+
+    used = set()
+    for path in sorted(glob.glob(os.path.join(ROOT, "resources", "layouts", "*.json"))):
+        with open(path, "r", encoding="utf-8") as handle:
+            for number in re.findall(r"\$LOCALIZE\[(\d+)\]", handle.read()):
+                used.add(int(number))
+    check(used, "the bundled layouts use %d translated strings" % len(used))
+    missing = sorted(number for number in used if number not in english)
+    check(not missing, "no layout refers to an unknown string id (%s)"
+          % (missing or "none",))
+    untranslated = sorted(number for number in used
+                          if german.get(number) == english.get(number)
+                          and number not in (32423,))
+    check(not untranslated,
+          "every layout string differs between the languages (%s)"
+          % (untranslated or "none",))
+
+    # The offline catalogue is what the preview tools read.
+    localize._catalogue = None
+    os.environ["LANGUAGE"] = "de_DE.UTF-8"
+    try:
+        check(localize.text(32433) == "Bibliothek",
+              "a layout string reads German with a German environment")
+        check(localize.weekday(0) == "Montag" and localize.month(3) == "März",
+              "day and month names fall back to the add-on's own strings")
+    finally:
+        del os.environ["LANGUAGE"]
+        localize._catalogue = None
+
+    check(localize.text(32433) == "Library",
+          "and English again with the default environment")
+
+    # $LOCALIZE is resolved before ${...} so it can be a filter argument.
+    from lcd4linux import tokens
+
+    class Provider(object):
+        def value(self, key):
+            return "Personal Jesus"
+
+    os.environ["LANGUAGE"] = "de_DE.UTF-8"
+    localize._catalogue = None
+    try:
+        text = tokens.expand("${player.next|prefix:$LOCALIZE[32420]: |trunc:14}",
+                             Provider())
+    finally:
+        del os.environ["LANGUAGE"]
+        localize._catalogue = None
+    check(text == u"Weiter: Perso\u2026",
+          "a translated prefix is counted by trunc (%r)" % text)
+
+
 def test_power_hooks():
     """The start/stop commands that switch a smart plug."""
     print("power hooks")
@@ -583,7 +767,8 @@ def main():
     print("script.lcd4linux self test\n")
     for test in (test_encoding, test_fonts, test_images, test_tokens,
                  test_jpeg_encoder, test_protocol, test_target_from_settings,
-                 test_samsung_spf, test_power_hooks, test_rotation,
+                 test_samsung_spf, test_brightness, test_localisation,
+                 test_power_hooks, test_rotation,
                  test_layouts):
         test()
         print("")

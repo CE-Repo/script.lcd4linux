@@ -1,5 +1,5 @@
 {
-  "name": "XL Uhr (800x480)",
+  "name": "$LOCALIZE[32508] (800x480)",
   "size": [
     800,
     480
@@ -13,7 +13,7 @@
   },
   "pages": [
     {
-      "name": "Clock",
+      "name": "$LOCALIZE[32402]",
       "widgets": [
         {
           "type": "text",

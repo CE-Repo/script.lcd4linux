@@ -184,29 +184,9 @@ msgctxt "#32131"
 msgid "0 switches the backlight off, 7 is the brightest setting."
 msgstr "0 schaltet die Hintergrundbeleuchtung aus, 7 ist die hellste Stufe."
 
-msgctxt "#32132"
-msgid "Dim while the screensaver is active"
-msgstr "Während des Bildschirmschoners dimmen"
-
 msgctxt "#32133"
-msgid "Dimmed brightness"
-msgstr "Gedimmte Helligkeit"
-
-msgctxt "#32134"
-msgid "Switch backlight off with the screensaver"
-msgstr "Beleuchtung mit dem Bildschirmschoner ausschalten"
-
-msgctxt "#32135"
-msgid "Switch off when idle"
-msgstr "Bei Inaktivität ausschalten"
-
-msgctxt "#32136"
-msgid "Turns the backlight off after the idle timeout, unless something is playing."
-msgstr "Schaltet die Beleuchtung nach der Wartezeit aus, sofern nichts abgespielt wird."
-
-msgctxt "#32137"
-msgid "Idle timeout (minutes)"
-msgstr "Wartezeit bei Inaktivität (Minuten)"
+msgid "Idle brightness"
+msgstr "Helligkeit im Leerlauf"
 
 msgctxt "#32138"
 msgid "Clear the display when Kodi stops"
@@ -467,3 +447,359 @@ msgstr "Zeitlimit für Befehle (s)"
 msgctxt "#32185"
 msgid "How long to wait for a command before giving up."
 msgstr "Wie lange auf einen Befehl gewartet wird, bevor abgebrochen wird."
+
+msgctxt "#32186"
+msgid "Dim while idle"
+msgstr "Während des Leerlaufs dimmen"
+
+msgctxt "#32187"
+msgid "Dims the display whenever nothing is playing. Paused playback still counts as playing."
+msgstr "Dimmt das Display, sobald nichts abgespielt wird. Pause zählt weiterhin als Wiedergabe."
+
+msgctxt "#32188"
+msgid "Brightness (software)"
+msgstr "Helligkeit (Software)"
+
+msgctxt "#32189"
+msgid "Samsung frames have no backlight control over USB, so the picture is darkened in software before it is sent. 100% leaves it untouched."
+msgstr "Samsung-Rahmen bieten keine Helligkeitssteuerung über USB. Das Bild wird deshalb vor dem Senden softwareseitig abgedunkelt. 100 % lässt es unverändert."
+
+msgctxt "#32190"
+msgid "Idle brightness (software)"
+msgstr "Helligkeit im Leerlauf (Software)"
+
+msgctxt "#32191"
+msgid "Backlight level while nothing is playing."
+msgstr "Helligkeitsstufe, solange nichts abgespielt wird."
+
+msgctxt "#32192"
+msgid "How far the picture is darkened while nothing is playing. 0% shows a black picture."
+msgstr "Wie stark das Bild abgedunkelt wird, solange nichts abgespielt wird. 0 % zeigt ein schwarzes Bild."
+
+msgctxt "#32340"
+msgid "{weekday}, {day} {month} {year}"
+msgstr "{weekday}, {day}. {month} {year}"
+
+msgctxt "#32341"
+msgid "LCD4Linux test pattern"
+msgstr "LCD4Linux-Testbild"
+
+msgctxt "#32342"
+msgid "red border must touch all four edges"
+msgstr "Der rote Rahmen muss alle vier Kanten berühren"
+
+msgctxt "#32400"
+msgid "Playing"
+msgstr "Wiedergabe"
+
+msgctxt "#32401"
+msgid "Idle"
+msgstr "Leerlauf"
+
+msgctxt "#32402"
+msgid "Clock"
+msgstr "Uhr"
+
+msgctxt "#32403"
+msgid "Music"
+msgstr "Musik"
+
+msgctxt "#32404"
+msgid "Library"
+msgstr "Bibliothek"
+
+msgctxt "#32405"
+msgid "Now and next"
+msgstr "Jetzt & Danach"
+
+msgctxt "#32406"
+msgid "Other"
+msgstr "Sonstiges"
+
+msgctxt "#32407"
+msgid "Weather"
+msgstr "Wetter"
+
+msgctxt "#32408"
+msgid "Remaining"
+msgstr "Restzeit"
+
+msgctxt "#32420"
+msgid "Next"
+msgstr "Weiter"
+
+msgctxt "#32421"
+msgid "UP NEXT"
+msgstr "ALS NÄCHSTES"
+
+msgctxt "#32422"
+msgid "Track"
+msgstr "Titel"
+
+msgctxt "#32423"
+msgid "of"
+msgstr "/"
+
+msgctxt "#32424"
+msgid "Free"
+msgstr "Frei"
+
+msgctxt "#32425"
+msgid "free"
+msgstr "frei"
+
+msgctxt "#32426"
+msgid "Ends at"
+msgstr "Ende"
+
+msgctxt "#32427"
+msgid "remaining  ·  ends at"
+msgstr "verbleibend  ·  Ende"
+
+msgctxt "#32428"
+msgid "Up"
+msgstr "Läuft"
+
+msgctxt "#32429"
+msgid "up"
+msgstr "läuft"
+
+msgctxt "#32430"
+msgid "Memory"
+msgstr "Speicher"
+
+msgctxt "#32431"
+msgid "Temperature"
+msgstr "Temperatur"
+
+msgctxt "#32432"
+msgid "CPU history"
+msgstr "CPU-Verlauf"
+
+msgctxt "#32433"
+msgid "Library"
+msgstr "Bibliothek"
+
+msgctxt "#32434"
+msgid "Movies"
+msgstr "Filme"
+
+msgctxt "#32435"
+msgid "TV shows"
+msgstr "Serien"
+
+msgctxt "#32436"
+msgid "Albums"
+msgstr "Alben"
+
+msgctxt "#32437"
+msgid "Episodes"
+msgstr "Episoden"
+
+msgctxt "#32438"
+msgid "Artists"
+msgstr "Interpreten"
+
+msgctxt "#32439"
+msgid "elapsed  "
+msgstr "gespielt "
+
+msgctxt "#32440"
+msgid "remain   "
+msgstr "restzeit "
+
+msgctxt "#32450"
+msgid "Monday"
+msgstr "Montag"
+
+msgctxt "#32451"
+msgid "Tuesday"
+msgstr "Dienstag"
+
+msgctxt "#32452"
+msgid "Wednesday"
+msgstr "Mittwoch"
+
+msgctxt "#32453"
+msgid "Thursday"
+msgstr "Donnerstag"
+
+msgctxt "#32454"
+msgid "Friday"
+msgstr "Freitag"
+
+msgctxt "#32455"
+msgid "Saturday"
+msgstr "Samstag"
+
+msgctxt "#32456"
+msgid "Sunday"
+msgstr "Sonntag"
+
+msgctxt "#32457"
+msgid "Mon"
+msgstr "Mo"
+
+msgctxt "#32458"
+msgid "Tue"
+msgstr "Di"
+
+msgctxt "#32459"
+msgid "Wed"
+msgstr "Mi"
+
+msgctxt "#32460"
+msgid "Thu"
+msgstr "Do"
+
+msgctxt "#32461"
+msgid "Fri"
+msgstr "Fr"
+
+msgctxt "#32462"
+msgid "Sat"
+msgstr "Sa"
+
+msgctxt "#32463"
+msgid "Sun"
+msgstr "So"
+
+msgctxt "#32464"
+msgid "January"
+msgstr "Januar"
+
+msgctxt "#32465"
+msgid "February"
+msgstr "Februar"
+
+msgctxt "#32466"
+msgid "March"
+msgstr "März"
+
+msgctxt "#32467"
+msgid "April"
+msgstr "April"
+
+msgctxt "#32468"
+msgid "May"
+msgstr "Mai"
+
+msgctxt "#32469"
+msgid "June"
+msgstr "Juni"
+
+msgctxt "#32470"
+msgid "July"
+msgstr "Juli"
+
+msgctxt "#32471"
+msgid "August"
+msgstr "August"
+
+msgctxt "#32472"
+msgid "September"
+msgstr "September"
+
+msgctxt "#32473"
+msgid "October"
+msgstr "Oktober"
+
+msgctxt "#32474"
+msgid "November"
+msgstr "November"
+
+msgctxt "#32475"
+msgid "December"
+msgstr "Dezember"
+
+msgctxt "#32476"
+msgid "Jan"
+msgstr "Jan"
+
+msgctxt "#32477"
+msgid "Feb"
+msgstr "Feb"
+
+msgctxt "#32478"
+msgid "Mar"
+msgstr "Mär"
+
+msgctxt "#32479"
+msgid "Apr"
+msgstr "Apr"
+
+msgctxt "#32480"
+msgid "May"
+msgstr "Mai"
+
+msgctxt "#32481"
+msgid "Jun"
+msgstr "Jun"
+
+msgctxt "#32482"
+msgid "Jul"
+msgstr "Jul"
+
+msgctxt "#32483"
+msgid "Aug"
+msgstr "Aug"
+
+msgctxt "#32484"
+msgid "Sep"
+msgstr "Sep"
+
+msgctxt "#32485"
+msgid "Oct"
+msgstr "Okt"
+
+msgctxt "#32486"
+msgid "Nov"
+msgstr "Nov"
+
+msgctxt "#32487"
+msgid "Dec"
+msgstr "Dez"
+
+msgctxt "#32500"
+msgid "Default"
+msgstr "Standard"
+
+msgctxt "#32501"
+msgid "Big cover"
+msgstr "Großes Cover"
+
+msgctxt "#32502"
+msgid "Cover full screen"
+msgstr "Cover formatfüllend"
+
+msgctxt "#32503"
+msgid "Library"
+msgstr "Bibliothek"
+
+msgctxt "#32504"
+msgid "Light"
+msgstr "Hell"
+
+msgctxt "#32505"
+msgid "Portrait"
+msgstr "Hochformat"
+
+msgctxt "#32506"
+msgid "Now and next"
+msgstr "Jetzt & Danach"
+
+msgctxt "#32507"
+msgid "Weather & clock"
+msgstr "Wetter & Uhr"
+
+msgctxt "#32508"
+msgid "XL clock"
+msgstr "XL Uhr"
+
+msgctxt "#32509"
+msgid "XL player"
+msgstr "XL Wiedergabe"
+
+msgctxt "#32510"
+msgid "XL remaining"
+msgstr "XL Restzeit"

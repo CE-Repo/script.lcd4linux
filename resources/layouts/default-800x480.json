@@ -1,5 +1,5 @@
 {
-  "name": "Default (800x480)",
+  "name": "$LOCALIZE[32500] (800x480)",
   "size": [800, 480],
   "background": "#0b0d12",
   "accent": "auto:${player.thumb}",
@@ -7,7 +7,7 @@
 
   "pages": [
     {
-      "name": "Music",
+      "name": "$LOCALIZE[32403]",
       "condition": "audio",
       "priority": 10,
       "background": "#0b0d12",
@@ -40,7 +40,7 @@
          "size": 17, "color": "#6f7891"},
 
         {"type": "text", "x": 320, "y": 230, "w": 452, "h": 24,
-         "text": "${player.next|prefix:Next: |trunc:40}", "size": 17,
+         "text": "${player.next|prefix:$LOCALIZE[32420]: |trunc:40}", "size": 17,
          "color": "#59617a"},
 
         {"type": "icon", "x": 28, "y": 318, "w": 24, "h": 24,
@@ -48,7 +48,7 @@
         {"type": "icon", "x": 28, "y": 318, "w": 24, "h": 24,
          "icon": "pause", "color": "#8b93a8", "condition": "paused"},
         {"type": "text", "x": 64, "y": 316, "w": 300, "h": 26,
-         "text": "${player.playlistposition|prefix:Track }${player.playlistlength|prefix: of }",
+         "text": "${player.playlistposition|prefix:$LOCALIZE[32422] }${player.playlistlength|prefix: $LOCALIZE[32423] }",
          "size": 18, "color": "#6f7891"},
         {"type": "text", "x": 472, "y": 316, "w": 300, "h": 26,
          "text": "-${player.remaining}", "size": 18, "align": "right",
@@ -131,7 +131,7 @@
          "knobsize": 10},
 
         {"type": "text", "x": 28, "y": 424, "w": 380, "h": 24,
-         "text": "${player.finishtime|prefix:Ends at }", "size": 16,
+         "text": "${player.finishtime|prefix:$LOCALIZE[32426] }", "size": 16,
          "color": "#4a5266"},
         {"type": "text", "x": 472, "y": 424, "w": 300, "h": 24,
          "text": "${system.time}", "size": 16, "align": "right",
@@ -140,7 +140,7 @@
     },
 
     {
-      "name": "Clock",
+      "name": "$LOCALIZE[32402]",
       "condition": "!active",
       "duration": 20,
       "background": "#08090d",
@@ -189,7 +189,7 @@
          "value": "${system.cpu}", "color": "#17b2e2", "background": "#161b26"},
 
         {"type": "text", "x": 28, "y": 142, "w": 200, "h": 26,
-         "text": "Memory", "size": 18, "color": "#7c8494"},
+         "text": "$LOCALIZE[32430]", "size": 18, "color": "#7c8494"},
         {"type": "text", "x": 572, "y": 142, "w": 200, "h": 26,
          "text": "${system.memory}%", "size": 18, "align": "right",
          "color": "#e6ebf5"},
@@ -197,7 +197,7 @@
          "value": "${system.memory}", "color": "#8b5cf6", "background": "#161b26"},
 
         {"type": "text", "x": 28, "y": 196, "w": 200, "h": 26,
-         "text": "Temperature", "size": 18, "color": "#7c8494"},
+         "text": "$LOCALIZE[32431]", "size": 18, "color": "#7c8494"},
         {"type": "text", "x": 572, "y": 196, "w": 200, "h": 26,
          "text": "${system.cputemp}°C", "size": 18, "align": "right",
          "color": "#e6ebf5"},
@@ -206,18 +206,18 @@
          "background": "#161b26"},
 
         {"type": "text", "x": 28, "y": 258, "w": 300, "h": 24,
-         "text": "CPU history", "size": 16, "color": "#4a5266"},
+         "text": "$LOCALIZE[32432]", "size": 16, "color": "#4a5266"},
         {"type": "graph", "x": 28, "y": 284, "w": 744, "h": 110,
          "value": "${system.cpu}", "points": 124, "interval": 2,
          "color": "#17b2e2", "fill": "#2217b2e2", "background": "#0d1017"},
 
         {"type": "text", "x": 28, "y": 420, "w": 380, "h": 24,
-         "text": "Free ${system.freespace}", "size": 16, "color": "#4a5266"},
+         "text": "$LOCALIZE[32424] ${system.freespace}", "size": 16, "color": "#4a5266"},
         {"type": "text", "x": 472, "y": 420, "w": 300, "h": 24,
          "text": "Kodi ${system.kodiversion}", "size": 16, "align": "right",
          "color": "#4a5266"},
         {"type": "text", "x": 28, "y": 448, "w": 744, "h": 24,
-         "text": "${system.hostname}  ·  ${system.ip}  ·  up ${system.uptime}",
+         "text": "${system.hostname}  ·  ${system.ip}  ·  $LOCALIZE[32429] ${system.uptime}",
          "size": 15, "color": "#3f4759"}
       ]
     }

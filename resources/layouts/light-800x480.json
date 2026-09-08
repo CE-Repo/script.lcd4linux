@@ -1,5 +1,5 @@
 {
-  "name": "Hell (800x480)",
+  "name": "$LOCALIZE[32504] (800x480)",
   "size": [
     800,
     480
@@ -12,7 +12,7 @@
   },
   "pages": [
     {
-      "name": "Playing",
+      "name": "$LOCALIZE[32400]",
       "condition": "active",
       "priority": 10,
       "widgets": [
@@ -129,7 +129,7 @@
           "y": 432,
           "w": 367,
           "h": 39,
-          "text": "${player.finishtime|prefix:Ende }",
+          "text": "${player.finishtime|prefix:$LOCALIZE[32426] }",
           "size": 28,
           "align": "right",
           "color": "#5b6472"
@@ -137,7 +137,7 @@
       ]
     },
     {
-      "name": "Idle",
+      "name": "$LOCALIZE[32401]",
       "condition": "!active",
       "widgets": [
         {

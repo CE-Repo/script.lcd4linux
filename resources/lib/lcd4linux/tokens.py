@@ -9,11 +9,18 @@ Layout files address data through ``${...}`` placeholders::
 Anything the add-on does not know natively can still be reached with the
 ``info:`` prefix (any Kodi InfoLabel) or ``bool:`` (any Kodi boolean
 condition), so a layout is never limited to the built-in token list.
+
+Fixed words are written as ``$LOCALIZE[id]``, the same spelling Kodi skins
+use, so the bundled layouts read in the language Kodi is set to.  Ids from
+30000 up are the add-on's own strings, lower ones are Kodi's.
 """
 
 import re
 
+from . import localize
+
 TOKEN_RE = re.compile(r"\$\{([^}]*)\}")
+LOCALIZE_RE = re.compile(r"\$LOCALIZE\[(\d+)\]")
 
 _TRUE_WORDS = ("1", "true", "yes", "on")
 
@@ -122,10 +129,23 @@ def apply_filter(value, spec):
 # expansion
 # ---------------------------------------------------------------------------
 
+def localize_text(template):
+    """Replace every ``$LOCALIZE[id]`` with its translation."""
+    if not template or "$LOCALIZE[" not in template:
+        return template or u""
+    return LOCALIZE_RE.sub(lambda match: localize.text(match.group(1)), template)
+
+
 def expand(template, provider):
-    """Replace every ``${...}`` in ``template`` using ``provider``."""
+    """Replace every ``$LOCALIZE[...]`` and ``${...}`` in ``template``.
+
+    The translations go in first so a fixed word can be used as a filter
+    argument, as in ``${player.next|prefix:$LOCALIZE[32420]: |trunc:32}``,
+    where ``trunc`` has to count the translated text.
+    """
     if not template:
         return u""
+    template = localize_text(template)
     if "${" not in template:
         return template
 

@@ -38,10 +38,9 @@ DEFAULTS = {
     "retry_seconds": 20,
     "brightness": 7,
     "dim_brightness": 1,
-    "dim_on_screensaver": True,
-    "off_on_screensaver": False,
-    "off_on_idle": False,
-    "idle_minutes": 30,
+    "spf_brightness": 100,
+    "spf_dim_brightness": 20,
+    "dim_on_idle": True,
     "clear_on_exit": True,
     "layout": "default.json",
     "layout_dir": "",
@@ -198,8 +197,10 @@ class Config(object):
         return 1.0 / max(1, int(self._values["fps_idle"]))
 
     def describe(self):
+        brightness = ("spf_brightness" if self._values["display_type"] == "spf"
+                      else "brightness")
         keys = ("display_type", "output_mode", "device_ids", "rotation",
-                "mirror", "byte_order", "layout", "brightness", "fps_playing",
+                "mirror", "byte_order", "layout", brightness, "fps_playing",
                 "fps_idle")
         return ", ".join("%s=%s" % (key, self._values[key]) for key in keys)
 

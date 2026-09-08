@@ -6,7 +6,7 @@
 
   "pages": [
     {
-      "name": "Playing",
+      "name": "$LOCALIZE[32400]",
       "condition": "active",
       "priority": 10,
       "widgets": [
@@ -36,7 +36,7 @@
     },
 
     {
-      "name": "Clock",
+      "name": "$LOCALIZE[32402]",
       "condition": "!active",
       "widgets": [
         {"type": "text", "x": 0, "y": 130, "w": 800, "h": 160,

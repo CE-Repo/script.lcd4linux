@@ -168,7 +168,7 @@
           "y": 414,
           "w": 333,
           "h": 45,
-          "text": "${system.freespace|suffix: frei}",
+          "text": "${system.freespace|suffix: $LOCALIZE[32425]}",
           "size": 32,
           "align": "right",
           "color": "#a8b0c0"

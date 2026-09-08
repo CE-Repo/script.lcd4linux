@@ -382,6 +382,34 @@ ${player.year|prefix: · }
 there is nothing to separate:
 `${player.year}${player.genre|prefix: · }`.
 
+### Translating fixed words - `$LOCALIZE[...]`
+
+A fixed word can be translated by writing a string id instead, the same
+spelling Kodi skins use:
+
+```json
+{"type": "text", "x": 16, "y": 8, "text": "$LOCALIZE[32433]"}
+```
+
+* Ids from **30000** up come from this add-on's `resources/language/`.
+* Lower ids come from Kodi itself, for example `$LOCALIZE[31]` for
+  "Available".
+
+`$LOCALIZE[...]` is replaced **before** the `${...}` tokens, so it can also be
+a filter argument where `trunc` has to count the translated text:
+
+```
+${player.next|prefix:$LOCALIZE[32420]: |trunc:32}
+```
+
+A page `name` may be written the same way; that name is shown as a banner when
+the page changes. The bundled layouts are written like this throughout, with
+the word ids from 32400 up in both language files.
+
+Day and month names (`${system.weekday}`, `${system.monthname}`,
+`${system.date_long}`) are translated by the add-on itself, nothing to do
+there.
+
 ---
 
 ## 6. Conditions

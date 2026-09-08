@@ -1,5 +1,5 @@
 {
-  "name": "XL Restzeit (800x480)",
+  "name": "$LOCALIZE[32510] (800x480)",
   "size": [
     800,
     480
@@ -13,7 +13,7 @@
   },
   "pages": [
     {
-      "name": "Remaining",
+      "name": "$LOCALIZE[32408]",
       "condition": "active",
       "priority": 10,
       "widgets": [
@@ -58,7 +58,7 @@
           "y": 306,
           "w": 800,
           "h": 42,
-          "text": "verbleibend  ·  Ende ${player.finishtime}",
+          "text": "$LOCALIZE[32427] ${player.finishtime}",
           "size": 30,
           "align": "center",
           "color": "#a8b0c0"
@@ -100,7 +100,7 @@
       ]
     },
     {
-      "name": "Idle",
+      "name": "$LOCALIZE[32401]",
       "condition": "!active",
       "widgets": [
         {

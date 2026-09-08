@@ -11,6 +11,7 @@ import os
 import socket
 import time
 
+from . import localize
 from .logger import debug
 
 try:
@@ -19,6 +20,27 @@ try:
 except ImportError:
     xbmc = None
     xbmcgui = None
+
+def weekday_name(when, short=False):
+    """Day name in Kodi's language, falling back to the C locale."""
+    return (localize.weekday(when.tm_wday, short)
+            or time.strftime("%a" if short else "%A", when))
+
+
+def month_name(when, short=False):
+    """Month name in Kodi's language, falling back to the C locale."""
+    return (localize.month(when.tm_mon, short)
+            or time.strftime("%b" if short else "%B", when))
+
+
+def long_date(when):
+    """``Monday, 08 September 2026`` in Kodi's language and order."""
+    pattern = localize.text(32340, "{weekday}, {day} {month} {year}")
+    return (pattern.replace("{weekday}", weekday_name(when))
+            .replace("{day}", time.strftime("%d", when))
+            .replace("{month}", month_name(when))
+            .replace("{year}", time.strftime("%Y", when)))
+
 
 THERMAL_PATHS = (
     "/sys/class/thermal/thermal_zone0/temp",
@@ -511,17 +533,17 @@ class KodiProvider(BaseProvider):
         if name == "date_short":
             return time.strftime("%d.%m.", now)
         if name == "date_long":
-            return time.strftime("%A, %d %B %Y", now)
+            return long_date(now)
         if name == "weekday":
-            return time.strftime("%A", now)
+            return weekday_name(now)
         if name == "weekday_short":
-            return time.strftime("%a", now)
+            return weekday_name(now, True)
         if name == "day":
             return time.strftime("%d", now)
         if name == "month":
             return time.strftime("%m", now)
         if name == "monthname":
-            return time.strftime("%B", now)
+            return month_name(now)
         if name == "year":
             return time.strftime("%Y", now)
         if name in ("cpu", "cpuusage"):
@@ -725,12 +747,12 @@ class DemoProvider(BaseProvider):
                 "date": time.strftime("%d.%m.%Y", now),
                 "date_iso": time.strftime("%Y-%m-%d", now),
                 "date_short": time.strftime("%d.%m.", now),
-                "date_long": time.strftime("%A, %d %B %Y", now),
-                "weekday": time.strftime("%A", now),
-                "weekday_short": time.strftime("%a", now),
+                "date_long": long_date(now),
+                "weekday": weekday_name(now),
+                "weekday_short": weekday_name(now, True),
                 "day": time.strftime("%d", now),
                 "month": time.strftime("%m", now),
-                "monthname": time.strftime("%B", now),
+                "monthname": month_name(now),
                 "year": time.strftime("%Y", now),
                 "memoryfree": "1204", "memorytotal": "3072",
                 "gputemp": "51", "muted": "0", "buildversion": "21.2 Omega",

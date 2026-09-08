@@ -184,28 +184,8 @@ msgctxt "#32131"
 msgid "0 switches the backlight off, 7 is the brightest setting."
 msgstr ""
 
-msgctxt "#32132"
-msgid "Dim while the screensaver is active"
-msgstr ""
-
 msgctxt "#32133"
-msgid "Dimmed brightness"
-msgstr ""
-
-msgctxt "#32134"
-msgid "Switch backlight off with the screensaver"
-msgstr ""
-
-msgctxt "#32135"
-msgid "Switch off when idle"
-msgstr ""
-
-msgctxt "#32136"
-msgid "Turns the backlight off after the idle timeout, unless something is playing."
-msgstr ""
-
-msgctxt "#32137"
-msgid "Idle timeout (minutes)"
+msgid "Idle brightness"
 msgstr ""
 
 msgctxt "#32138"
@@ -466,4 +446,360 @@ msgstr ""
 
 msgctxt "#32185"
 msgid "How long to wait for a command before giving up."
+msgstr ""
+
+msgctxt "#32186"
+msgid "Dim while idle"
+msgstr ""
+
+msgctxt "#32187"
+msgid "Dims the display whenever nothing is playing. Paused playback still counts as playing."
+msgstr ""
+
+msgctxt "#32188"
+msgid "Brightness (software)"
+msgstr ""
+
+msgctxt "#32189"
+msgid "Samsung frames have no backlight control over USB, so the picture is darkened in software before it is sent. 100% leaves it untouched."
+msgstr ""
+
+msgctxt "#32190"
+msgid "Idle brightness (software)"
+msgstr ""
+
+msgctxt "#32191"
+msgid "Backlight level while nothing is playing."
+msgstr ""
+
+msgctxt "#32192"
+msgid "How far the picture is darkened while nothing is playing. 0% shows a black picture."
+msgstr ""
+
+msgctxt "#32340"
+msgid "{weekday}, {day} {month} {year}"
+msgstr ""
+
+msgctxt "#32341"
+msgid "LCD4Linux test pattern"
+msgstr ""
+
+msgctxt "#32342"
+msgid "red border must touch all four edges"
+msgstr ""
+
+msgctxt "#32400"
+msgid "Playing"
+msgstr ""
+
+msgctxt "#32401"
+msgid "Idle"
+msgstr ""
+
+msgctxt "#32402"
+msgid "Clock"
+msgstr ""
+
+msgctxt "#32403"
+msgid "Music"
+msgstr ""
+
+msgctxt "#32404"
+msgid "Library"
+msgstr ""
+
+msgctxt "#32405"
+msgid "Now and next"
+msgstr ""
+
+msgctxt "#32406"
+msgid "Other"
+msgstr ""
+
+msgctxt "#32407"
+msgid "Weather"
+msgstr ""
+
+msgctxt "#32408"
+msgid "Remaining"
+msgstr ""
+
+msgctxt "#32420"
+msgid "Next"
+msgstr ""
+
+msgctxt "#32421"
+msgid "UP NEXT"
+msgstr ""
+
+msgctxt "#32422"
+msgid "Track"
+msgstr ""
+
+msgctxt "#32423"
+msgid "of"
+msgstr ""
+
+msgctxt "#32424"
+msgid "Free"
+msgstr ""
+
+msgctxt "#32425"
+msgid "free"
+msgstr ""
+
+msgctxt "#32426"
+msgid "Ends at"
+msgstr ""
+
+msgctxt "#32427"
+msgid "remaining  ·  ends at"
+msgstr ""
+
+msgctxt "#32428"
+msgid "Up"
+msgstr ""
+
+msgctxt "#32429"
+msgid "up"
+msgstr ""
+
+msgctxt "#32430"
+msgid "Memory"
+msgstr ""
+
+msgctxt "#32431"
+msgid "Temperature"
+msgstr ""
+
+msgctxt "#32432"
+msgid "CPU history"
+msgstr ""
+
+msgctxt "#32433"
+msgid "Library"
+msgstr ""
+
+msgctxt "#32434"
+msgid "Movies"
+msgstr ""
+
+msgctxt "#32435"
+msgid "TV shows"
+msgstr ""
+
+msgctxt "#32436"
+msgid "Albums"
+msgstr ""
+
+msgctxt "#32437"
+msgid "Episodes"
+msgstr ""
+
+msgctxt "#32438"
+msgid "Artists"
+msgstr ""
+
+msgctxt "#32439"
+msgid "elapsed  "
+msgstr ""
+
+msgctxt "#32440"
+msgid "remain   "
+msgstr ""
+
+msgctxt "#32450"
+msgid "Monday"
+msgstr ""
+
+msgctxt "#32451"
+msgid "Tuesday"
+msgstr ""
+
+msgctxt "#32452"
+msgid "Wednesday"
+msgstr ""
+
+msgctxt "#32453"
+msgid "Thursday"
+msgstr ""
+
+msgctxt "#32454"
+msgid "Friday"
+msgstr ""
+
+msgctxt "#32455"
+msgid "Saturday"
+msgstr ""
+
+msgctxt "#32456"
+msgid "Sunday"
+msgstr ""
+
+msgctxt "#32457"
+msgid "Mon"
+msgstr ""
+
+msgctxt "#32458"
+msgid "Tue"
+msgstr ""
+
+msgctxt "#32459"
+msgid "Wed"
+msgstr ""
+
+msgctxt "#32460"
+msgid "Thu"
+msgstr ""
+
+msgctxt "#32461"
+msgid "Fri"
+msgstr ""
+
+msgctxt "#32462"
+msgid "Sat"
+msgstr ""
+
+msgctxt "#32463"
+msgid "Sun"
+msgstr ""
+
+msgctxt "#32464"
+msgid "January"
+msgstr ""
+
+msgctxt "#32465"
+msgid "February"
+msgstr ""
+
+msgctxt "#32466"
+msgid "March"
+msgstr ""
+
+msgctxt "#32467"
+msgid "April"
+msgstr ""
+
+msgctxt "#32468"
+msgid "May"
+msgstr ""
+
+msgctxt "#32469"
+msgid "June"
+msgstr ""
+
+msgctxt "#32470"
+msgid "July"
+msgstr ""
+
+msgctxt "#32471"
+msgid "August"
+msgstr ""
+
+msgctxt "#32472"
+msgid "September"
+msgstr ""
+
+msgctxt "#32473"
+msgid "October"
+msgstr ""
+
+msgctxt "#32474"
+msgid "November"
+msgstr ""
+
+msgctxt "#32475"
+msgid "December"
+msgstr ""
+
+msgctxt "#32476"
+msgid "Jan"
+msgstr ""
+
+msgctxt "#32477"
+msgid "Feb"
+msgstr ""
+
+msgctxt "#32478"
+msgid "Mar"
+msgstr ""
+
+msgctxt "#32479"
+msgid "Apr"
+msgstr ""
+
+msgctxt "#32480"
+msgid "May"
+msgstr ""
+
+msgctxt "#32481"
+msgid "Jun"
+msgstr ""
+
+msgctxt "#32482"
+msgid "Jul"
+msgstr ""
+
+msgctxt "#32483"
+msgid "Aug"
+msgstr ""
+
+msgctxt "#32484"
+msgid "Sep"
+msgstr ""
+
+msgctxt "#32485"
+msgid "Oct"
+msgstr ""
+
+msgctxt "#32486"
+msgid "Nov"
+msgstr ""
+
+msgctxt "#32487"
+msgid "Dec"
+msgstr ""
+
+msgctxt "#32500"
+msgid "Default"
+msgstr ""
+
+msgctxt "#32501"
+msgid "Big cover"
+msgstr ""
+
+msgctxt "#32502"
+msgid "Cover full screen"
+msgstr ""
+
+msgctxt "#32503"
+msgid "Library"
+msgstr ""
+
+msgctxt "#32504"
+msgid "Light"
+msgstr ""
+
+msgctxt "#32505"
+msgid "Portrait"
+msgstr ""
+
+msgctxt "#32506"
+msgid "Now and next"
+msgstr ""
+
+msgctxt "#32507"
+msgid "Weather & clock"
+msgstr ""
+
+msgctxt "#32508"
+msgid "XL clock"
+msgstr ""
+
+msgctxt "#32509"
+msgid "XL player"
+msgstr ""
+
+msgctxt "#32510"
+msgid "XL remaining"
 msgstr ""

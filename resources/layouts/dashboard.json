@@ -24,9 +24,9 @@
         {"type": "text", "x": 240, "y": 74, "w": 214, "h": 20,
          "text": "Kodi ${system.kodiversion}", "size": 14, "color": "#6f7891"},
         {"type": "text", "x": 240, "y": 100, "w": 214, "h": 20,
-         "text": "Up ${system.uptime}", "size": 14, "color": "#6f7891"},
+         "text": "$LOCALIZE[32428] ${system.uptime}", "size": 14, "color": "#6f7891"},
         {"type": "text", "x": 240, "y": 126, "w": 214, "h": 20,
-         "text": "${system.freespace|prefix:Free }", "size": 14,
+         "text": "${system.freespace|prefix:$LOCALIZE[32424] }", "size": 14,
          "color": "#6f7891"},
 
         {"type": "rect", "x": 12, "y": 174, "w": 148, "h": 74, "radius": 10,
