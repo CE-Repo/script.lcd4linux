@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="script.lcd4linux"
        name="LCD4Linux"
-       version="1.6.0"
+       version="1.7.0"
        provider-name="U3knOwn">
   <requires>
     <import addon="xbmc.python" version="3.0.0"/>
@@ -31,7 +31,13 @@ Zusätzliche Python-Module werden nicht benötigt: Der USB-Zugriff läuft über 
     <platform>linux</platform>
     <license>MIT</license>
     <source>https://github.com/CE-Repo/script.lcd4linux</source>
-    <news>v1.6.0
+    <news>v1.7.0
+- A layout editor in the browser: place pages and widgets with the mouse at
+  http://&lt;box&gt;:8099/, with a preview drawn by the add-on's own renderer
+- Layouts can be saved and sent to the panel straight from the editor
+- New settings for the editor: on/off, port, reach and an optional password
+
+v1.6.0
 - Layouts are picked from a list of preview pictures, and the settings stay
   open while choosing
 

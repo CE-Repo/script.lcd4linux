@@ -36,6 +36,9 @@ Und auf dem 800×480-Rahmen:
   Samsung werden nur die geänderten JPEG-Blockzeilen neu kodiert.
 * **Frei anpassbare Layouts** als JSON: Seiten, Widgets, Positionen, Farben,
   Schriftgrößen, Bedingungen und Datenquellen.
+* **Layout-Baukasten im Browser**: Elemente mit der Maus setzen, ziehen und
+  in der Größe ändern, mit einer Vorschau, die derselbe Renderer zeichnet wie
+  das Display – vom Handy, Tablet oder PC im Netzwerk aus.
 * **Alle Kodi-InfoLabels** sind verwendbar (`${info:MusicPlayer.Album}`),
   ebenso alle Kodi-Bedingungen (`Player.HasVideo`).
 * **Mehrere Seiten** mit Bedingungen und automatischem Wechsel
@@ -261,6 +264,16 @@ beim ersten Öffnen der Liste einmal gerendert und in
 Designs (`default.json` und `default-800x480.json`) erscheinen als ein
 Eintrag, weil beim Laden ohnehin die zum Panel passende Fassung genommen wird.
 
+**Layout → Web-Editor**
+
+| Einstellung | Bedeutung |
+|---|---|
+| Layout-Editor im Browser | schaltet den Webserver ein und aus (Standard: an) |
+| Web-Editor öffnen | zeigt die Adresse, unter der der Editor erreichbar ist |
+| Port | Standard 8099 |
+| Erreichbar von | `dem ganzen Netzwerk` oder `nur dieser Box` (dann nur über einen Browser auf der Box selbst) |
+| Passwort | leer = keine Abfrage; sonst fragt der Browser danach, der Benutzername ist beliebig |
+
 **Sprache**
 
 Es gibt nichts einzustellen: Das Add-on folgt der Sprache von Kodi. Die
@@ -371,6 +384,75 @@ wenn ein entsprechendes Panel angeschlossen ist.
 
 Für das Hochformat zusätzlich *Einstellungen → Anzeige → Bild → Drehung* auf
 90 oder 270 Grad stellen.
+
+---
+
+## Layout-Baukasten im Browser
+
+Layouts lassen sich mit der Maus zusammenstellen, statt JSON zu tippen: Der
+Dienst bringt einen kleinen Webserver mit, der einen Editor ausliefert.
+
+![Layout-Baukasten](resources/screenshots/webeditor.png)
+
+**Öffnen**
+
+*Add-ons → LCD4Linux → Web-Editor* zeigt die Adresse an, meist
+
+```
+http://<IP-der-Box>:8099/
+```
+
+Die Adresse steht auch in den Einstellungen unter *Layout → Web-Editor*. Der
+Editor läuft in jedem aktuellen Browser, auch auf Handy und Tablet – es wird
+nichts nachgeladen, alles gehört zum Add-on.
+
+**Was er kann**
+
+* **Seiten** anlegen, kopieren, umsortieren und löschen – die Reiter oben
+  links entsprechen den Seiten des Layouts.
+* **Elemente** aus der Palette auf die Fläche ziehen oder anklicken: Text,
+  Bild, Fortschrittsbalken, Diagramm, Rechteck, Linie, Kreis, Symbol und
+  Analoguhr.
+* **Verschieben und Größe ändern** mit der Maus, am Raster einrastend
+  (`Alt` gedrückt halten schaltet das Einrasten aus, `Umschalt` hält beim
+  Ziehen die Richtung). Pfeiltasten verschieben pixelweise, mit `Umschalt`
+  in Zehnerschritten.
+* **Eigenschaften** rechts: jedes Feld, das der Renderer kennt – Farben mit
+  Farbwähler, Schriften, Ausrichtung, Lauftext, Bedingungen mit Vorlagen.
+* **Datenfelder** über den Knopf `${}`: alle Tokens mit Erklärung, dazu die
+  Filter (`|upper`, `|trunc:20`, `|hms` …), eingefügt an der Cursorstelle.
+* **Vorschau**: Nach jeder Änderung rendert das Add-on das Bild selbst und
+  zeigt es an – kein Nachbau im Browser, sondern genau das, was das Panel
+  zeigen wird. Umschaltbar zwischen *Musik läuft*, *Video läuft*,
+  *Pausiert*, *Nichts läuft* und – auf der Box – *Echte Daten*.
+* **Speichern** in den eigenen Layout-Ordner und *Aufs Display* übernimmt das
+  Layout sofort auf dem Panel.
+* Rückgängig/Wiederholen (`Strg+Z` / `Strg+Y`), Duplizieren (`Strg+D`),
+  Speichern (`Strg+S`), Löschen (`Entf`), Ausrichtungsknöpfe und ein
+  JSON-Editor für den Feinschliff.
+
+**Speicherort**
+
+Gespeichert wird immer in den eigenen Ordner
+(`.../addon_data/script.lcd4linux/layouts/`). Ein mitgeliefertes Layout wird
+dabei nicht überschrieben: Die eigene Fassung hat Vorrang, das Original
+kommt zurück, sobald die Kopie gelöscht wird.
+
+**Ohne Box, nur am PC**
+
+```sh
+python3 tools/webeditor.py            # http://127.0.0.1:8099/
+python3 tools/webeditor.py --bind all --port 8099 --password geheim
+```
+
+**Sicherheit**
+
+Der Editor darf Layoutdateien schreiben und den Dienst neu laden. Im
+Heimnetz ist das gewollt; in einem gemeinsam genutzten Netz sollte
+*Erreichbar von* auf **nur dieser Box** stehen oder ein Passwort gesetzt
+sein. Ausgeliefert werden ausschließlich die Dateien aus `resources/web/`,
+gespeichert wird ausschließlich in den Layout-Ordner, und Dateinamen mit
+Pfadangaben weist der Server ab.
 
 ---
 
@@ -575,7 +657,11 @@ resources/lib/lcd4linux/
     service.py                Hauptschleife
     ui.py                     Menü
     thumbs.py                 Vorschaubilder für die Layout-Auswahl
+    webui.py                  Webserver und API des Layout-Baukastens
+    webschema.py              Widget-Felder und Tokens für den Editor
+resources/web/                der Editor selbst (HTML, CSS, JavaScript)
 tools/preview.py              Layout-Vorschau als PNG
+tools/webeditor.py            Layout-Baukasten am PC starten
 tools/scale_layout.py         Layout auf eine andere Displaygröße umrechnen
 tools/contact_sheet.py        Übersichtsbild aller Layouts erzeugen
 tools/make_thumbs.py          Vorschaubilder für die Layout-Auswahl erzeugen
@@ -604,6 +690,12 @@ changed rectangle is transferred; on the Samsung, which accepts complete JPEG
 images only, only the MCU rows that changed are re-encoded.
 
 * Layout reference: [docs/LAYOUT.en.md](docs/LAYOUT.en.md)
+* **Layout editor in the browser**: the service serves a drag and drop editor
+  at `http://<box>:8099/` (*Add-ons → LCD4Linux → Web editor* shows the
+  address). Pages, widgets, colours and data fields are edited with the
+  mouse, and the preview next to them is drawn by the add-on's own renderer,
+  so it is exactly what the panel will show. On a PC without Kodi:
+  `python3 tools/webeditor.py`
 * Design layouts without hardware: `python3 tools/preview.py --out preview.png`
 * Verify an installation: `python3 tools/selftest.py`
 * Settings, bundled layouts, remote-control actions and troubleshooting are

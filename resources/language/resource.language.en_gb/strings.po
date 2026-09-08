@@ -32,6 +32,10 @@ msgctxt "#32012"
 msgid "Behaviour"
 msgstr ""
 
+msgctxt "#32013"
+msgid "Web editor"
+msgstr ""
+
 msgctxt "#32020"
 msgid "Connection"
 msgstr ""
@@ -274,6 +278,50 @@ msgstr ""
 
 msgctxt "#32169"
 msgid "Writes detailed messages to the Kodi log."
+msgstr ""
+
+msgctxt "#32211"
+msgid "Layout editor in the browser"
+msgstr ""
+
+msgctxt "#32212"
+msgid "Design layouts from a phone, tablet or PC on the network"
+msgstr ""
+
+msgctxt "#32213"
+msgid "Port"
+msgstr ""
+
+msgctxt "#32214"
+msgid "The editor is reached at http://<box>:<port>/"
+msgstr ""
+
+msgctxt "#32215"
+msgid "Reachable from"
+msgstr ""
+
+msgctxt "#32216"
+msgid "Whether other devices on the network may open the editor"
+msgstr ""
+
+msgctxt "#32217"
+msgid "the whole network"
+msgstr ""
+
+msgctxt "#32218"
+msgid "this box only"
+msgstr ""
+
+msgctxt "#32219"
+msgid "Password"
+msgstr ""
+
+msgctxt "#32220"
+msgid "Leave empty for no password; any user name is accepted"
+msgstr ""
+
+msgctxt "#32221"
+msgid "Open the web editor"
 msgstr ""
 
 msgctxt "#32300"
@@ -562,6 +610,22 @@ msgstr ""
 
 msgctxt "#32342"
 msgid "red border must touch all four edges"
+msgstr ""
+
+msgctxt "#32343"
+msgid "Web editor"
+msgstr ""
+
+msgctxt "#32344"
+msgid "The web editor is not running yet"
+msgstr ""
+
+msgctxt "#32345"
+msgid "Open this address in a browser:"
+msgstr ""
+
+msgctxt "#32346"
+msgid "The web editor is switched off"
 msgstr ""
 
 msgctxt "#32400"

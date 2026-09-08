@@ -931,13 +931,199 @@ def test_tokens():
     check(tokens.evaluate("audio+playing", provider), "and combination")
 
 
+def test_web_editor():
+    """The browser editor: its API, its guards and its field catalogue."""
+    print("web editor")
+    import base64
+    import json
+    import re
+    import shutil
+    import socket
+    import tempfile
+    import urllib.error
+    import urllib.request
+    from lcd4linux import webschema, webui
+    from lcd4linux.settings import Config
+
+    # -- the catalogue must describe the renderer, not something like it --
+    widget_source = _read_text(os.path.join(ROOT, "resources", "lib",
+                                            "lcd4linux", "widgets.py"))
+    layout_source = _read_text(os.path.join(ROOT, "resources", "lib",
+                                            "lcd4linux", "layout.py"))
+    unknown = []
+    for kind, fields in sorted(webschema.WIDGET_FIELDS.items()):
+        for field in fields:
+            if 'get("%s"' % field["key"] not in widget_source:
+                unknown.append("%s.%s" % (kind, field["key"]))
+    for field in webschema.COMMON_FIELDS:
+        if 'get("%s"' % field["key"] not in widget_source:
+            unknown.append("common.%s" % field["key"])
+    for group, fields in (("page", webschema.PAGE_FIELDS),
+                          ("layout", webschema.LAYOUT_FIELDS)):
+        for field in fields:
+            if 'get("%s"' % field["key"] not in layout_source:
+                unknown.append("%s.%s" % (group, field["key"]))
+    check(not unknown, "every editor field is read by the renderer (%s)"
+          % (unknown or "none",))
+    check(sorted(webschema.PALETTE) == sorted(webschema.WIDGET_FIELDS),
+          "the palette lists every described widget")
+
+    # -- a layout the editor offers must be one the renderer accepts ------
+    for kind, preset in sorted(webschema.NEW_WIDGET.items()):
+        spec = webschema.blank_layout()
+        spec["pages"][0]["widgets"] = [dict(preset, type=kind, x=0, y=0)]
+        webui.validate(spec)
+    check(True, "every widget the palette adds parses (%d types)"
+          % len(webschema.NEW_WIDGET))
+
+    for name, bad in (("no size", {"pages": [{}]}),
+                      ("no pages", {"size": [480, 320], "pages": []}),
+                      ("huge", {"size": [9000, 9000], "pages": [{}]}),
+                      ("odd widget", {"size": [480, 320], "pages": [
+                          {"widgets": [{"type": "nonsense"}]}]})):
+        try:
+            webui.validate(bad)
+        except webui.EditorError:
+            continue
+        check(False, "a layout with %s is refused" % name)
+    check(True, "invalid layouts are refused")
+
+    for bad in ("../evil.json", "a/b.json", "..\\evil.json", ".hidden.json", ""):
+        try:
+            webui.safe_name(bad)
+        except webui.EditorError:
+            continue
+        check(False, "the file name %r is refused" % bad)
+    check(webui.safe_name("mein layout") == "mein layout.json",
+          "a plain name gets its .json")
+
+    # -- the server -------------------------------------------------------
+    probe = socket.socket()
+    probe.bind(("127.0.0.1", 0))
+    port = probe.getsockname()[1]
+    probe.close()
+    directory = tempfile.mkdtemp(prefix="lcd4linux-web-")
+    editor = webui.WebEditor(Config({"web_port": port, "web_bind": "local",
+                                     "layout_dir": directory,
+                                     "web_password": "secret"}))
+    check(editor.start(), "the editor server starts")
+    base = "http://127.0.0.1:%d" % port
+    auth = {"Authorization": "Basic %s"
+            % base64.b64encode(b"kodi:secret").decode("ascii")}
+
+    def request(path, payload=None, headers=None, method=None):
+        data = None if payload is None else json.dumps(payload).encode("utf-8")
+        head = dict(auth)
+        head.update(headers or {})
+        if data is not None:
+            head["Content-Type"] = "application/json"
+        message = urllib.request.Request(base + path, data=data, headers=head,
+                                         method=method)
+        try:
+            reply = urllib.request.urlopen(message, timeout=20)
+        except urllib.error.HTTPError as failure:
+            return failure.code, failure.headers.get("Content-Type"), failure.read()
+        return reply.status, reply.headers.get("Content-Type"), reply.read()
+
+    try:
+        try:
+            urllib.request.urlopen(base + "/api/state", timeout=10)
+            check(False, "the password is asked for")
+        except urllib.error.HTTPError as failure:
+            check(failure.code == 401, "without the password the answer is 401")
+
+        code, _kind, body = request("/")
+        check(code == 200 and b"LCD4Linux" in body, "the editor page is served")
+        for name in ("editor.css", "editor.js"):
+            code, _kind, body = request("/static/" + name)
+            check(code == 200 and len(body) > 1000, "%s is served" % name)
+        code, _kind, _body = request("/static/../resources/settings.xml")
+        check(code == 403, "a path outside the web folder is refused")
+
+        code, _kind, body = request("/api/schema")
+        schema = json.loads(body)
+        check(code == 200 and len(schema["widgets"]) == len(webschema.PALETTE),
+              "the schema describes every widget")
+        check("sans" in schema["fonts"] and "play" in schema["icons"],
+              "fonts and icons come from the add-on itself")
+
+        code, _kind, body = request("/api/layouts")
+        listed = json.loads(body)["layouts"]
+        check(code == 200 and any(entry["file"] == "default.json"
+                                  for entry in listed),
+              "the bundled layouts are listed (%d)" % len(listed))
+
+        code, _kind, body = request("/api/layout?file=default.json")
+        answer = json.loads(body)
+        check(code == 200 and answer["spec"]["pages"], "a layout is read back")
+        check(answer["strings"].get("32403"),
+              "the editor is told what $LOCALIZE[...] means")
+
+        spec = answer["spec"]
+        code, kind, body = request("/api/preview", {"spec": spec, "page": 1,
+                                                    "track": 1, "frames": 2})
+        check(code == 200 and kind == "image/png" and body[:4] == b"\x89PNG",
+              "a page is rendered to a PNG (%d bytes)" % len(body))
+        width, height = _png_size(body)
+        check((width, height) == tuple(spec["size"]),
+              "the preview has the size of the layout (%dx%d)" % (width, height))
+
+        code, _kind, body = request("/api/layout",
+                                    {"file": "selftest.json", "spec": spec})
+        check(code == 200, "a layout is saved")
+        check(os.path.isfile(os.path.join(directory, "selftest.json")),
+              "and it lands in the user folder")
+        code, _kind, body = request("/api/layout?file=selftest.json")
+        check(json.loads(body)["user"], "a saved layout is marked as the user's")
+
+        code, _kind, body = request("/api/layout",
+                                    {"file": "broken.json",
+                                     "spec": {"size": [480, 320], "pages": []}})
+        check(code == 400 and b"page" in body, "a broken layout is refused")
+        check(not os.path.isfile(os.path.join(directory, "broken.json")),
+              "and nothing is written")
+
+        code, _kind, _body = request("/api/layout",
+                                     {"file": "../evil.json", "spec": spec})
+        check(code == 400, "a file name with a path in it is refused")
+        check(not os.path.isfile(os.path.join(os.path.dirname(directory),
+                                              "evil.json")),
+              "and no file appears outside the folder")
+
+        code, _kind, _body = request("/api/delete", {"file": "selftest.json"})
+        check(code == 200 and not os.path.isfile(
+            os.path.join(directory, "selftest.json")), "a layout is deleted")
+
+        code, _kind, body = request("/api/blank?size=800x480")
+        blank = json.loads(body)["spec"]
+        check(blank["size"] == [800, 480], "a blank layout is offered")
+        webui.validate(blank)
+
+        code, _kind, _body = request("/api/command", {"command": "rm -rf"})
+        check(code == 400, "an unknown command is refused")
+    finally:
+        editor.stop()
+        shutil.rmtree(directory, ignore_errors=True)
+    check(not editor.running, "and it stops again")
+
+
+def _read_text(path):
+    with open(path, "r", encoding="utf-8") as handle:
+        return handle.read()
+
+
+def _png_size(data):
+    import struct
+    return struct.unpack(">II", data[16:24])
+
+
 def main():
     print("script.lcd4linux self test\n")
     for test in (test_encoding, test_fonts, test_images, test_tokens,
                  test_jpeg_encoder, test_protocol, test_target_from_settings,
                  test_samsung_spf, test_brightness, test_localisation,
                  test_settings_xml, test_layout_chooser,
-                 test_power_hooks, test_rotation,
+                 test_power_hooks, test_rotation, test_web_editor,
                  test_layouts):
         test()
         print("")
