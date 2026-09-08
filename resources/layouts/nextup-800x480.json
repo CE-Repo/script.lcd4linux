@@ -1,0 +1,274 @@
+{
+  "name": "Jetzt & Danach (800x480)",
+  "size": [
+    800,
+    480
+  ],
+  "background": "#0b0d12",
+  "accent": "auto:${player.thumb}",
+  "defaults": {
+    "font": "sans",
+    "size": 30,
+    "color": "#ffffff"
+  },
+  "pages": [
+    {
+      "name": "Now and next",
+      "condition": "audio",
+      "priority": 10,
+      "widgets": [
+        {
+          "type": "image",
+          "x": 27,
+          "y": 21,
+          "w": 173,
+          "h": 156,
+          "src": "${player.thumb}",
+          "fit": "cover",
+          "radius": 12
+        },
+        {
+          "type": "text",
+          "x": 223,
+          "y": 21,
+          "w": 550,
+          "h": 51,
+          "text": "${player.title}",
+          "size": 40,
+          "bold": true,
+          "scroll": "marquee",
+          "scrollspeed": 36
+        },
+        {
+          "type": "text",
+          "x": 223,
+          "y": 78,
+          "w": 550,
+          "h": 42,
+          "text": "${player.artist}",
+          "size": 33,
+          "color": "accent",
+          "scroll": "bounce"
+        },
+        {
+          "type": "text",
+          "x": 223,
+          "y": 126,
+          "w": 550,
+          "h": 39,
+          "text": "${player.album}",
+          "size": 27,
+          "color": "#9aa3b5"
+        },
+        {
+          "type": "progress",
+          "x": 27,
+          "y": 198,
+          "w": 747,
+          "h": 21,
+          "value": "${player.percent}",
+          "radius": 10,
+          "color": "accent",
+          "background": "#262b36"
+        },
+        {
+          "type": "text",
+          "x": 27,
+          "y": 231,
+          "w": 333,
+          "h": 45,
+          "text": "${player.time}",
+          "font": "mono",
+          "size": 33,
+          "color": "#c8cede"
+        },
+        {
+          "type": "text",
+          "x": 440,
+          "y": 231,
+          "w": 333,
+          "h": 45,
+          "text": "-${player.remaining}",
+          "font": "mono",
+          "size": 33,
+          "align": "right",
+          "color": "#c8cede"
+        },
+        {
+          "type": "line",
+          "x": 27,
+          "y": 294,
+          "w": 747,
+          "h": 3,
+          "color": "#262b36"
+        },
+        {
+          "type": "text",
+          "x": 27,
+          "y": 312,
+          "w": 500,
+          "h": 36,
+          "text": "ALS NÄCHSTES",
+          "size": 26,
+          "color": "#6b7488"
+        },
+        {
+          "type": "text",
+          "x": 440,
+          "y": 312,
+          "w": 333,
+          "h": 36,
+          "text": "${player.playlistposition|prefix:Titel }${player.playlistlength|prefix: / }",
+          "size": 26,
+          "align": "right",
+          "color": "#6b7488"
+        },
+        {
+          "type": "text",
+          "x": 27,
+          "y": 351,
+          "w": 747,
+          "h": 54,
+          "text": "${player.next|default:—}",
+          "size": 42,
+          "bold": true,
+          "scroll": "bounce",
+          "color": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 27,
+          "y": 411,
+          "w": 550,
+          "h": 45,
+          "text": "${player.nextartist}",
+          "size": 32,
+          "color": "#9aa3b5"
+        },
+        {
+          "type": "text",
+          "x": 583,
+          "y": 414,
+          "w": 190,
+          "h": 42,
+          "text": "${system.time}",
+          "size": 30,
+          "align": "right",
+          "color": "#6b7488"
+        }
+      ]
+    },
+    {
+      "name": "Video",
+      "condition": "video",
+      "priority": 10,
+      "widgets": [
+        {
+          "type": "text",
+          "x": 30,
+          "y": 36,
+          "w": 740,
+          "h": 144,
+          "text": "${player.title}",
+          "size": 54,
+          "bold": true,
+          "wrap": true,
+          "lines": 2,
+          "valign": "middle"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 195,
+          "w": 740,
+          "h": 51,
+          "text": "${player.showtitle}${player.artist}",
+          "size": 38,
+          "color": "accent"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 252,
+          "w": 740,
+          "h": 42,
+          "text": "${player.episodelabel}${player.year}",
+          "size": 30,
+          "color": "#9aa3b5"
+        },
+        {
+          "type": "progress",
+          "x": 30,
+          "y": 318,
+          "w": 740,
+          "h": 27,
+          "value": "${player.percent}",
+          "radius": 14,
+          "color": "accent",
+          "background": "#262b36"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 363,
+          "w": 333,
+          "h": 63,
+          "text": "${player.time}",
+          "font": "mono-bold",
+          "size": 48
+        },
+        {
+          "type": "text",
+          "x": 437,
+          "y": 363,
+          "w": 333,
+          "h": 63,
+          "text": "-${player.remaining}",
+          "font": "mono-bold",
+          "size": 48,
+          "align": "right",
+          "color": "#9aa3b5"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 432,
+          "w": 740,
+          "h": 39,
+          "text": "${player.finishtime|prefix:Ende }",
+          "size": 28,
+          "align": "center",
+          "color": "#6b7488"
+        }
+      ]
+    },
+    {
+      "name": "Idle",
+      "condition": "!active",
+      "widgets": [
+        {
+          "type": "text",
+          "x": 0,
+          "y": 99,
+          "w": 800,
+          "h": 192,
+          "text": "${system.time}",
+          "size": 180,
+          "bold": true,
+          "align": "center"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 315,
+          "w": 800,
+          "h": 51,
+          "text": "${system.date_long}",
+          "size": 36,
+          "align": "center",
+          "color": "#9aa3b5"
+        }
+      ]
+    }
+  ]
+}

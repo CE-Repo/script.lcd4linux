@@ -280,8 +280,42 @@ aufstehen" und „sehe ich vom Sofa".
 ![XL System](resources/screenshots/xl-system.png)
 ![Cover formatfüllend](resources/screenshots/cover-full.png)
 
-Von jedem Layout gibt es die 800×480-Fassung mit dem Zusatz `-800x480`; das
-Add-on wählt sie automatisch, wenn ein entsprechendes Panel angeschlossen ist.
+**Stile**
+
+Gleiche Informationen, anderes Aussehen – such dir aus, was zum Wohnzimmer
+passt.
+
+| Datei | Beschreibung |
+|---|---|
+| `light.json` | Helles Thema, dunkle Schrift auf Weiß – für helle Räume und tagsüber deutlich angenehmer |
+| `terminal.json` | Grün auf Schwarz, durchgehend Monospace, Segmentbalken – Konsolen-Optik und sehr gut lesbar |
+| `neon.json` | Magenta/Cyan mit leuchtender Kontur um die Schrift, Verlaufsbalken |
+| `vinyl.json` | Das Cover als runde Schallplatte samt Mittelloch, Text rechts daneben |
+
+![Terminal](resources/screenshots/terminal.png)
+![Neon](resources/screenshots/neon.png)
+![Vinyl](resources/screenshots/vinyl.png)
+![Hell](resources/screenshots/light.png)
+
+**Andere Inhalte**
+
+| Datei | Beschreibung |
+|---|---|
+| `nextup.json` | Oben der laufende Titel, unten **was als Nächstes kommt** – für Musik-Wiedergabelisten |
+| `weather.json` | Uhr und Wetter nebeneinander, darunter CPU, Temperatur und RAM. Die Wetterseite erscheint nur, wenn in Kodi ein Wetter-Add-on eingerichtet ist |
+| `library.json` | Filme, Serien und Alben als große Zähler, darunter Episoden, Songs und Interpreten |
+| `portrait.json` | **Hochformat 320×480** für ein um 90° gedreht montiertes Display – Cover oben, Text darunter |
+
+![Jetzt & Danach](resources/screenshots/nextup.png)
+![Wetter](resources/screenshots/weather.png)
+![Bibliothek](resources/screenshots/library.png)
+
+Von jedem Layout gibt es die 800×480-Fassung mit dem Zusatz `-800x480`
+(beim Hochformat `portrait-480x800.json`); das Add-on wählt sie automatisch,
+wenn ein entsprechendes Panel angeschlossen ist.
+
+Für das Hochformat zusätzlich *Einstellungen → Anzeige → Bild → Drehung* auf
+90 oder 270 Grad stellen.
 
 ---
 
@@ -343,6 +377,10 @@ python3 tools/scale_layout.py meins.json 800 480
 Positionen und Boxen folgen dabei den beiden Achsen getrennt, Schriftgrößen,
 Radien und Linienstärken der Höhe – so bleiben die Proportionen der Schrift
 erhalten. Prozentangaben bleiben unverändert, weil sie schon relativ sind.
+
+Eine Einschränkung: Weil beide Achsen unterschiedlich skalieren, wird aus
+einem Kreis ein Oval. Layouts mit runden Elementen – etwa `vinyl.json` – muss
+man danach von Hand nachziehen (Box wieder quadratisch machen).
 
 ### Layout ohne Hardware entwerfen
 

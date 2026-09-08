@@ -1,0 +1,91 @@
+{
+  "name": "Vinyl",
+  "size": [480, 320],
+  "background": "#0a0a0c",
+  "accent": "auto:${player.thumb}",
+  "defaults": {"font": "sans", "size": 21, "color": "#ffffff"},
+
+  "pages": [
+    {
+      "name": "Playing",
+      "condition": "audio",
+      "priority": 10,
+      "widgets": [
+        {"type": "circle", "x": 10, "y": 52, "w": 202, "h": 202,
+         "color": "#1c1c22"},
+        {"type": "image", "x": 16, "y": 58, "w": 190, "h": 190,
+         "src": "${player.thumb}", "fit": "cover", "radius": 95},
+        {"type": "circle", "x": 96, "y": 138, "w": 30, "h": 30,
+         "color": "#0a0a0c"},
+        {"type": "circle", "x": 105, "y": 147, "w": 12, "h": 12,
+         "color": "#3a3a44"},
+
+        {"type": "text", "x": 224, "y": 60, "w": 240, "h": 80,
+         "text": "${player.title}", "size": 30, "bold": true,
+         "wrap": true, "lines": 2, "valign": "middle", "color": "#ffffff"},
+        {"type": "text", "x": 224, "y": 146, "w": 240, "h": 32,
+         "text": "${player.artist}", "size": 24, "color": "accent",
+         "scroll": "bounce"},
+        {"type": "text", "x": 224, "y": 182, "w": 240, "h": 28,
+         "text": "${player.album}", "size": 19, "color": "#9aa3b5",
+         "scroll": "bounce"},
+        {"type": "text", "x": 224, "y": 214, "w": 240, "h": 26,
+         "text": "${player.year}${player.genre|prefix: · |trunc:16}",
+         "size": 17, "color": "#6b7488"},
+
+        {"type": "progress", "x": 224, "y": 254, "w": 240, "h": 12,
+         "value": "${player.percent}", "radius": 6, "color": "accent",
+         "background": "#26262e"},
+        {"type": "text", "x": 224, "y": 274, "w": 110, "h": 30,
+         "text": "${player.time}", "font": "mono", "size": 21,
+         "color": "#c8cede"},
+        {"type": "text", "x": 354, "y": 274, "w": 110, "h": 30,
+         "text": "${player.duration}", "font": "mono", "size": 21,
+         "align": "right", "color": "#c8cede"}
+      ]
+    },
+
+    {
+      "name": "Other",
+      "condition": "video",
+      "priority": 10,
+      "widgets": [
+        {"type": "text", "x": 20, "y": 40, "w": 440, "h": 100,
+         "text": "${player.title}", "size": 36, "bold": true,
+         "wrap": true, "lines": 2, "valign": "middle"},
+        {"type": "text", "x": 20, "y": 150, "w": 440, "h": 34,
+         "text": "${player.showtitle}${player.artist}", "size": 25,
+         "color": "accent"},
+        {"type": "progress", "x": 20, "y": 210, "w": 440, "h": 18,
+         "value": "${player.percent}", "radius": 9, "color": "accent",
+         "background": "#26262e"},
+        {"type": "text", "x": 20, "y": 240, "w": 200, "h": 42,
+         "text": "${player.time}", "font": "mono-bold", "size": 32},
+        {"type": "text", "x": 260, "y": 240, "w": 200, "h": 42,
+         "text": "-${player.remaining}", "font": "mono-bold", "size": 32,
+         "align": "right", "color": "#9aa3b5"}
+      ]
+    },
+
+    {
+      "name": "Idle",
+      "condition": "!active",
+      "widgets": [
+        {"type": "circle", "x": 140, "y": 40, "w": 200, "h": 200,
+         "color": "#15151a"},
+        {"type": "circle", "x": 140, "y": 40, "w": 200, "h": 200,
+         "color": "#2a2a33", "thickness": 2},
+        {"type": "circle", "x": 175, "y": 75, "w": 130, "h": 130,
+         "color": "#2a2a33", "thickness": 1},
+        {"type": "circle", "x": 225, "y": 125, "w": 30, "h": 30,
+         "color": "#3a3a44"},
+        {"type": "text", "x": 0, "y": 112, "w": 480, "h": 60,
+         "text": "${system.time}", "size": 52, "bold": true,
+         "align": "center", "color": "#ffffff"},
+        {"type": "text", "x": 0, "y": 262, "w": 480, "h": 32,
+         "text": "${system.date_long}", "size": 22, "align": "center",
+         "color": "#6b7488"}
+      ]
+    }
+  ]
+}

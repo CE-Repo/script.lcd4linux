@@ -172,11 +172,13 @@ class LineWidget(Widget):
         x2 = self.spec.get("x2")
         y2 = self.spec.get("y2")
         if x2 is None and y2 is None:
-            # A plain separator: use the widget box.
-            if height <= thickness:
-                canvas.fill_rect(x, y, width, thickness, color)
+            # A plain separator fills its own box: a wide flat box draws a
+            # horizontal rule as thick as the box, a tall narrow one a
+            # vertical rule. "thickness" only raises that minimum.
+            if height <= width:
+                canvas.fill_rect(x, y, width, max(thickness, height), color)
             else:
-                canvas.fill_rect(x, y, thickness, height, color)
+                canvas.fill_rect(x, y, max(thickness, width), height, color)
             return
         end_x = resolve_length(x2, context.width, x + width)
         end_y = resolve_length(y2, context.height, y)

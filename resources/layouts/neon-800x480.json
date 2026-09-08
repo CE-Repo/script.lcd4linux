@@ -1,0 +1,156 @@
+{
+  "name": "Neon (800x480)",
+  "size": [
+    800,
+    480
+  ],
+  "background": "#07020f",
+  "defaults": {
+    "font": "sans",
+    "size": 33,
+    "color": "#ffffff"
+  },
+  "pages": [
+    {
+      "name": "Playing",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {
+          "type": "line",
+          "x": 0,
+          "y": 9,
+          "w": 800,
+          "h": 4,
+          "color": "#ff2d95"
+        },
+        {
+          "type": "text",
+          "x": 33,
+          "y": 42,
+          "w": 733,
+          "h": 144,
+          "text": "${player.title}",
+          "size": 57,
+          "bold": true,
+          "wrap": true,
+          "lines": 2,
+          "valign": "middle",
+          "outline": "#ff2d95",
+          "color": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 33,
+          "y": 198,
+          "w": 733,
+          "h": 54,
+          "text": "${player.artist}${player.showtitle}",
+          "size": 40,
+          "color": "#00e5ff",
+          "scroll": "bounce",
+          "scrollspeed": 36
+        },
+        {
+          "type": "text",
+          "x": 33,
+          "y": 258,
+          "w": 733,
+          "h": 42,
+          "text": "${player.album}${player.episodelabel}",
+          "size": 30,
+          "color": "#8a6bff"
+        },
+        {
+          "type": "progress",
+          "x": 33,
+          "y": 324,
+          "w": 733,
+          "h": 30,
+          "value": "${player.percent}",
+          "radius": 15,
+          "color": "#ff2d95",
+          "gradient": "#00e5ff",
+          "background": "#1a0f2e"
+        },
+        {
+          "type": "text",
+          "x": 33,
+          "y": 369,
+          "w": 350,
+          "h": 66,
+          "text": "${player.time}",
+          "font": "mono-bold",
+          "size": 51,
+          "color": "#00e5ff"
+        },
+        {
+          "type": "text",
+          "x": 417,
+          "y": 369,
+          "w": 350,
+          "h": 66,
+          "text": "-${player.remaining}",
+          "font": "mono-bold",
+          "size": 51,
+          "align": "right",
+          "color": "#ff2d95"
+        },
+        {
+          "type": "line",
+          "x": 0,
+          "y": 466,
+          "w": 800,
+          "h": 4,
+          "color": "#00e5ff"
+        }
+      ]
+    },
+    {
+      "name": "Idle",
+      "condition": "!active",
+      "widgets": [
+        {
+          "type": "line",
+          "x": 0,
+          "y": 9,
+          "w": 800,
+          "h": 4,
+          "color": "#ff2d95"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 99,
+          "w": 800,
+          "h": 198,
+          "text": "${system.time}",
+          "size": 192,
+          "bold": true,
+          "align": "center",
+          "outline": "#ff2d95",
+          "color": "#00e5ff"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 318,
+          "w": 800,
+          "h": 54,
+          "text": "${system.date_long}",
+          "size": 36,
+          "align": "center",
+          "color": "#8a6bff"
+        },
+        {
+          "type": "line",
+          "x": 0,
+          "y": 466,
+          "w": 800,
+          "h": 4,
+          "color": "#00e5ff"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,202 @@
+{
+  "name": "Terminal (800x480)",
+  "size": [
+    800,
+    480
+  ],
+  "background": "#000000",
+  "defaults": {
+    "font": "mono",
+    "size": 30,
+    "color": "#33ff66"
+  },
+  "pages": [
+    {
+      "name": "Playing",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {
+          "type": "text",
+          "x": 23,
+          "y": 15,
+          "w": 753,
+          "h": 39,
+          "text": "coreelec:~$ now-playing",
+          "size": 28,
+          "color": "#1f9945"
+        },
+        {
+          "type": "line",
+          "x": 23,
+          "y": 60,
+          "w": 753,
+          "h": 2,
+          "color": "#123d22"
+        },
+        {
+          "type": "text",
+          "x": 23,
+          "y": 81,
+          "w": 753,
+          "h": 60,
+          "text": "${player.title}",
+          "font": "mono-bold",
+          "size": 45,
+          "scroll": "marquee",
+          "scrollspeed": 36,
+          "color": "#33ff66"
+        },
+        {
+          "type": "text",
+          "x": 23,
+          "y": 150,
+          "w": 753,
+          "h": 45,
+          "text": "${player.artist}${player.showtitle}",
+          "size": 33,
+          "color": "#26cc52"
+        },
+        {
+          "type": "text",
+          "x": 23,
+          "y": 198,
+          "w": 753,
+          "h": 42,
+          "text": "${player.album}${player.episodelabel}",
+          "size": 28,
+          "color": "#1f9945"
+        },
+        {
+          "type": "progress",
+          "x": 23,
+          "y": 267,
+          "w": 753,
+          "h": 33,
+          "value": "${player.percent}",
+          "color": "#33ff66",
+          "background": "#000000",
+          "style": "segments",
+          "segments": 53,
+          "gap": 4,
+          "inactivecolor": "#123d22"
+        },
+        {
+          "type": "text",
+          "x": 23,
+          "y": 318,
+          "w": 753,
+          "h": 45,
+          "text": "elapsed  ${player.time}",
+          "size": 33,
+          "color": "#26cc52"
+        },
+        {
+          "type": "text",
+          "x": 23,
+          "y": 363,
+          "w": 753,
+          "h": 45,
+          "text": "remain   ${player.remaining}",
+          "size": 33,
+          "color": "#26cc52"
+        },
+        {
+          "type": "line",
+          "x": 23,
+          "y": 423,
+          "w": 753,
+          "h": 2,
+          "color": "#123d22"
+        },
+        {
+          "type": "text",
+          "x": 23,
+          "y": 435,
+          "w": 753,
+          "h": 39,
+          "text": "cpu ${system.cpu}%  temp ${system.cputemp}C  ${system.time}",
+          "size": 27,
+          "color": "#1f9945"
+        }
+      ]
+    },
+    {
+      "name": "Idle",
+      "condition": "!active",
+      "widgets": [
+        {
+          "type": "text",
+          "x": 23,
+          "y": 21,
+          "w": 753,
+          "h": 39,
+          "text": "coreelec:~$ uptime",
+          "size": 28,
+          "color": "#1f9945"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 99,
+          "w": 800,
+          "h": 150,
+          "text": "${system.time}",
+          "font": "mono-bold",
+          "size": 144,
+          "align": "center",
+          "color": "#33ff66"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 264,
+          "w": 800,
+          "h": 45,
+          "text": "${system.date_iso}",
+          "size": 33,
+          "align": "center",
+          "color": "#26cc52"
+        },
+        {
+          "type": "line",
+          "x": 23,
+          "y": 330,
+          "w": 753,
+          "h": 2,
+          "color": "#123d22"
+        },
+        {
+          "type": "text",
+          "x": 23,
+          "y": 348,
+          "w": 753,
+          "h": 39,
+          "text": "host  ${system.hostname}",
+          "size": 28,
+          "color": "#26cc52"
+        },
+        {
+          "type": "text",
+          "x": 23,
+          "y": 387,
+          "w": 753,
+          "h": 39,
+          "text": "addr  ${system.ip}",
+          "size": 28,
+          "color": "#26cc52"
+        },
+        {
+          "type": "text",
+          "x": 23,
+          "y": 426,
+          "w": 753,
+          "h": 39,
+          "text": "disk  ${system.freespace} free",
+          "size": 28,
+          "color": "#26cc52"
+        }
+      ]
+    }
+  ]
+}

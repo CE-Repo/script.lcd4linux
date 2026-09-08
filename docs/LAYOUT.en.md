@@ -236,7 +236,11 @@ Rolling sparkline of a numeric value.
 |---|---|
 | `color` | Colour |
 | `thickness` | Width |
-| `x2`, `y2` | End point; without them the line fills the widget box (horizontal for a short box, otherwise vertical) |
+| `x2`, `y2` | End point for a diagonal line |
+
+Without `x2`/`y2` the line fills its own box: a wide flat box gives a
+horizontal rule as thick as the box (`"w": 440, "h": 3` is 3 px tall), a tall
+narrow one a vertical rule. `thickness` only raises that minimum.
 
 ### `circle`
 

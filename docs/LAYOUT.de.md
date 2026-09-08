@@ -240,7 +240,11 @@ Verlaufsdiagramm eines Zahlenwerts.
 |---|---|
 | `color` | Farbe |
 | `thickness` | Stärke |
-| `x2`, `y2` | Endpunkt; ohne diese Angaben füllt die Linie die Widgetbox (waagerecht bei kleiner Höhe, sonst senkrecht) |
+| `x2`, `y2` | Endpunkt für eine schräge Linie |
+
+Ohne `x2`/`y2` füllt die Linie ihre eigene Box: eine breite flache Box ergibt
+eine waagerechte Linie in Boxhöhe (`"w": 440, "h": 3` also 3 px hoch), eine
+hohe schmale Box eine senkrechte. `thickness` hebt nur die Mindeststärke an.
 
 ### `circle`
 

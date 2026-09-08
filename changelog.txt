@@ -1,3 +1,17 @@
+v1.3.0
+- Eight more layouts, each in both display sizes:
+  light (dark on white, for bright rooms), terminal (green monospace console),
+  neon (magenta/cyan with a glowing outline), vinyl (the cover as a round
+  record with a centre hole), nextup (what is playing and what comes next),
+  weather (clock beside the weather, only shown when a weather add-on is set
+  up), library (movies, shows and albums as large counters) and portrait
+  (320x480 for a display mounted at 90 degrees)
+- The line widget now fills its own box: a wide flat box draws a horizontal
+  rule of that height instead of a one pixel vertical line, which is what
+  everyone writing "w": 440, "h": 3 expects
+- The 800x480 vinyl layout is hand made, because scaling the axes separately
+  turns a circle into an oval
+
 v1.2.0
 - Five new layouts built for reading from a distance, in both display sizes:
   xl-player (40 px title, 38 px times), xl-remaining (the remaining time at
