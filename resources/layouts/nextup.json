@@ -1,5 +1,5 @@
 {
-  "name": "Jetzt & Danach",
+  "name": "$LOCALIZE[32506]",
   "size": [480, 320],
   "background": "#0b0d12",
   "accent": "auto:${player.thumb}",
@@ -7,7 +7,7 @@
 
   "pages": [
     {
-      "name": "Now and next",
+      "name": "$LOCALIZE[32405]",
       "condition": "audio",
       "priority": 10,
       "widgets": [
@@ -37,9 +37,9 @@
          "color": "#262b36"},
 
         {"type": "text", "x": 16, "y": 208, "w": 300, "h": 24,
-         "text": "ALS NÄCHSTES", "size": 17, "color": "#6b7488"},
+         "text": "$LOCALIZE[32421]", "size": 17, "color": "#6b7488"},
         {"type": "text", "x": 264, "y": 208, "w": 200, "h": 24,
-         "text": "${player.playlistposition|prefix:Titel }${player.playlistlength|prefix: / }",
+         "text": "${player.playlistposition|prefix:$LOCALIZE[32422] }${player.playlistlength|prefix: $LOCALIZE[32423] }",
          "size": 17, "align": "right", "color": "#6b7488"},
 
         {"type": "text", "x": 16, "y": 234, "w": 448, "h": 36,
@@ -76,13 +76,13 @@
          "text": "-${player.remaining}", "font": "mono-bold", "size": 32,
          "align": "right", "color": "#9aa3b5"},
         {"type": "text", "x": 18, "y": 288, "w": 444, "h": 26,
-         "text": "${player.finishtime|prefix:Ende }", "size": 19,
+         "text": "${player.finishtime|prefix:$LOCALIZE[32426] }", "size": 19,
          "align": "center", "color": "#6b7488"}
       ]
     },
 
     {
-      "name": "Idle",
+      "name": "$LOCALIZE[32401]",
       "condition": "!active",
       "widgets": [
         {"type": "text", "x": 0, "y": 66, "w": 480, "h": 128,

@@ -1,5 +1,5 @@
 {
-  "name": "Bibliothek (800x480)",
+  "name": "$LOCALIZE[32503] (800x480)",
   "size": [
     800,
     480
@@ -12,7 +12,7 @@
   },
   "pages": [
     {
-      "name": "Library",
+      "name": "$LOCALIZE[32404]",
       "condition": "!active",
       "widgets": [
         {
@@ -21,7 +21,7 @@
           "y": 21,
           "w": 500,
           "h": 54,
-          "text": "Bibliothek",
+          "text": "$LOCALIZE[32433]",
           "size": 39,
           "bold": true
         },
@@ -60,7 +60,7 @@
           "y": 108,
           "w": 200,
           "h": 39,
-          "text": "Filme",
+          "text": "$LOCALIZE[32434]",
           "size": 28,
           "color": "#9aa3b5"
         },
@@ -89,7 +89,7 @@
           "y": 108,
           "w": 200,
           "h": 39,
-          "text": "Serien",
+          "text": "$LOCALIZE[32435]",
           "size": 28,
           "color": "#9aa3b5"
         },
@@ -118,7 +118,7 @@
           "y": 108,
           "w": 200,
           "h": 39,
-          "text": "Alben",
+          "text": "$LOCALIZE[32436]",
           "size": 28,
           "color": "#9aa3b5"
         },
@@ -146,7 +146,7 @@
           "y": 273,
           "w": 367,
           "h": 45,
-          "text": "Episoden",
+          "text": "$LOCALIZE[32437]",
           "size": 30,
           "color": "#9aa3b5"
         },
@@ -188,7 +188,7 @@
           "y": 369,
           "w": 367,
           "h": 45,
-          "text": "Interpreten",
+          "text": "$LOCALIZE[32438]",
           "size": 30,
           "color": "#9aa3b5"
         },
@@ -209,7 +209,7 @@
           "y": 429,
           "w": 740,
           "h": 39,
-          "text": "${system.freespace|suffix: frei}  ·  ${system.hostname}",
+          "text": "${system.freespace|suffix: $LOCALIZE[32425]}  ·  ${system.hostname}",
           "size": 27,
           "align": "center",
           "color": "#6b7488"
@@ -217,7 +217,7 @@
       ]
     },
     {
-      "name": "Playing",
+      "name": "$LOCALIZE[32400]",
       "condition": "active",
       "priority": 10,
       "widgets": [

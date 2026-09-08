@@ -6,7 +6,7 @@
 
   "pages": [
     {
-      "name": "Playing",
+      "name": "$LOCALIZE[32400]",
       "condition": "active",
       "priority": 10,
       "widgets": [
@@ -32,9 +32,9 @@
          "gap": 3, "inactivecolor": "#123d22"},
 
         {"type": "text", "x": 14, "y": 212, "w": 452, "h": 30,
-         "text": "elapsed  ${player.time}", "size": 22, "color": "#26cc52"},
+         "text": "$LOCALIZE[32439]${player.time}", "size": 22, "color": "#26cc52"},
         {"type": "text", "x": 14, "y": 242, "w": 452, "h": 30,
-         "text": "remain   ${player.remaining}", "size": 22,
+         "text": "$LOCALIZE[32440]${player.remaining}", "size": 22,
          "color": "#26cc52"},
 
         {"type": "line", "x": 14, "y": 282, "w": 452, "h": 1,
@@ -46,7 +46,7 @@
     },
 
     {
-      "name": "Idle",
+      "name": "$LOCALIZE[32401]",
       "condition": "!active",
       "widgets": [
         {"type": "text", "x": 14, "y": 14, "w": 452, "h": 26,
@@ -65,7 +65,7 @@
         {"type": "text", "x": 14, "y": 258, "w": 452, "h": 26,
          "text": "addr  ${system.ip}", "size": 19, "color": "#26cc52"},
         {"type": "text", "x": 14, "y": 284, "w": 452, "h": 26,
-         "text": "disk  ${system.freespace} free", "size": 19,
+         "text": "disk  ${system.freespace} $LOCALIZE[32425]", "size": 19,
          "color": "#26cc52"}
       ]
     }

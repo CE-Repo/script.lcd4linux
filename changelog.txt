@@ -1,3 +1,10 @@
+v1.5.0
+- The display now follows Kodi's language: every fixed word in the bundled
+  layouts, the page banners, the test pattern and the day and month names
+  are translated instead of always being English
+- Layouts can translate their own text with $LOCALIZE[id], the spelling
+  Kodi skins use; it also works as a filter argument
+
 v1.4.0
 - Backlight settings reworked: the display now dims while nothing is playing
   instead of following the screensaver and an idle timer

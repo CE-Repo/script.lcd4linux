@@ -512,6 +512,78 @@ def test_brightness():
     target.close()
 
 
+def test_localisation():
+    """Every $LOCALIZE[...] the bundled layouts use must be translated."""
+    print("localisation")
+    import glob
+    import re
+    from lcd4linux import localize
+
+    def catalogue(language):
+        path = os.path.join(ROOT, "resources", "language",
+                            "resource.language.%s" % language, "strings.po")
+        with open(path, "r", encoding="utf-8") as handle:
+            data = handle.read()
+        found = {}
+        for number, english, translated in localize._PO_ENTRY.findall(data):
+            found[int(number)] = translated or english
+        return found
+
+    english = catalogue("en_gb")
+    german = catalogue("de_de")
+    check(sorted(english) == sorted(german),
+          "both languages define the same %d string ids" % len(english))
+
+    used = set()
+    for path in sorted(glob.glob(os.path.join(ROOT, "resources", "layouts", "*.json"))):
+        with open(path, "r", encoding="utf-8") as handle:
+            for number in re.findall(r"\$LOCALIZE\[(\d+)\]", handle.read()):
+                used.add(int(number))
+    check(used, "the bundled layouts use %d translated strings" % len(used))
+    missing = sorted(number for number in used if number not in english)
+    check(not missing, "no layout refers to an unknown string id (%s)"
+          % (missing or "none",))
+    untranslated = sorted(number for number in used
+                          if german.get(number) == english.get(number)
+                          and number not in (32423,))
+    check(not untranslated,
+          "every layout string differs between the languages (%s)"
+          % (untranslated or "none",))
+
+    # The offline catalogue is what the preview tools read.
+    localize._catalogue = None
+    os.environ["LANGUAGE"] = "de_DE.UTF-8"
+    try:
+        check(localize.text(32433) == "Bibliothek",
+              "a layout string reads German with a German environment")
+        check(localize.weekday(0) == "Montag" and localize.month(3) == "März",
+              "day and month names fall back to the add-on's own strings")
+    finally:
+        del os.environ["LANGUAGE"]
+        localize._catalogue = None
+
+    check(localize.text(32433) == "Library",
+          "and English again with the default environment")
+
+    # $LOCALIZE is resolved before ${...} so it can be a filter argument.
+    from lcd4linux import tokens
+
+    class Provider(object):
+        def value(self, key):
+            return "Personal Jesus"
+
+    os.environ["LANGUAGE"] = "de_DE.UTF-8"
+    localize._catalogue = None
+    try:
+        text = tokens.expand("${player.next|prefix:$LOCALIZE[32420]: |trunc:14}",
+                             Provider())
+    finally:
+        del os.environ["LANGUAGE"]
+        localize._catalogue = None
+    check(text == u"Weiter: Perso\u2026",
+          "a translated prefix is counted by trunc (%r)" % text)
+
+
 def test_power_hooks():
     """The start/stop commands that switch a smart plug."""
     print("power hooks")
@@ -695,8 +767,8 @@ def main():
     print("script.lcd4linux self test\n")
     for test in (test_encoding, test_fonts, test_images, test_tokens,
                  test_jpeg_encoder, test_protocol, test_target_from_settings,
-                 test_samsung_spf, test_brightness, test_power_hooks,
-                 test_rotation,
+                 test_samsung_spf, test_brightness, test_localisation,
+                 test_power_hooks, test_rotation,
                  test_layouts):
         test()
         print("")

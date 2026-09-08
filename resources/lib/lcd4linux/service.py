@@ -525,13 +525,15 @@ class Service(object):
         canvas.rect(0, 0, width, height, parse_color("#ff0000"), 1)
         font = self.fonts.get("sans-bold", 22)
         small = self.fonts.get("mono", 15)
-        canvas.draw_text(font, "LCD4Linux test pattern", 16,
-                         height // 2 + 34, parse_color("#ffffff"))
+        canvas.draw_text(font, localize.text(32341, "LCD4Linux test pattern"),
+                         16, height // 2 + 34, parse_color("#ffffff"))
         canvas.draw_text(small, "%d x %d  rot %d  %s-endian"
                          % (width, height, self.config.rotation,
                             self.config.byte_order),
                          16, height // 2 + 60, parse_color("#9aa3b5"))
-        canvas.draw_text(small, "red border must touch all four edges",
+        canvas.draw_text(small,
+                         localize.text(32342,
+                                       "red border must touch all four edges"),
                          16, height // 2 + 82, parse_color("#9aa3b5"))
 
     def _handle_disconnect(self):

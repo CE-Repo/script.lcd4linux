@@ -1,5 +1,5 @@
 {
-  "name": "Hochformat (480x800)",
+  "name": "$LOCALIZE[32505] (480x800)",
   "size": [
     480,
     800
@@ -13,7 +13,7 @@
   },
   "pages": [
     {
-      "name": "Playing",
+      "name": "$LOCALIZE[32400]",
       "condition": "active",
       "priority": 10,
       "widgets": [
@@ -101,7 +101,7 @@
       ]
     },
     {
-      "name": "Idle",
+      "name": "$LOCALIZE[32401]",
       "condition": "!active",
       "widgets": [
         {

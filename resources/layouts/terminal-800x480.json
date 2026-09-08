@@ -12,7 +12,7 @@
   },
   "pages": [
     {
-      "name": "Playing",
+      "name": "$LOCALIZE[32400]",
       "condition": "active",
       "priority": 10,
       "widgets": [
@@ -87,7 +87,7 @@
           "y": 318,
           "w": 753,
           "h": 45,
-          "text": "elapsed  ${player.time}",
+          "text": "$LOCALIZE[32439]${player.time}",
           "size": 33,
           "color": "#26cc52"
         },
@@ -97,7 +97,7 @@
           "y": 363,
           "w": 753,
           "h": 45,
-          "text": "remain   ${player.remaining}",
+          "text": "$LOCALIZE[32440]${player.remaining}",
           "size": 33,
           "color": "#26cc52"
         },
@@ -122,7 +122,7 @@
       ]
     },
     {
-      "name": "Idle",
+      "name": "$LOCALIZE[32401]",
       "condition": "!active",
       "widgets": [
         {
@@ -192,7 +192,7 @@
           "y": 426,
           "w": 753,
           "h": 39,
-          "text": "disk  ${system.freespace} free",
+          "text": "disk  ${system.freespace} $LOCALIZE[32425]",
           "size": 28,
           "color": "#26cc52"
         }

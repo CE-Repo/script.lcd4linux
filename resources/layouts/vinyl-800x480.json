@@ -7,7 +7,7 @@
 
   "pages": [
     {
-      "name": "Playing",
+      "name": "$LOCALIZE[32400]",
       "condition": "audio",
       "priority": 10,
       "widgets": [
@@ -46,7 +46,7 @@
     },
 
     {
-      "name": "Other",
+      "name": "$LOCALIZE[32406]",
       "condition": "video",
       "priority": 10,
       "widgets": [
@@ -68,7 +68,7 @@
     },
 
     {
-      "name": "Idle",
+      "name": "$LOCALIZE[32401]",
       "condition": "!active",
       "widgets": [
         {"type": "circle", "x": 250, "y": 60, "w": 300, "h": 300,

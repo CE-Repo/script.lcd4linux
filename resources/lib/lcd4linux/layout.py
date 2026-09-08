@@ -34,7 +34,8 @@ class Page(object):
         self.spec = spec or {}
         self.layout = layout
         self.index = index
-        self.name = self.spec.get("name", "page %d" % (index + 1))
+        self.name = tokens.localize_text(
+            self.spec.get("name", "page %d" % (index + 1)))
         self.condition = self.spec.get("condition") or self.spec.get("visible")
         self.duration = float(self.spec.get("duration", 0) or 0)
         self.priority = int(self.spec.get("priority", 0))
@@ -97,8 +98,8 @@ class Layout(object):
     def __init__(self, spec, path=None):
         self.spec = spec or {}
         self.path = path
-        self.name = self.spec.get("name") or (
-            os.path.splitext(os.path.basename(path))[0] if path else "layout")
+        self.name = tokens.localize_text(self.spec.get("name") or (
+            os.path.splitext(os.path.basename(path))[0] if path else "layout"))
         size = self.spec.get("size") or DEFAULT_SIZE
         try:
             self.width, self.height = int(size[0]), int(size[1])

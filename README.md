@@ -49,6 +49,9 @@ Und auf dem 800×480-Rahmen:
 * **Drehung** um 0/90/180/270 Grad, Spiegelung, einstellbare Byte-Reihenfolge.
 * **Hintergrundbeleuchtung** dimmt, solange nichts abgespielt wird – beim
   AX206 über die Beleuchtung, beim Samsung-Rahmen softwareseitig.
+* **Deutsch und Englisch** auf dem Display: die mitgelieferten Layouts, die
+  Seitennamen sowie Wochentage und Monate folgen der Sprache von Kodi. Eigene
+  Layouts können mit `$LOCALIZE[...]` dasselbe tun.
 * **Vorschau ohne Hardware**: Layouts lassen sich als PNG rendern.
 
 ---
@@ -248,6 +251,14 @@ Rechenzeit, weil die Abdunklung in der Farbtabelle des JPEG-Encoders steckt.
 Aktives Layout, Layout-Auswahl, eigener Layout-Ordner, Seitenwechselintervall
 sowie die Aktionsknöpfe *Vorschau*, *Testbild*, *Anzeigestatus* und
 *Dienst neu laden*.
+
+**Sprache**
+
+Es gibt nichts einzustellen: Das Add-on folgt der Sprache von Kodi. Die
+Einstellungen, die Meldungen auf dem Display, die mitgelieferten Layouts und
+die Namen von Wochentagen und Monaten liegen auf Deutsch und Englisch vor.
+Wie eigene Layouts mitziehen, steht in
+[docs/LAYOUT.de.md](docs/LAYOUT.de.md) unter *Feste Wörter übersetzen*.
 
 **Verhalten**
 

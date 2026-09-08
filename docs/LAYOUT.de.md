@@ -387,6 +387,34 @@ ${player.year|prefix: · }
 sollen, wenn es nichts zu trennen gibt:
 `${player.year}${player.genre|prefix: · }`.
 
+### Feste Wörter übersetzen – `$LOCALIZE[...]`
+
+Fest eingetragene Wörter lassen sich übersetzen, indem statt des Wortes eine
+String-ID geschrieben wird – dieselbe Schreibweise wie in Kodi-Skins:
+
+```json
+{"type": "text", "x": 16, "y": 8, "text": "$LOCALIZE[32433]"}
+```
+
+* IDs ab **30000** kommen aus `resources/language/` dieses Add-ons.
+* IDs darunter kommen aus Kodi selbst, zum Beispiel `$LOCALIZE[31]` für
+  „Verfügbar".
+
+`$LOCALIZE[...]` wird **vor** den `${...}`-Tokens ersetzt und darf deshalb
+auch als Filterargument stehen, wo `trunc` die übersetzte Länge zählen muss:
+
+```
+${player.next|prefix:$LOCALIZE[32420]: |trunc:32}
+```
+
+Auch `name` einer Seite darf so geschrieben werden; dieser Name erscheint als
+Einblendung beim Seitenwechsel. Die mitgelieferten Layouts sind vollständig so
+aufgebaut, die IDs der Wörter stehen ab 32400 in beiden Sprachdateien.
+
+Wochentags- und Monatsnamen (`${system.weekday}`, `${system.monthname}`,
+`${system.date_long}`) übersetzt das Add-on von sich aus, dafür ist nichts zu
+tun.
+
 ---
 
 ## 6. Bedingungen

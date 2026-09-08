@@ -1,5 +1,5 @@
 {
-  "name": "Cover formatfüllend (800x480)",
+  "name": "$LOCALIZE[32502] (800x480)",
   "size": [
     800,
     480
@@ -74,7 +74,7 @@
       ]
     },
     {
-      "name": "Idle",
+      "name": "$LOCALIZE[32401]",
       "condition": "!active",
       "widgets": [
         {

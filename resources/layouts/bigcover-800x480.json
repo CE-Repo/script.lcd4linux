@@ -1,5 +1,5 @@
 {
-  "name": "Big Cover (800x480)",
+  "name": "$LOCALIZE[32501] (800x480)",
   "size": [800, 480],
   "background": "#000000",
   "accent": "auto:${player.thumb}",
@@ -7,7 +7,7 @@
 
   "pages": [
     {
-      "name": "Playing",
+      "name": "$LOCALIZE[32400]",
       "condition": "active",
       "priority": 10,
       "backgroundimage": "${player.thumb}",
@@ -46,7 +46,7 @@
     },
 
     {
-      "name": "Idle",
+      "name": "$LOCALIZE[32401]",
       "condition": "!active",
       "background": "#000000",
       "widgets": [

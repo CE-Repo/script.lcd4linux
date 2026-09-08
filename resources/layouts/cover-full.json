@@ -1,5 +1,5 @@
 {
-  "name": "Cover formatfüllend",
+  "name": "$LOCALIZE[32502]",
   "size": [480, 320],
   "background": "#000000",
   "accent": "auto:${player.thumb}",
@@ -31,7 +31,7 @@
     },
 
     {
-      "name": "Idle",
+      "name": "$LOCALIZE[32401]",
       "condition": "!active",
       "widgets": [
         {"type": "text", "x": 0, "y": 60, "w": 480, "h": 132,

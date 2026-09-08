@@ -1,5 +1,5 @@
 {
-  "name": "XL Restzeit",
+  "name": "$LOCALIZE[32510]",
   "size": [480, 320],
   "background": "#000000",
   "accent": "auto:${player.thumb}",
@@ -7,7 +7,7 @@
 
   "pages": [
     {
-      "name": "Remaining",
+      "name": "$LOCALIZE[32408]",
       "condition": "active",
       "priority": 10,
       "widgets": [
@@ -24,7 +24,7 @@
          "align": "center", "color": "#ffffff"},
 
         {"type": "text", "x": 0, "y": 204, "w": 480, "h": 28,
-         "text": "verbleibend  ·  Ende ${player.finishtime}", "size": 20,
+         "text": "$LOCALIZE[32427] ${player.finishtime}", "size": 20,
          "align": "center", "color": "#a8b0c0"},
 
         {"type": "progress", "x": 18, "y": 250, "w": 444, "h": 26,
@@ -41,7 +41,7 @@
     },
 
     {
-      "name": "Idle",
+      "name": "$LOCALIZE[32401]",
       "condition": "!active",
       "widgets": [
         {"type": "text", "x": 0, "y": 68, "w": 480, "h": 132,
