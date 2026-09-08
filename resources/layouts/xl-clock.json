@@ -1,0 +1,46 @@
+{
+  "name": "XL Uhr",
+  "size": [480, 320],
+  "background": "#000000",
+  "accent": "auto:${player.thumb}",
+  "defaults": {"font": "sans", "size": 24, "color": "#ffffff"},
+
+  "pages": [
+    {
+      "name": "Clock",
+      "widgets": [
+        {"type": "text", "x": 0, "y": 16, "w": 480, "h": 132,
+         "text": "${system.time}", "size": 128, "bold": true,
+         "align": "center", "color": "#ffffff", "condition": "active"},
+        {"type": "text", "x": 0, "y": 52, "w": 480, "h": 132,
+         "text": "${system.time}", "size": 128, "bold": true,
+         "align": "center", "color": "#ffffff", "condition": "!active"},
+
+        {"type": "text", "x": 0, "y": 196, "w": 480, "h": 36,
+         "text": "${system.date_long}", "size": 26, "align": "center",
+         "color": "#a8b0c0", "condition": "!active"},
+        {"type": "text", "x": 0, "y": 250, "w": 480, "h": 30,
+         "text": "${system.cpu}%   ·   ${system.cputemp}°C", "size": 22,
+         "align": "center", "color": "#6b7488", "condition": "!active"},
+
+        {"type": "text", "x": 18, "y": 168, "w": 444, "h": 36,
+         "text": "${player.title}", "size": 27, "bold": true,
+         "align": "center", "scroll": "marquee", "scrollspeed": 24,
+         "color": "#ffffff", "condition": "active"},
+        {"type": "text", "x": 18, "y": 206, "w": 444, "h": 30,
+         "text": "${player.artist}${player.showtitle}", "size": 22,
+         "align": "center", "color": "accent", "condition": "active"},
+
+        {"type": "progress", "x": 18, "y": 250, "w": 444, "h": 18,
+         "value": "${player.percent}", "radius": 9, "color": "accent",
+         "background": "#262b36", "condition": "active"},
+        {"type": "text", "x": 18, "y": 276, "w": 200, "h": 30,
+         "text": "${player.time}", "font": "mono", "size": 22,
+         "color": "#a8b0c0", "condition": "active"},
+        {"type": "text", "x": 262, "y": 276, "w": 200, "h": 30,
+         "text": "-${player.remaining}", "font": "mono", "size": 22,
+         "align": "right", "color": "#a8b0c0", "condition": "active"}
+      ]
+    }
+  ]
+}

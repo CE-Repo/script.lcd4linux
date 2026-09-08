@@ -1,0 +1,122 @@
+{
+  "name": "XL Wiedergabe (800x480)",
+  "size": [
+    800,
+    480
+  ],
+  "background": "#000000",
+  "accent": "auto:${player.thumb}",
+  "defaults": {
+    "font": "sans",
+    "size": 36,
+    "color": "#ffffff"
+  },
+  "pages": [
+    {
+      "name": "Playing",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {
+          "type": "text",
+          "x": 30,
+          "y": 15,
+          "w": 740,
+          "h": 162,
+          "text": "${player.title}",
+          "size": 60,
+          "bold": true,
+          "wrap": true,
+          "lines": 2,
+          "valign": "middle",
+          "color": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 186,
+          "w": 740,
+          "h": 54,
+          "text": "${player.artist}${player.showtitle}",
+          "size": 42,
+          "color": "accent",
+          "scroll": "bounce",
+          "scrollspeed": 36
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 243,
+          "w": 740,
+          "h": 45,
+          "text": "${player.album}${player.episodelabel}",
+          "size": 33,
+          "color": "#a8b0c0"
+        },
+        {
+          "type": "progress",
+          "x": 30,
+          "y": 309,
+          "w": 740,
+          "h": 33,
+          "value": "${player.percent}",
+          "radius": 16,
+          "color": "accent",
+          "background": "#262b36"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 360,
+          "w": 350,
+          "h": 84,
+          "text": "${player.time}",
+          "font": "mono-bold",
+          "size": 57,
+          "color": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 420,
+          "y": 360,
+          "w": 350,
+          "h": 84,
+          "text": "-${player.remaining}",
+          "font": "mono-bold",
+          "size": 57,
+          "align": "right",
+          "color": "#a8b0c0"
+        }
+      ]
+    },
+    {
+      "name": "Idle",
+      "condition": "!active",
+      "widgets": [
+        {
+          "type": "text",
+          "x": 0,
+          "y": 90,
+          "w": 800,
+          "h": 198,
+          "text": "${system.time}",
+          "size": 192,
+          "bold": true,
+          "align": "center",
+          "color": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 315,
+          "w": 800,
+          "h": 54,
+          "text": "${system.date_long}",
+          "size": 39,
+          "align": "center",
+          "color": "#a8b0c0"
+        }
+      ]
+    }
+  ]
+}

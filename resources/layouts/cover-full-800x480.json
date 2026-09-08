@@ -1,0 +1,106 @@
+{
+  "name": "Cover formatfüllend (800x480)",
+  "size": [
+    800,
+    480
+  ],
+  "background": "#000000",
+  "accent": "auto:${player.thumb}",
+  "defaults": {
+    "font": "sans",
+    "size": 33,
+    "color": "#ffffff"
+  },
+  "pages": [
+    {
+      "name": "Cover",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {
+          "type": "image",
+          "x": 0,
+          "y": 0,
+          "w": 800,
+          "h": 480,
+          "src": "${player.thumb}",
+          "fallback": "${player.fanart}",
+          "fit": "cover"
+        },
+        {
+          "type": "rect",
+          "x": 0,
+          "y": 402,
+          "w": 800,
+          "h": 78,
+          "color": "#cc000000"
+        },
+        {
+          "type": "text",
+          "x": 27,
+          "y": 411,
+          "w": 500,
+          "h": 42,
+          "text": "${player.title}",
+          "size": 34,
+          "bold": true,
+          "scroll": "marquee",
+          "scrollspeed": 33,
+          "shadow": "#000000"
+        },
+        {
+          "type": "text",
+          "x": 540,
+          "y": 414,
+          "w": 233,
+          "h": 39,
+          "text": "-${player.remaining}",
+          "font": "mono-bold",
+          "size": 33,
+          "align": "right",
+          "color": "#ffffff",
+          "shadow": "#000000"
+        },
+        {
+          "type": "progress",
+          "x": 0,
+          "y": 468,
+          "w": 800,
+          "h": 12,
+          "value": "${player.percent}",
+          "color": "accent",
+          "background": "#40ffffff"
+        }
+      ]
+    },
+    {
+      "name": "Idle",
+      "condition": "!active",
+      "widgets": [
+        {
+          "type": "text",
+          "x": 0,
+          "y": 90,
+          "w": 800,
+          "h": 198,
+          "text": "${system.time}",
+          "size": 192,
+          "bold": true,
+          "align": "center",
+          "color": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 312,
+          "w": 800,
+          "h": 54,
+          "text": "${system.date_long}",
+          "size": 39,
+          "align": "center",
+          "color": "#a8b0c0"
+        }
+      ]
+    }
+  ]
+}

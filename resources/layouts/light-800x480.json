@@ -1,0 +1,188 @@
+{
+  "name": "Hell (800x480)",
+  "size": [
+    800,
+    480
+  ],
+  "background": "#f4f6fa",
+  "defaults": {
+    "font": "sans",
+    "size": 30,
+    "color": "#10141c"
+  },
+  "pages": [
+    {
+      "name": "Playing",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {
+          "type": "image",
+          "x": 27,
+          "y": 24,
+          "w": 253,
+          "h": 228,
+          "src": "${player.thumb}",
+          "fit": "cover",
+          "radius": 15
+        },
+        {
+          "type": "rect",
+          "x": 27,
+          "y": 24,
+          "w": 253,
+          "h": 228,
+          "radius": 15,
+          "border": 2,
+          "bordercolor": "#22000000"
+        },
+        {
+          "type": "text",
+          "x": 307,
+          "y": 27,
+          "w": 467,
+          "h": 114,
+          "text": "${player.title}",
+          "size": 44,
+          "bold": true,
+          "wrap": true,
+          "lines": 2,
+          "valign": "middle",
+          "color": "#10141c"
+        },
+        {
+          "type": "text",
+          "x": 307,
+          "y": 150,
+          "w": 467,
+          "h": 45,
+          "text": "${player.artist}${player.showtitle}",
+          "size": 34,
+          "color": "#0b57d0",
+          "scroll": "bounce"
+        },
+        {
+          "type": "text",
+          "x": 307,
+          "y": 201,
+          "w": 467,
+          "h": 39,
+          "text": "${player.album}${player.episodelabel}",
+          "size": 28,
+          "color": "#5b6472"
+        },
+        {
+          "type": "progress",
+          "x": 27,
+          "y": 294,
+          "w": 747,
+          "h": 27,
+          "value": "${player.percent}",
+          "radius": 14,
+          "color": "#0b57d0",
+          "background": "#d7dce6"
+        },
+        {
+          "type": "text",
+          "x": 27,
+          "y": 336,
+          "w": 367,
+          "h": 60,
+          "text": "${player.time}",
+          "font": "mono-bold",
+          "size": 48,
+          "color": "#10141c"
+        },
+        {
+          "type": "text",
+          "x": 407,
+          "y": 336,
+          "w": 367,
+          "h": 60,
+          "text": "-${player.remaining}",
+          "font": "mono-bold",
+          "size": 48,
+          "align": "right",
+          "color": "#5b6472"
+        },
+        {
+          "type": "line",
+          "x": 27,
+          "y": 417,
+          "w": 747,
+          "h": 2,
+          "color": "#dde2ea"
+        },
+        {
+          "type": "text",
+          "x": 27,
+          "y": 432,
+          "w": 367,
+          "h": 39,
+          "text": "${system.time}",
+          "size": 28,
+          "color": "#5b6472"
+        },
+        {
+          "type": "text",
+          "x": 407,
+          "y": 432,
+          "w": 367,
+          "h": 39,
+          "text": "${player.finishtime|prefix:Ende }",
+          "size": 28,
+          "align": "right",
+          "color": "#5b6472"
+        }
+      ]
+    },
+    {
+      "name": "Idle",
+      "condition": "!active",
+      "widgets": [
+        {
+          "type": "text",
+          "x": 0,
+          "y": 84,
+          "w": 800,
+          "h": 177,
+          "text": "${system.time}",
+          "size": 168,
+          "bold": true,
+          "align": "center",
+          "color": "#10141c"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 285,
+          "w": 800,
+          "h": 54,
+          "text": "${system.date_long}",
+          "size": 38,
+          "align": "center",
+          "color": "#5b6472"
+        },
+        {
+          "type": "line",
+          "x": 250,
+          "y": 366,
+          "w": 300,
+          "h": 2,
+          "color": "#dde2ea"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 393,
+          "w": 800,
+          "h": 45,
+          "text": "${system.cpu}%   ·   ${system.cputemp}°C",
+          "size": 32,
+          "align": "center",
+          "color": "#5b6472"
+        }
+      ]
+    }
+  ]
+}

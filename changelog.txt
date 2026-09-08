@@ -1,0 +1,101 @@
+v1.3.1
+- tools/contact_sheet.py renders every bundled layout into one labelled
+  overview image, in whichever state you ask for (video, series, music, idle),
+  showing the page each layout's own conditions select
+- Overview images for video, music and idle added to the README
+
+v1.3.0
+- Eight more layouts, each in both display sizes:
+  light (dark on white, for bright rooms), terminal (green monospace console),
+  neon (magenta/cyan with a glowing outline), vinyl (the cover as a round
+  record with a centre hole), nextup (what is playing and what comes next),
+  weather (clock beside the weather, only shown when a weather add-on is set
+  up), library (movies, shows and albums as large counters) and portrait
+  (320x480 for a display mounted at 90 degrees)
+- The line widget now fills its own box: a wide flat box draws a horizontal
+  rule of that height instead of a one pixel vertical line, which is what
+  everyone writing "w": 440, "h": 3 expects
+- The 800x480 vinyl layout is hand made, because scaling the axes separately
+  turns a circle into an oval
+
+v1.2.0
+- Five new layouts built for reading from a distance, in both display sizes:
+  xl-player (40 px title, 38 px times), xl-remaining (the remaining time at
+  96 px, the one number that matters during a film), xl-clock (128 px clock
+  with what is playing underneath), xl-system (clock plus CPU, temperature
+  and RAM as three large figures) and cover-full (artwork edge to edge with a
+  slim info strip)
+- Bundled font sizes up to 128 px, so large type stays crisp instead of being
+  resampled from 64 px
+- tools/scale_layout.py rescales a layout for a different display size,
+  positions per axis and type sizes by height
+- Fixed the IP address: some Kodi builds return the label name instead of an
+  address, so the socket lookup is used first
+- Fixed free space, which reported "0 MB" because the info label follows the
+  GUI context; it is now read from the filesystem, with usedspace, totalspace
+  and freespace_percent alongside it
+- Demo data separates a film (director, no show title) from a TV episode
+  (show title and S..E.., no director), so previews match reality
+
+v1.1.1
+- Start and stop commands: a shell command can be run when the service starts
+  (before the display is opened) and when it stops (after the USB connection
+  is released). Samsung frames have no power control in their protocol, so
+  this is how a smart plug can switch them with the box
+- Documented how to connect a Samsung frame and what can and cannot be done
+  about switching it off
+
+v1.1.0
+- Samsung SPF photo frame support: SPF-72H, SPF-75H/76H, SPF-83H/83M,
+  SPF-85H/85P, SPF-86H/86P, SPF-87H, SPF-105P, SPF-107H, SPF-700T, SPF-800P
+  and SPF-1000P, including the switch out of USB mass storage mode, so no
+  usb_modeswitch setup is needed
+- Built-in baseline JPEG encoder, because the frames accept complete JPEG
+  images only. A restart marker after every MCU row makes each row
+  independently coded, so unchanged rows are copied from the previous frame's
+  bitstream; flat blocks skip the DCT and repeated blocks are cached. A
+  typical update re-encodes 2 to 6 of 30 rows
+- Display type is a setting; JPEG quality and chroma subsampling configurable
+- Layouts for 800x480 panels (default, big cover, minimal, dashboard), picked
+  automatically when the selected layout name has a size specific variant
+- Backlight settings apply to the AX206 only; on a Samsung frame, which has no
+  backlight control over USB, "switch off when idle" shows a black picture
+- Both drivers now raise a shared DisplayError and either kind of panel is
+  reconnected automatically after it disappears from the bus
+
+v1.0.1
+- Fixed the service failing to start on CoreELEC with UnicodeDecodeError:
+  layout files and the example layout are now read as UTF-8 (BOM tolerated)
+  instead of relying on the C locale, whose default encoding is ASCII
+- Fixed the configured USB device IDs being passed to the driver as a raw
+  string, so the bus scan never matched and the add-on reported
+  "no AX206 display found" even with a panel attached
+- Fixed Kodi rejecting the empty default of the "User layout folder" setting
+  (missing allowempty constraint)
+- Service overrides are no longer lost when the settings are reloaded
+- Self test covers the settings-to-display path and guards against text mode
+  file reads without an explicit encoding
+
+v1.0.0
+- First release
+- AX206 USB LCD support (USB ID 1908:0102) through libusb/ctypes, no extra
+  Python modules required
+- Only the changed part of each frame is sent to the panel
+- JSON layout engine: pages with conditions and automatic rotation, widgets
+  for text (scrolling, wrapping, shadow), progress bars (bar/segments,
+  horizontal/vertical, knob), graphs, rectangles, lines, circles, images,
+  icons and an analogue clock
+- Access to every Kodi InfoLabel and boolean condition, plus player, system,
+  weather and library data with a filter pipeline
+- Bundled layouts: Default (music/video/clock/system), Big Cover, Minimal,
+  Dashboard
+- Built-in PNG and baseline JPEG decoders with scaled IDCT for fast cover art
+- Anti-aliased DejaVu bitmap fonts in any size
+- Rotation 0/90/180/270, mirroring, configurable pixel byte order
+- Backlight control: dim on screensaver, switch off when idle, clear on exit
+- Kodi notifications mirrored on the panel
+- Menu and remote-control actions: choose layout, preview, next page, test
+  pattern, status, reload, brightness
+- Preview mode and tools/preview.py to design layouts without hardware
+- tools/selftest.py verifies fonts, decoders, USB protocol and all layouts
+- English and German translations

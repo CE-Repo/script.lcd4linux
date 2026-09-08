@@ -1,0 +1,94 @@
+{
+  "name": "Wetter & Uhr",
+  "size": [480, 320],
+  "background": "#0b1020",
+  "defaults": {"font": "sans", "size": 20, "color": "#ffffff"},
+
+  "pages": [
+    {
+      "name": "Weather",
+      "condition": "!active+${weather.temperature}",
+      "widgets": [
+        {"type": "text", "x": 20, "y": 30, "w": 268, "h": 88,
+         "text": "${system.time}", "size": 76, "bold": true,
+         "color": "#ffffff"},
+        {"type": "text", "x": 22, "y": 128, "w": 264, "h": 30,
+         "text": "${system.weekday}", "size": 24, "color": "#7fb0ff"},
+        {"type": "text", "x": 22, "y": 160, "w": 264, "h": 28,
+         "text": "${system.date}", "size": 20, "color": "#8892a8"},
+
+        {"type": "line", "x": 300, "y": 30, "w": 2, "h": 160,
+         "color": "#1c2740"},
+
+        {"type": "text", "x": 316, "y": 26, "w": 148, "h": 86,
+         "text": "${weather.temperature}°", "size": 72, "bold": true,
+         "align": "right", "color": "#ffd166"},
+        {"type": "text", "x": 316, "y": 118, "w": 148, "h": 56,
+         "text": "${weather.conditions}", "size": 20, "align": "right",
+         "wrap": true, "lines": 2, "color": "#c8d4ea"},
+        {"type": "text", "x": 316, "y": 176, "w": 148, "h": 26,
+         "text": "${weather.location}", "size": 18, "align": "right",
+         "color": "#8892a8"},
+
+        {"type": "line", "x": 20, "y": 216, "w": 444, "h": 2,
+         "color": "#1c2740"},
+
+        {"type": "text", "x": 20, "y": 234, "w": 140, "h": 26,
+         "text": "CPU", "size": 17, "color": "#6b7899"},
+        {"type": "text", "x": 20, "y": 256, "w": 140, "h": 40,
+         "text": "${system.cpu}%", "size": 32, "bold": true},
+        {"type": "text", "x": 172, "y": 234, "w": 140, "h": 26,
+         "text": "TEMP", "size": 17, "color": "#6b7899"},
+        {"type": "text", "x": 172, "y": 256, "w": 140, "h": 40,
+         "text": "${system.cputemp}°C", "size": 32, "bold": true},
+        {"type": "text", "x": 324, "y": 234, "w": 140, "h": 26,
+         "text": "RAM", "size": 17, "align": "right", "color": "#6b7899"},
+        {"type": "text", "x": 324, "y": 256, "w": 140, "h": 40,
+         "text": "${system.memory}%", "size": 32, "bold": true,
+         "align": "right"}
+      ]
+    },
+
+    {
+      "name": "Clock",
+      "condition": "!active",
+      "widgets": [
+        {"type": "text", "x": 0, "y": 64, "w": 480, "h": 128,
+         "text": "${system.time}", "size": 120, "bold": true,
+         "align": "center"},
+        {"type": "text", "x": 0, "y": 208, "w": 480, "h": 34,
+         "text": "${system.date_long}", "size": 24, "align": "center",
+         "color": "#8892a8"}
+      ]
+    },
+
+    {
+      "name": "Playing",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {"type": "text", "x": 20, "y": 30, "w": 440, "h": 92,
+         "text": "${player.title}", "size": 34, "bold": true,
+         "wrap": true, "lines": 2, "valign": "middle"},
+        {"type": "text", "x": 20, "y": 132, "w": 440, "h": 34,
+         "text": "${player.artist}${player.showtitle}", "size": 25,
+         "color": "#7fb0ff"},
+        {"type": "progress", "x": 20, "y": 192, "w": 440, "h": 18,
+         "value": "${player.percent}", "radius": 9, "color": "#ffd166",
+         "background": "#1c2740"},
+        {"type": "text", "x": 20, "y": 222, "w": 200, "h": 42,
+         "text": "${player.time}", "font": "mono-bold", "size": 32},
+        {"type": "text", "x": 260, "y": 222, "w": 200, "h": 42,
+         "text": "-${player.remaining}", "font": "mono-bold", "size": 32,
+         "align": "right", "color": "#8892a8"},
+        {"type": "line", "x": 20, "y": 278, "w": 440, "h": 2,
+         "color": "#1c2740"},
+        {"type": "text", "x": 20, "y": 288, "w": 200, "h": 28,
+         "text": "${system.time}", "size": 20, "color": "#8892a8"},
+        {"type": "text", "x": 260, "y": 288, "w": 200, "h": 28,
+         "text": "${weather.temperature|suffix:°}${weather.conditions|prefix:  |trunc:14}",
+         "size": 20, "align": "right", "color": "#8892a8"}
+      ]
+    }
+  ]
+}

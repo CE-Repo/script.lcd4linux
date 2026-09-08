@@ -1,0 +1,67 @@
+{
+  "name": "Hell",
+  "size": [480, 320],
+  "background": "#f4f6fa",
+  "defaults": {"font": "sans", "size": 20, "color": "#10141c"},
+
+  "pages": [
+    {
+      "name": "Playing",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {"type": "image", "x": 16, "y": 16, "w": 152, "h": 152,
+         "src": "${player.thumb}", "fit": "cover", "radius": 10},
+        {"type": "rect", "x": 16, "y": 16, "w": 152, "h": 152, "radius": 10,
+         "border": 1, "bordercolor": "#22000000"},
+
+        {"type": "text", "x": 184, "y": 18, "w": 280, "h": 76,
+         "text": "${player.title}", "size": 29, "bold": true,
+         "wrap": true, "lines": 2, "valign": "middle", "color": "#10141c"},
+        {"type": "text", "x": 184, "y": 100, "w": 280, "h": 30,
+         "text": "${player.artist}${player.showtitle}", "size": 23,
+         "color": "#0b57d0", "scroll": "bounce"},
+        {"type": "text", "x": 184, "y": 134, "w": 280, "h": 26,
+         "text": "${player.album}${player.episodelabel}", "size": 19,
+         "color": "#5b6472"},
+
+        {"type": "progress", "x": 16, "y": 196, "w": 448, "h": 18,
+         "value": "${player.percent}", "radius": 9, "color": "#0b57d0",
+         "background": "#d7dce6"},
+
+        {"type": "text", "x": 16, "y": 224, "w": 220, "h": 40,
+         "text": "${player.time}", "font": "mono-bold", "size": 32,
+         "color": "#10141c"},
+        {"type": "text", "x": 244, "y": 224, "w": 220, "h": 40,
+         "text": "-${player.remaining}", "font": "mono-bold", "size": 32,
+         "align": "right", "color": "#5b6472"},
+
+        {"type": "line", "x": 16, "y": 278, "w": 448, "h": 1,
+         "color": "#dde2ea"},
+        {"type": "text", "x": 16, "y": 288, "w": 220, "h": 26,
+         "text": "${system.time}", "size": 19, "color": "#5b6472"},
+        {"type": "text", "x": 244, "y": 288, "w": 220, "h": 26,
+         "text": "${player.finishtime|prefix:Ende }", "size": 19,
+         "align": "right", "color": "#5b6472"}
+      ]
+    },
+
+    {
+      "name": "Idle",
+      "condition": "!active",
+      "widgets": [
+        {"type": "text", "x": 0, "y": 56, "w": 480, "h": 118,
+         "text": "${system.time}", "size": 112, "bold": true,
+         "align": "center", "color": "#10141c"},
+        {"type": "text", "x": 0, "y": 190, "w": 480, "h": 36,
+         "text": "${system.date_long}", "size": 25, "align": "center",
+         "color": "#5b6472"},
+        {"type": "line", "x": 150, "y": 244, "w": 180, "h": 1,
+         "color": "#dde2ea"},
+        {"type": "text", "x": 0, "y": 262, "w": 480, "h": 30,
+         "text": "${system.cpu}%   ·   ${system.cputemp}°C", "size": 21,
+         "align": "center", "color": "#5b6472"}
+      ]
+    }
+  ]
+}

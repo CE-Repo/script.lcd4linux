@@ -1,0 +1,469 @@
+# Kodi Media Center language file
+# Addon Name: LCD4Linux
+# Addon id: script.lcd4linux
+# Addon Provider: U3knOwn
+msgid ""
+msgstr ""
+"Project-Id-Version: Kodi Add-ons\n"
+"Report-Msgid-Bugs-To: https://github.com/CE-Repo/script.lcd4linux\n"
+"POT-Creation-Date: 2026-01-01 00:00+0000\n"
+"PO-Revision-Date: 2026-01-01 00:00+0000\n"
+"Last-Translator: Kodi Translation Team\n"
+"Language-Team: English (United Kingdom)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en_GB\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgctxt "#32000"
+msgid "LCD4Linux"
+msgstr ""
+
+msgctxt "#32010"
+msgid "Display"
+msgstr ""
+
+msgctxt "#32011"
+msgid "Layout"
+msgstr ""
+
+msgctxt "#32012"
+msgid "Behaviour"
+msgstr ""
+
+msgctxt "#32020"
+msgid "Connection"
+msgstr ""
+
+msgctxt "#32021"
+msgid "Picture"
+msgstr ""
+
+msgctxt "#32022"
+msgid "Backlight"
+msgstr ""
+
+msgctxt "#32023"
+msgid "Layout file"
+msgstr ""
+
+msgctxt "#32024"
+msgid "Actions"
+msgstr ""
+
+msgctxt "#32025"
+msgid "Performance"
+msgstr ""
+
+msgctxt "#32026"
+msgid "Notifications"
+msgstr ""
+
+msgctxt "#32100"
+msgid "Output"
+msgstr ""
+
+msgctxt "#32101"
+msgid "Where the rendered frames are sent. \"Preview file only\" writes preview.png into the add-on data folder instead of using the USB display."
+msgstr ""
+
+msgctxt "#32102"
+msgid "AX206 USB display"
+msgstr ""
+
+msgctxt "#32103"
+msgid "Preview file only"
+msgstr ""
+
+msgctxt "#32104"
+msgid "Disabled"
+msgstr ""
+
+msgctxt "#32105"
+msgid "USB device IDs"
+msgstr ""
+
+msgctxt "#32106"
+msgid "Vendor:product IDs to look for, separated by commas. The AX206 panels use 1908:0102."
+msgstr ""
+
+msgctxt "#32107"
+msgid "Display number"
+msgstr ""
+
+msgctxt "#32108"
+msgid "Which panel to use when several are connected."
+msgstr ""
+
+msgctxt "#32109"
+msgid "Reset USB device when connecting"
+msgstr ""
+
+msgctxt "#32110"
+msgid "Helps if the panel was left in a bad state by another program."
+msgstr ""
+
+msgctxt "#32111"
+msgid "USB timeout (ms)"
+msgstr ""
+
+msgctxt "#32112"
+msgid "Reconnect interval (s)"
+msgstr ""
+
+msgctxt "#32113"
+msgid "How long to wait before looking for the display again after it disappeared."
+msgstr ""
+
+msgctxt "#32114"
+msgid "Rotation"
+msgstr ""
+
+msgctxt "#32115"
+msgid "Rotate the picture clockwise, for panels that are not mounted in landscape."
+msgstr ""
+
+msgctxt "#32116"
+msgid "None"
+msgstr ""
+
+msgctxt "#32117"
+msgid "90 degrees"
+msgstr ""
+
+msgctxt "#32118"
+msgid "180 degrees"
+msgstr ""
+
+msgctxt "#32119"
+msgid "270 degrees"
+msgstr ""
+
+msgctxt "#32120"
+msgid "Mirror horizontally"
+msgstr ""
+
+msgctxt "#32121"
+msgid "Pixel byte order"
+msgstr ""
+
+msgctxt "#32122"
+msgid "Change this if colours look wrong (for example red and blue swapped or a garbled picture)."
+msgstr ""
+
+msgctxt "#32123"
+msgid "High byte first (default)"
+msgstr ""
+
+msgctxt "#32124"
+msgid "Low byte first"
+msgstr ""
+
+msgctxt "#32125"
+msgid "Override display size"
+msgstr ""
+
+msgctxt "#32126"
+msgid "Only needed when the panel reports a wrong resolution."
+msgstr ""
+
+msgctxt "#32127"
+msgid "Width"
+msgstr ""
+
+msgctxt "#32128"
+msgid "Height"
+msgstr ""
+
+msgctxt "#32130"
+msgid "Brightness"
+msgstr ""
+
+msgctxt "#32131"
+msgid "0 switches the backlight off, 7 is the brightest setting."
+msgstr ""
+
+msgctxt "#32132"
+msgid "Dim while the screensaver is active"
+msgstr ""
+
+msgctxt "#32133"
+msgid "Dimmed brightness"
+msgstr ""
+
+msgctxt "#32134"
+msgid "Switch backlight off with the screensaver"
+msgstr ""
+
+msgctxt "#32135"
+msgid "Switch off when idle"
+msgstr ""
+
+msgctxt "#32136"
+msgid "Turns the backlight off after the idle timeout, unless something is playing."
+msgstr ""
+
+msgctxt "#32137"
+msgid "Idle timeout (minutes)"
+msgstr ""
+
+msgctxt "#32138"
+msgid "Clear the display when Kodi stops"
+msgstr ""
+
+msgctxt "#32140"
+msgid "Active layout"
+msgstr ""
+
+msgctxt "#32141"
+msgid "File name of the layout, for example default.json."
+msgstr ""
+
+msgctxt "#32142"
+msgid "Choose layout..."
+msgstr ""
+
+msgctxt "#32143"
+msgid "User layout folder"
+msgstr ""
+
+msgctxt "#32144"
+msgid "Leave empty to use the layouts folder in the add-on data directory."
+msgstr ""
+
+msgctxt "#32145"
+msgid "Page interval (s)"
+msgstr ""
+
+msgctxt "#32146"
+msgid "How long each page is shown when a layout has more than one visible page. 0 keeps the first page."
+msgstr ""
+
+msgctxt "#32147"
+msgid "Preview current layout"
+msgstr ""
+
+msgctxt "#32148"
+msgid "Show test pattern"
+msgstr ""
+
+msgctxt "#32149"
+msgid "Display status"
+msgstr ""
+
+msgctxt "#32150"
+msgid "Reload service"
+msgstr ""
+
+msgctxt "#32160"
+msgid "Updates per second while playing"
+msgstr ""
+
+msgctxt "#32161"
+msgid "Higher values make the progress bar and scrolling smoother but use more CPU."
+msgstr ""
+
+msgctxt "#32162"
+msgid "Updates per second when idle"
+msgstr ""
+
+msgctxt "#32163"
+msgid "Smooth image scaling"
+msgstr ""
+
+msgctxt "#32164"
+msgid "Better looking cover art, slightly more CPU when the artwork changes."
+msgstr ""
+
+msgctxt "#32165"
+msgid "Show Kodi notifications on the display"
+msgstr ""
+
+msgctxt "#32166"
+msgid "Mirrors library scans, sleep/wake and add-on messages as a banner."
+msgstr ""
+
+msgctxt "#32167"
+msgid "Notification duration (s)"
+msgstr ""
+
+msgctxt "#32168"
+msgid "Debug logging"
+msgstr ""
+
+msgctxt "#32169"
+msgid "Writes detailed messages to the Kodi log."
+msgstr ""
+
+msgctxt "#32300"
+msgid "Video library scan started"
+msgstr ""
+
+msgctxt "#32301"
+msgid "Video library scan finished"
+msgstr ""
+
+msgctxt "#32302"
+msgid "Video library clean started"
+msgstr ""
+
+msgctxt "#32303"
+msgid "Video library clean finished"
+msgstr ""
+
+msgctxt "#32304"
+msgid "Music library scan started"
+msgstr ""
+
+msgctxt "#32305"
+msgid "Music library scan finished"
+msgstr ""
+
+msgctxt "#32306"
+msgid "System going to sleep"
+msgstr ""
+
+msgctxt "#32307"
+msgid "System woken up"
+msgstr ""
+
+msgctxt "#32308"
+msgid "Kodi is shutting down"
+msgstr ""
+
+msgctxt "#32309"
+msgid "Kodi is restarting"
+msgstr ""
+
+msgctxt "#32310"
+msgid "Page"
+msgstr ""
+
+msgctxt "#32320"
+msgid "Choose layout"
+msgstr ""
+
+msgctxt "#32321"
+msgid "No layout files found"
+msgstr ""
+
+msgctxt "#32322"
+msgid "Reloading"
+msgstr ""
+
+msgctxt "#32323"
+msgid "Test pattern"
+msgstr ""
+
+msgctxt "#32324"
+msgid "Preview layout"
+msgstr ""
+
+msgctxt "#32325"
+msgid "Next page"
+msgstr ""
+
+msgctxt "#32326"
+msgid "Settings"
+msgstr ""
+
+msgctxt "#32330"
+msgid "Service"
+msgstr ""
+
+msgctxt "#32331"
+msgid "not running"
+msgstr ""
+
+msgctxt "#32332"
+msgid "No AX206 display detected"
+msgstr ""
+
+msgctxt "#32333"
+msgid "USB error"
+msgstr ""
+
+msgctxt "#32334"
+msgid "Layout folder"
+msgstr ""
+
+msgctxt "#32335"
+msgid "Display status"
+msgstr ""
+
+msgctxt "#32027"
+msgid "Samsung photo frame"
+msgstr ""
+
+msgctxt "#32170"
+msgid "Display type"
+msgstr ""
+
+msgctxt "#32171"
+msgid "Which panel is connected. The AX206 type is the 3.5\" 480x320 LCD sold as an AIDA64 display; Samsung SPF frames are the 7\" and larger photo frames."
+msgstr ""
+
+msgctxt "#32172"
+msgid "AX206 USB LCD (AIDA64 type)"
+msgstr ""
+
+msgctxt "#32173"
+msgid "Samsung SPF photo frame"
+msgstr ""
+
+msgctxt "#32174"
+msgid "Samsung model"
+msgstr ""
+
+msgctxt "#32175"
+msgid "Leave empty to use whichever frame is found, or enter a model such as SPF-72H."
+msgstr ""
+
+msgctxt "#32176"
+msgid "JPEG quality"
+msgstr ""
+
+msgctxt "#32177"
+msgid "Samsung frames accept complete JPEG images only. Lower values encode faster and send less data."
+msgstr ""
+
+msgctxt "#32178"
+msgid "Reduced colour resolution (4:2:0)"
+msgstr ""
+
+msgctxt "#32179"
+msgid "Faster and smaller. Switch it off for sharper coloured text at the cost of about twice the encoding time."
+msgstr ""
+
+msgctxt "#32336"
+msgid "No Samsung photo frame detected"
+msgstr ""
+
+msgctxt "#32028"
+msgid "Power hooks"
+msgstr ""
+
+msgctxt "#32180"
+msgid "Command when the service starts"
+msgstr ""
+
+msgctxt "#32181"
+msgid "Shell command run before the display is opened, for example to switch on a smart plug. Leave empty to do nothing."
+msgstr ""
+
+msgctxt "#32182"
+msgid "Command when the service stops"
+msgstr ""
+
+msgctxt "#32183"
+msgid "Shell command run after the display has been released, for example to switch off a smart plug. Samsung frames cannot be switched off over USB, so cutting their power is the only way."
+msgstr ""
+
+msgctxt "#32184"
+msgid "Command timeout (s)"
+msgstr ""
+
+msgctxt "#32185"
+msgid "How long to wait for a command before giving up."
+msgstr ""

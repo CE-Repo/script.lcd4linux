@@ -1,0 +1,286 @@
+{
+  "name": "Wetter & Uhr (800x480)",
+  "size": [
+    800,
+    480
+  ],
+  "background": "#0b1020",
+  "defaults": {
+    "font": "sans",
+    "size": 30,
+    "color": "#ffffff"
+  },
+  "pages": [
+    {
+      "name": "Weather",
+      "condition": "!active+${weather.temperature}",
+      "widgets": [
+        {
+          "type": "text",
+          "x": 33,
+          "y": 45,
+          "w": 447,
+          "h": 132,
+          "text": "${system.time}",
+          "size": 114,
+          "bold": true,
+          "color": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 37,
+          "y": 192,
+          "w": 440,
+          "h": 45,
+          "text": "${system.weekday}",
+          "size": 36,
+          "color": "#7fb0ff"
+        },
+        {
+          "type": "text",
+          "x": 37,
+          "y": 240,
+          "w": 440,
+          "h": 42,
+          "text": "${system.date}",
+          "size": 30,
+          "color": "#8892a8"
+        },
+        {
+          "type": "line",
+          "x": 500,
+          "y": 45,
+          "w": 3,
+          "h": 240,
+          "color": "#1c2740"
+        },
+        {
+          "type": "text",
+          "x": 527,
+          "y": 39,
+          "w": 247,
+          "h": 129,
+          "text": "${weather.temperature}°",
+          "size": 108,
+          "bold": true,
+          "align": "right",
+          "color": "#ffd166"
+        },
+        {
+          "type": "text",
+          "x": 527,
+          "y": 177,
+          "w": 247,
+          "h": 84,
+          "text": "${weather.conditions}",
+          "size": 30,
+          "align": "right",
+          "wrap": true,
+          "lines": 2,
+          "color": "#c8d4ea"
+        },
+        {
+          "type": "text",
+          "x": 527,
+          "y": 264,
+          "w": 247,
+          "h": 39,
+          "text": "${weather.location}",
+          "size": 27,
+          "align": "right",
+          "color": "#8892a8"
+        },
+        {
+          "type": "line",
+          "x": 33,
+          "y": 324,
+          "w": 740,
+          "h": 3,
+          "color": "#1c2740"
+        },
+        {
+          "type": "text",
+          "x": 33,
+          "y": 351,
+          "w": 233,
+          "h": 39,
+          "text": "CPU",
+          "size": 26,
+          "color": "#6b7899"
+        },
+        {
+          "type": "text",
+          "x": 33,
+          "y": 384,
+          "w": 233,
+          "h": 60,
+          "text": "${system.cpu}%",
+          "size": 48,
+          "bold": true
+        },
+        {
+          "type": "text",
+          "x": 287,
+          "y": 351,
+          "w": 233,
+          "h": 39,
+          "text": "TEMP",
+          "size": 26,
+          "color": "#6b7899"
+        },
+        {
+          "type": "text",
+          "x": 287,
+          "y": 384,
+          "w": 233,
+          "h": 60,
+          "text": "${system.cputemp}°C",
+          "size": 48,
+          "bold": true
+        },
+        {
+          "type": "text",
+          "x": 540,
+          "y": 351,
+          "w": 233,
+          "h": 39,
+          "text": "RAM",
+          "size": 26,
+          "align": "right",
+          "color": "#6b7899"
+        },
+        {
+          "type": "text",
+          "x": 540,
+          "y": 384,
+          "w": 233,
+          "h": 60,
+          "text": "${system.memory}%",
+          "size": 48,
+          "bold": true,
+          "align": "right"
+        }
+      ]
+    },
+    {
+      "name": "Clock",
+      "condition": "!active",
+      "widgets": [
+        {
+          "type": "text",
+          "x": 0,
+          "y": 96,
+          "w": 800,
+          "h": 192,
+          "text": "${system.time}",
+          "size": 180,
+          "bold": true,
+          "align": "center"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 312,
+          "w": 800,
+          "h": 51,
+          "text": "${system.date_long}",
+          "size": 36,
+          "align": "center",
+          "color": "#8892a8"
+        }
+      ]
+    },
+    {
+      "name": "Playing",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {
+          "type": "text",
+          "x": 33,
+          "y": 45,
+          "w": 733,
+          "h": 138,
+          "text": "${player.title}",
+          "size": 51,
+          "bold": true,
+          "wrap": true,
+          "lines": 2,
+          "valign": "middle"
+        },
+        {
+          "type": "text",
+          "x": 33,
+          "y": 198,
+          "w": 733,
+          "h": 51,
+          "text": "${player.artist}${player.showtitle}",
+          "size": 38,
+          "color": "#7fb0ff"
+        },
+        {
+          "type": "progress",
+          "x": 33,
+          "y": 288,
+          "w": 733,
+          "h": 27,
+          "value": "${player.percent}",
+          "radius": 14,
+          "color": "#ffd166",
+          "background": "#1c2740"
+        },
+        {
+          "type": "text",
+          "x": 33,
+          "y": 333,
+          "w": 333,
+          "h": 63,
+          "text": "${player.time}",
+          "font": "mono-bold",
+          "size": 48
+        },
+        {
+          "type": "text",
+          "x": 433,
+          "y": 333,
+          "w": 333,
+          "h": 63,
+          "text": "-${player.remaining}",
+          "font": "mono-bold",
+          "size": 48,
+          "align": "right",
+          "color": "#8892a8"
+        },
+        {
+          "type": "line",
+          "x": 33,
+          "y": 417,
+          "w": 733,
+          "h": 3,
+          "color": "#1c2740"
+        },
+        {
+          "type": "text",
+          "x": 33,
+          "y": 432,
+          "w": 333,
+          "h": 42,
+          "text": "${system.time}",
+          "size": 30,
+          "color": "#8892a8"
+        },
+        {
+          "type": "text",
+          "x": 433,
+          "y": 432,
+          "w": 333,
+          "h": 42,
+          "text": "${weather.temperature|suffix:°}${weather.conditions|prefix:  |trunc:14}",
+          "size": 30,
+          "align": "right",
+          "color": "#8892a8"
+        }
+      ]
+    }
+  ]
+}

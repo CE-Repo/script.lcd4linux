@@ -1,0 +1,283 @@
+{
+  "name": "Bibliothek (800x480)",
+  "size": [
+    800,
+    480
+  ],
+  "background": "#0b0d12",
+  "defaults": {
+    "font": "sans",
+    "size": 30,
+    "color": "#ffffff"
+  },
+  "pages": [
+    {
+      "name": "Library",
+      "condition": "!active",
+      "widgets": [
+        {
+          "type": "text",
+          "x": 30,
+          "y": 21,
+          "w": 500,
+          "h": 54,
+          "text": "Bibliothek",
+          "size": 39,
+          "bold": true
+        },
+        {
+          "type": "text",
+          "x": 500,
+          "y": 24,
+          "w": 270,
+          "h": 51,
+          "text": "${system.time}",
+          "size": 39,
+          "bold": true,
+          "align": "right",
+          "color": "#9aa3b5"
+        },
+        {
+          "type": "line",
+          "x": 30,
+          "y": 87,
+          "w": 740,
+          "h": 3,
+          "color": "#1e2330"
+        },
+        {
+          "type": "icon",
+          "x": 30,
+          "y": 111,
+          "w": 33,
+          "h": 30,
+          "icon": "movie",
+          "color": "#17b2e2"
+        },
+        {
+          "type": "text",
+          "x": 77,
+          "y": 108,
+          "w": 200,
+          "h": 39,
+          "text": "Filme",
+          "size": 28,
+          "color": "#9aa3b5"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 147,
+          "w": 233,
+          "h": 84,
+          "text": "${library.movies}",
+          "size": 66,
+          "bold": true
+        },
+        {
+          "type": "icon",
+          "x": 287,
+          "y": 111,
+          "w": 33,
+          "h": 30,
+          "icon": "tv",
+          "color": "#8b5cf6"
+        },
+        {
+          "type": "text",
+          "x": 333,
+          "y": 108,
+          "w": 200,
+          "h": 39,
+          "text": "Serien",
+          "size": 28,
+          "color": "#9aa3b5"
+        },
+        {
+          "type": "text",
+          "x": 287,
+          "y": 147,
+          "w": 233,
+          "h": 84,
+          "text": "${library.tvshows}",
+          "size": 66,
+          "bold": true
+        },
+        {
+          "type": "icon",
+          "x": 543,
+          "y": 111,
+          "w": 33,
+          "h": 30,
+          "icon": "music",
+          "color": "#f59e0b"
+        },
+        {
+          "type": "text",
+          "x": 590,
+          "y": 108,
+          "w": 200,
+          "h": 39,
+          "text": "Alben",
+          "size": 28,
+          "color": "#9aa3b5"
+        },
+        {
+          "type": "text",
+          "x": 543,
+          "y": 147,
+          "w": 233,
+          "h": 84,
+          "text": "${library.albums}",
+          "size": 66,
+          "bold": true
+        },
+        {
+          "type": "line",
+          "x": 30,
+          "y": 252,
+          "w": 740,
+          "h": 3,
+          "color": "#1e2330"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 273,
+          "w": 367,
+          "h": 45,
+          "text": "Episoden",
+          "size": 30,
+          "color": "#9aa3b5"
+        },
+        {
+          "type": "text",
+          "x": 403,
+          "y": 273,
+          "w": 367,
+          "h": 45,
+          "text": "${library.episodes}",
+          "size": 33,
+          "bold": true,
+          "align": "right"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 321,
+          "w": 367,
+          "h": 45,
+          "text": "Songs",
+          "size": 30,
+          "color": "#9aa3b5"
+        },
+        {
+          "type": "text",
+          "x": 403,
+          "y": 321,
+          "w": 367,
+          "h": 45,
+          "text": "${library.songs}",
+          "size": 33,
+          "bold": true,
+          "align": "right"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 369,
+          "w": 367,
+          "h": 45,
+          "text": "Interpreten",
+          "size": 30,
+          "color": "#9aa3b5"
+        },
+        {
+          "type": "text",
+          "x": 403,
+          "y": 369,
+          "w": 367,
+          "h": 45,
+          "text": "${library.artists}",
+          "size": 33,
+          "bold": true,
+          "align": "right"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 429,
+          "w": 740,
+          "h": 39,
+          "text": "${system.freespace|suffix: frei}  ·  ${system.hostname}",
+          "size": 27,
+          "align": "center",
+          "color": "#6b7488"
+        }
+      ]
+    },
+    {
+      "name": "Playing",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {
+          "type": "text",
+          "x": 30,
+          "y": 45,
+          "w": 740,
+          "h": 138,
+          "text": "${player.title}",
+          "size": 51,
+          "bold": true,
+          "wrap": true,
+          "lines": 2,
+          "valign": "middle"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 198,
+          "w": 740,
+          "h": 51,
+          "text": "${player.artist}${player.showtitle}",
+          "size": 38,
+          "color": "#17b2e2"
+        },
+        {
+          "type": "progress",
+          "x": 30,
+          "y": 291,
+          "w": 740,
+          "h": 27,
+          "value": "${player.percent}",
+          "radius": 14,
+          "color": "#17b2e2",
+          "background": "#1e2330"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 336,
+          "w": 333,
+          "h": 63,
+          "text": "${player.time}",
+          "font": "mono-bold",
+          "size": 48
+        },
+        {
+          "type": "text",
+          "x": 437,
+          "y": 336,
+          "w": 333,
+          "h": 63,
+          "text": "-${player.remaining}",
+          "font": "mono-bold",
+          "size": 48,
+          "align": "right",
+          "color": "#9aa3b5"
+        }
+      ]
+    }
+  ]
+}

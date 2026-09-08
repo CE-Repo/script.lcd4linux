@@ -1,0 +1,414 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<settings version="1">
+  <section id="script.lcd4linux">
+
+    <category id="display" label="32010">
+      <group id="1" label="32020">
+        <setting id="display_type" type="string" label="32170" help="32171">
+          <level>0</level>
+          <default>ax206</default>
+          <constraints>
+            <options>
+              <option label="32172">ax206</option>
+              <option label="32173">spf</option>
+            </options>
+          </constraints>
+          <control type="list" format="string"/>
+        </setting>
+        <setting id="output_mode" type="string" label="32100" help="32101">
+          <level>0</level>
+          <default>usb</default>
+          <constraints>
+            <options>
+              <option label="32102">usb</option>
+              <option label="32103">preview</option>
+              <option label="32104">none</option>
+            </options>
+          </constraints>
+          <control type="list" format="string"/>
+        </setting>
+        <setting id="device_ids" type="string" label="32105" help="32106">
+          <level>2</level>
+          <default>1908:0102</default>
+          <dependencies>
+            <dependency type="visible" setting="display_type" operator="is">ax206</dependency>
+          </dependencies>
+          <control type="edit" format="string"/>
+        </setting>
+        <setting id="spf_model" type="string" label="32174" help="32175">
+          <level>2</level>
+          <default></default>
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <dependencies>
+            <dependency type="visible" setting="display_type" operator="is">spf</dependency>
+          </dependencies>
+          <control type="edit" format="string"/>
+        </setting>
+        <setting id="device_index" type="integer" label="32107" help="32108">
+          <level>2</level>
+          <default>0</default>
+          <constraints>
+            <minimum>0</minimum>
+            <step>1</step>
+            <maximum>7</maximum>
+          </constraints>
+          <control type="spinner" format="integer"/>
+        </setting>
+        <setting id="reset_on_open" type="boolean" label="32109" help="32110">
+          <level>2</level>
+          <default>false</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="usb_timeout" type="integer" label="32111">
+          <level>3</level>
+          <default>3000</default>
+          <constraints>
+            <minimum>500</minimum>
+            <step>500</step>
+            <maximum>10000</maximum>
+          </constraints>
+          <control type="slider" format="integer">
+            <popup>true</popup>
+          </control>
+        </setting>
+        <setting id="retry_seconds" type="integer" label="32112" help="32113">
+          <level>2</level>
+          <default>20</default>
+          <constraints>
+            <minimum>5</minimum>
+            <step>5</step>
+            <maximum>300</maximum>
+          </constraints>
+          <control type="slider" format="integer">
+            <popup>true</popup>
+          </control>
+        </setting>
+      </group>
+
+      <group id="2" label="32021">
+        <setting id="rotation" type="integer" label="32114" help="32115">
+          <level>0</level>
+          <default>0</default>
+          <constraints>
+            <options>
+              <option label="32116">0</option>
+              <option label="32117">90</option>
+              <option label="32118">180</option>
+              <option label="32119">270</option>
+            </options>
+          </constraints>
+          <control type="list" format="integer"/>
+        </setting>
+        <setting id="mirror" type="boolean" label="32120">
+          <level>1</level>
+          <default>false</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="byte_order" type="string" label="32121" help="32122">
+          <level>2</level>
+          <default>big</default>
+          <constraints>
+            <options>
+              <option label="32123">big</option>
+              <option label="32124">little</option>
+            </options>
+          </constraints>
+          <control type="list" format="string"/>
+        </setting>
+        <setting id="force_size" type="boolean" label="32125" help="32126">
+          <level>2</level>
+          <default>false</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="width" type="integer" label="32127">
+          <level>2</level>
+          <default>480</default>
+          <constraints>
+            <minimum>64</minimum>
+            <step>16</step>
+            <maximum>1024</maximum>
+          </constraints>
+          <dependencies>
+            <dependency type="enable" setting="force_size" operator="is">true</dependency>
+          </dependencies>
+          <control type="slider" format="integer">
+            <popup>true</popup>
+          </control>
+        </setting>
+        <setting id="height" type="integer" label="32128">
+          <level>2</level>
+          <default>320</default>
+          <constraints>
+            <minimum>64</minimum>
+            <step>16</step>
+            <maximum>1024</maximum>
+          </constraints>
+          <dependencies>
+            <dependency type="enable" setting="force_size" operator="is">true</dependency>
+          </dependencies>
+          <control type="slider" format="integer">
+            <popup>true</popup>
+          </control>
+        </setting>
+      </group>
+
+      <group id="4" label="32027">
+        <setting id="jpeg_quality" type="integer" label="32176" help="32177">
+          <level>1</level>
+          <default>85</default>
+          <constraints>
+            <minimum>40</minimum>
+            <step>5</step>
+            <maximum>100</maximum>
+          </constraints>
+          <dependencies>
+            <dependency type="visible" setting="display_type" operator="is">spf</dependency>
+          </dependencies>
+          <control type="slider" format="integer">
+            <popup>true</popup>
+          </control>
+        </setting>
+        <setting id="jpeg_subsample" type="boolean" label="32178" help="32179">
+          <level>1</level>
+          <default>true</default>
+          <dependencies>
+            <dependency type="visible" setting="display_type" operator="is">spf</dependency>
+          </dependencies>
+          <control type="toggle"/>
+        </setting>
+      </group>
+
+      <group id="3" label="32022">
+        <setting id="brightness" type="integer" label="32130" help="32131">
+          <level>0</level>
+          <default>7</default>
+          <constraints>
+            <minimum>0</minimum>
+            <step>1</step>
+            <maximum>7</maximum>
+          </constraints>
+          <dependencies>
+            <dependency type="visible" setting="display_type" operator="is">ax206</dependency>
+          </dependencies>
+          <control type="slider" format="integer">
+            <popup>true</popup>
+          </control>
+        </setting>
+        <setting id="dim_on_screensaver" type="boolean" label="32132">
+          <level>0</level>
+          <default>true</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="dim_brightness" type="integer" label="32133">
+          <level>0</level>
+          <default>1</default>
+          <constraints>
+            <minimum>0</minimum>
+            <step>1</step>
+            <maximum>7</maximum>
+          </constraints>
+          <dependencies>
+            <dependency type="enable" setting="dim_on_screensaver" operator="is">true</dependency>
+          </dependencies>
+          <dependencies>
+            <dependency type="visible" setting="display_type" operator="is">ax206</dependency>
+          </dependencies>
+          <control type="slider" format="integer">
+            <popup>true</popup>
+          </control>
+        </setting>
+        <setting id="off_on_screensaver" type="boolean" label="32134">
+          <level>1</level>
+          <default>false</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="off_on_idle" type="boolean" label="32135" help="32136">
+          <level>1</level>
+          <default>false</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="idle_minutes" type="integer" label="32137">
+          <level>1</level>
+          <default>30</default>
+          <constraints>
+            <minimum>1</minimum>
+            <step>1</step>
+            <maximum>240</maximum>
+          </constraints>
+          <dependencies>
+            <dependency type="enable" setting="off_on_idle" operator="is">true</dependency>
+          </dependencies>
+          <control type="slider" format="integer">
+            <popup>true</popup>
+          </control>
+        </setting>
+        <setting id="clear_on_exit" type="boolean" label="32138">
+          <level>1</level>
+          <default>true</default>
+          <control type="toggle"/>
+        </setting>
+      </group>
+    </category>
+
+    <category id="layout" label="32011">
+      <group id="1" label="32023">
+        <setting id="layout" type="string" label="32140" help="32141">
+          <level>0</level>
+          <default>default.json</default>
+          <control type="edit" format="string"/>
+        </setting>
+        <setting id="action_layout" type="action" label="32142">
+          <level>0</level>
+          <data>RunScript(script.lcd4linux,layout)</data>
+          <control type="button" format="action">
+            <close>true</close>
+          </control>
+        </setting>
+        <setting id="layout_dir" type="path" label="32143" help="32144">
+          <level>1</level>
+          <default></default>
+          <constraints>
+            <allowempty>true</allowempty>
+            <writable>true</writable>
+          </constraints>
+          <control type="button" format="path">
+            <heading>32143</heading>
+          </control>
+        </setting>
+        <setting id="page_interval" type="integer" label="32145" help="32146">
+          <level>0</level>
+          <default>15</default>
+          <constraints>
+            <minimum>0</minimum>
+            <step>1</step>
+            <maximum>300</maximum>
+          </constraints>
+          <control type="slider" format="integer">
+            <popup>true</popup>
+          </control>
+        </setting>
+      </group>
+
+      <group id="2" label="32024">
+        <setting id="action_preview" type="action" label="32147">
+          <level>0</level>
+          <data>RunScript(script.lcd4linux,preview)</data>
+          <control type="button" format="action">
+            <close>true</close>
+          </control>
+        </setting>
+        <setting id="action_test" type="action" label="32148">
+          <level>0</level>
+          <data>RunScript(script.lcd4linux,test_pattern)</data>
+          <control type="button" format="action"/>
+        </setting>
+        <setting id="action_status" type="action" label="32149">
+          <level>0</level>
+          <data>RunScript(script.lcd4linux,status)</data>
+          <control type="button" format="action"/>
+        </setting>
+        <setting id="action_reload" type="action" label="32150">
+          <level>0</level>
+          <data>RunScript(script.lcd4linux,reload)</data>
+          <control type="button" format="action"/>
+        </setting>
+      </group>
+    </category>
+
+    <category id="behaviour" label="32012">
+      <group id="1" label="32025">
+        <setting id="fps_playing" type="integer" label="32160" help="32161">
+          <level>0</level>
+          <default>4</default>
+          <constraints>
+            <minimum>1</minimum>
+            <step>1</step>
+            <maximum>10</maximum>
+          </constraints>
+          <control type="slider" format="integer">
+            <popup>true</popup>
+          </control>
+        </setting>
+        <setting id="fps_idle" type="integer" label="32162">
+          <level>0</level>
+          <default>1</default>
+          <constraints>
+            <minimum>1</minimum>
+            <step>1</step>
+            <maximum>5</maximum>
+          </constraints>
+          <control type="slider" format="integer">
+            <popup>true</popup>
+          </control>
+        </setting>
+        <setting id="smooth_images" type="boolean" label="32163" help="32164">
+          <level>1</level>
+          <default>true</default>
+          <control type="toggle"/>
+        </setting>
+      </group>
+
+      <group id="3" label="32028">
+        <setting id="start_command" type="string" label="32180" help="32181">
+          <level>1</level>
+          <default></default>
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string"/>
+        </setting>
+        <setting id="stop_command" type="string" label="32182" help="32183">
+          <level>1</level>
+          <default></default>
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string"/>
+        </setting>
+        <setting id="command_timeout" type="integer" label="32184" help="32185">
+          <level>2</level>
+          <default>15</default>
+          <constraints>
+            <minimum>1</minimum>
+            <step>1</step>
+            <maximum>60</maximum>
+          </constraints>
+          <control type="slider" format="integer">
+            <popup>true</popup>
+          </control>
+        </setting>
+      </group>
+
+      <group id="2" label="32026">
+        <setting id="notifications" type="boolean" label="32165" help="32166">
+          <level>0</level>
+          <default>true</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="notification_seconds" type="integer" label="32167">
+          <level>1</level>
+          <default>4</default>
+          <constraints>
+            <minimum>1</minimum>
+            <step>1</step>
+            <maximum>20</maximum>
+          </constraints>
+          <dependencies>
+            <dependency type="enable" setting="notifications" operator="is">true</dependency>
+          </dependencies>
+          <control type="slider" format="integer">
+            <popup>true</popup>
+          </control>
+        </setting>
+        <setting id="debug" type="boolean" label="32168" help="32169">
+          <level>2</level>
+          <default>false</default>
+          <control type="toggle"/>
+        </setting>
+      </group>
+    </category>
+
+  </section>
+</settings>

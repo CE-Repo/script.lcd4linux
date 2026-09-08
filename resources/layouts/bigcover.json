@@ -1,0 +1,63 @@
+{
+  "name": "Big Cover",
+  "size": [480, 320],
+  "background": "#000000",
+  "accent": "auto:${player.thumb}",
+  "defaults": {"font": "sans", "size": 18, "color": "#ffffff"},
+
+  "pages": [
+    {
+      "name": "Playing",
+      "condition": "active",
+      "priority": 10,
+      "backgroundimage": "${player.thumb}",
+      "backgrounddim": 55,
+      "widgets": [
+        {"type": "image", "x": 0, "y": 0, "w": 480, "h": 320,
+         "src": "${player.thumb}", "fit": "contain", "opacity": 100,
+         "condition": "audio"},
+
+        {"type": "rect", "x": 0, "y": 196, "w": 480, "h": 124,
+         "color": "#ff05070c"},
+        {"type": "rect", "x": 0, "y": 172, "w": 480, "h": 24,
+         "color": "#0005070c", "gradient": "#ff05070c"},
+
+        {"type": "text", "x": 20, "y": 202, "w": 440, "h": 32,
+         "text": "${player.title}", "size": 26, "bold": true,
+         "scroll": "marquee", "scrollspeed": 28, "shadow": "#000000"},
+
+        {"type": "text", "x": 20, "y": 236, "w": 440, "h": 24,
+         "text": "${player.artist}${player.showtitle|prefix: · }",
+         "size": 18, "color": "accent", "scroll": "bounce"},
+
+        {"type": "progress", "x": 20, "y": 272, "w": 440, "h": 6,
+         "value": "${player.percent}", "radius": 3, "color": "accent",
+         "background": "#33ffffff"},
+
+        {"type": "text", "x": 20, "y": 284, "w": 200, "h": 22,
+         "text": "${player.time}", "font": "mono", "size": 16,
+         "color": "#d5dae5"},
+        {"type": "text", "x": 260, "y": 284, "w": 200, "h": 22,
+         "text": "${player.duration}", "font": "mono", "size": 16,
+         "align": "right", "color": "#d5dae5"},
+
+        {"type": "icon", "x": 444, "y": 16, "w": 22, "h": 22,
+         "icon": "pause", "color": "#ffffff", "condition": "paused"}
+      ]
+    },
+
+    {
+      "name": "Idle",
+      "condition": "!active",
+      "background": "#000000",
+      "widgets": [
+        {"type": "text", "x": 0, "y": 96, "w": 480, "h": 110,
+         "text": "${system.time}", "size": 110, "bold": true,
+         "align": "center", "color": "#ffffff"},
+        {"type": "text", "x": 0, "y": 206, "w": 480, "h": 28,
+         "text": "${system.weekday}, ${system.date}", "size": 19,
+         "align": "center", "color": "#6f7891"}
+      ]
+    }
+  ]
+}
