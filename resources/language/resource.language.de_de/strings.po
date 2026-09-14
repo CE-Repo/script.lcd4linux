@@ -69,8 +69,8 @@ msgid "Output"
 msgstr "Ausgabe"
 
 msgctxt "#32101"
-msgid "Where the rendered frames are sent. \"Preview file only\" writes preview.png into the add-on data folder instead of using the USB display."
-msgstr "Wohin die gerenderten Bilder gehen. \"Nur Vorschaudatei\" schreibt preview.png in den Add-on-Datenordner, statt das USB-Display zu verwenden."
+msgid "Where the rendered frames are sent. \"Network display\" serves them to a browser or wall mounted tablet instead of a USB panel; \"Preview file only\" writes preview.png into the add-on data folder."
+msgstr "Wohin die gerenderten Bilder gehen. \"Netzwerkdisplay\" schickt sie an einen Browser oder ein Wandtablet statt an ein USB-Panel; \"Nur Vorschaudatei\" schreibt preview.png in den Add-on-Datenordner."
 
 msgctxt "#32102"
 msgid "USB display"
@@ -943,3 +943,15 @@ msgstr "XL Wiedergabe"
 msgctxt "#32510"
 msgid "XL remaining"
 msgstr "XL Restzeit"
+
+msgctxt "#32520"
+msgid "Network display (browser or tablet)"
+msgstr "Netzwerkdisplay (Browser oder Tablet)"
+
+msgctxt "#32521"
+msgid "Wall panel address:"
+msgstr "Adresse für das Wandtablet:"
+
+msgctxt "#32522"
+msgid "Network display"
+msgstr "Netzwerkdisplay"

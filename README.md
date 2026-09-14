@@ -9,6 +9,9 @@ Kodi-Add-on für zwei Familien von USB-Displays:
 * die **Samsung-SPF-Bilderrahmen** (SPF-72H, SPF-87H, SPF-107H und Verwandte,
   800×480 bis 1024×600) im „Mini-Monitor"-Modus.
 
+Ohne USB-Panel geht es auch: als **Netzwerkdisplay** liefert das Add-on die
+Bilder an einen Browser im Vollbild – etwa ein altes Tablet an der Wand.
+
 Das Add-on zeigt, was Kodi gerade abspielt – Titel, Interpret, Album, Cover,
 Fortschrittsbalken mit gespielter und verbleibender Zeit – dazu Uhr,
 CPU-Auslastung, Temperatur, Bibliotheksdaten und alles andere, was Kodi kennt.
@@ -55,6 +58,9 @@ Und auf dem 800×480-Rahmen:
 * **Deutsch und Englisch** auf dem Display: die mitgelieferten Layouts, die
   Seitennamen sowie Wochentage und Monate folgen der Sprache von Kodi. Eigene
   Layouts können mit `$LOCALIZE[...]` dasselbe tun.
+* **Netzwerkdisplay**: statt eines USB-Panels kann jedes Gerät mit Browser
+  das Bild zeigen – als MJPEG-Strom in einem schlichten `<img>`, der auch auf
+  einem Android-4.4-Tablet läuft.
 * **Vorschau ohne Hardware**: Layouts lassen sich als PNG rendern.
 
 ---
@@ -197,6 +203,95 @@ solange die Box läuft.
 Kodi läuft auf CoreELEC als `root`, zusätzliche udev-Regeln sind für beide
 Displays nicht nötig. Hängt ein Kerneltreiber am Gerät, löst das Add-on ihn ab.
 
+#### Netzwerkdisplay (Browser oder Tablet)
+
+Statt eines USB-Panels kann das Add-on die Bilder auch über sein eigenes
+Webinterface ausliefern. Am anderen Ende steht ein Browser im Vollbild –
+typischerweise ein altes Android-Tablet an der Wand.
+
+| | |
+|---|---|
+| Hardware | alles mit einem Browser: Tablet, Handy, alter Laptop, zweiter Monitor |
+| Auflösung | frei wählbar unter *Anzeige → Bild* (Breite/Höhe) |
+| Übertragung | MJPEG über HTTP; pro Bild ein vollständiges JPEG, intern werden nur die geänderten Blockzeilen neu kodiert |
+| Helligkeit | softwareseitig, das Bild wird vor dem Senden abgedunkelt |
+
+Einschalten: *Einstellungen → Anzeige → Verbindung → Ausgabe* auf
+**Netzwerkdisplay (Browser oder Tablet)** stellen. Der HTTP-Server läuft in
+diesem Modus immer, unabhängig vom Schalter für den Layout-Baukasten – er
+*ist* hier das Display.
+
+Die Adresse für das Tablet steht im Add-on-Menü unter *Anzeigestatus* und
+*Webeditor*:
+
+```
+http://<box>:8050/display
+```
+
+Ist ein Webinterface-Passwort gesetzt, hängt die Adresse es als
+`?key=<passwort>` an. Das ist Absicht: ein Kiosk-Browser kann für ein
+`<img>` keine Basic-Auth-Abfrage beantworten. Der Layout-Baukasten bleibt
+weiterhin durch Basic Auth geschützt.
+
+| Adresse | was sie liefert |
+|---|---|
+| `/display` | die Vollbildseite fürs Tablet |
+| `/display?fit=fill` | dasselbe, aber auf die volle Bildschirmfläche verzerrt statt mit Rändern |
+| `/display/stream` | der reine MJPEG-Datenstrom |
+| `/display/frame.jpg` | das aktuelle Bild als Einzeldatei |
+
+Die Seite ist bewusst winzig: ein `<img>` mit einem
+`multipart/x-mixed-replace`-Strom, ohne WebSocket und ohne Canvas. Genau
+deshalb läuft sie auch auf dem uralten WebKit eines Android-4.4-Tablets. Das
+bisschen JavaScript verbindet nur neu, wenn die Box neu startet – ohne
+JavaScript zeigt die Seite trotzdem Bilder.
+
+**Bandbreite:** 800×480 bei Qualität 85 sind rund 28 kB pro Bild. Im Leerlauf
+mit einem Bild pro Sekunde also etwa 0,2 Mbit/s.
+
+**Auflösung und Layouts:** die mitgelieferten Layouts gibt es in 480×320 und
+800×480. Ein 10"-Tablet mit 1280×800 kann entweder auf 800×480 gestellt
+werden – der Browser skaliert dann hoch, alle Layouts passen sofort – oder
+nativ rendern, dann rechnet `tools/scale_layout.py` die Layouts um.
+
+##### Tablet einrichten
+
+Ein Android-Tablet lässt sich **nicht** fernbedient hochfahren; Auto-Boot am
+Ladegerät braucht Root und geht nicht auf jedem Gerät. Der übliche Weg ist
+deshalb: das Tablet läuft durch, nur der **Bildschirm** geht an und aus.
+
+1. Auf dem Tablet einen Kiosk-Browser installieren, z. B. *Fully Kiosk
+   Browser* (ab Android 4.4) oder das quelloffene *WallPanel*.
+2. Als Startadresse die `/display`-Adresse von oben eintragen.
+3. Im Kiosk-Browser *Bildschirm anlassen* aktivieren und den Bildschirmschoner
+   abschalten.
+4. In Kodi unter *Einstellungen → Verhalten → Schaltbefehle* eintragen:
+
+```sh
+# Befehl beim Start des Dienstes – Bildschirm an
+curl -s --max-time 3 "http://192.168.1.60:2323/?cmd=screenOn&password=GEHEIM"
+
+# Befehl beim Beenden des Dienstes – Bildschirm aus
+curl -s --max-time 3 "http://192.168.1.60:2323/?cmd=screenOff&password=GEHEIM"
+```
+
+Das `--max-time` ist wichtig: der Startbefehl läuft, **bevor** das Display
+geöffnet wird, und würde den Dienststart sonst bis zum *Zeitlimit für
+Schaltbefehle* (Standard 15 s) aufhalten, wenn das Tablet gerade nicht im
+WLAN ist.
+
+Soll das Tablet auch im Leerlauf normal weiterlaufen und nicht abdunkeln,
+*Während des Leerlaufs dimmen* ausschalten oder *Helligkeit im Leerlauf
+(Software)* auf 100 % stellen.
+
+Beim Herunterfahren von Kodi schickt das Add-on noch ein schwarzes Bild
+(*Display beim Beenden von Kodi löschen*), bevor der Schaltbefehl den
+Bildschirm ausmacht – ein Browser, der offen bleibt, friert also nicht auf
+dem letzten Bild ein.
+
+**Zum Dauerbetrieb:** alte Li-Ion-Akkus blähen sich am Dauerladegerät gern
+auf. Bei fest montierten Tablets gelegentlich die Rückseite prüfen.
+
 ---
 
 ## Einstellungen
@@ -205,7 +300,7 @@ Displays nicht nötig. Hängt ein Kerneltreiber am Gerät, löst das Add-on ihn 
 
 | Einstellung | Bedeutung |
 |---|---|
-| Ausgabe | `USB-Display`, `Nur Vorschaudatei` (schreibt `preview.png` in den Add-on-Datenordner) oder `Deaktiviert` |
+| Ausgabe | `USB-Display`, `Netzwerkdisplay (Browser oder Tablet)`, `Nur Vorschaudatei` (schreibt `preview.png` in den Add-on-Datenordner) oder `Deaktiviert` |
 | USB-Geräte-IDs | Standard `1908:0102`, mehrere durch Komma getrennt (nur AX206) |
 | Displaynummer | wenn mehrere Panels angeschlossen sind |
 | USB-Gerät zurücksetzen | hilft, wenn ein anderes Programm das Display hängen ließ (nur AX206) |
@@ -231,17 +326,17 @@ Je nach Auswahl blendet der Dialog die passenden Optionen ein.
 | Drehung | 0/90/180/270 Grad, für Hochkant-Montage |
 | Horizontal spiegeln | für Spiegelmontage |
 | Byte-Reihenfolge | falls die Farben falsch sind – siehe *Fehlersuche* (nur AX206) |
-| Displaygröße überschreiben | nur nötig, wenn das Panel eine falsche Auflösung meldet |
+| Displaygröße überschreiben | nur nötig, wenn das Panel eine falsche Auflösung meldet. Im Netzwerkmodus sind Breite und Höhe immer einstellbar – dort meldet niemand eine Größe |
 
 **Anzeige → Hintergrundbeleuchtung**
 
 | Einstellung | Bedeutung |
 |---|---|
 | Helligkeit | AX206: Stufe 0–7 der Hintergrundbeleuchtung |
-| Helligkeit (Software) | Samsung: 10–100 %, das Bild wird vor dem Senden abgedunkelt |
+| Helligkeit (Software) | Samsung und Netzwerkdisplay: 10–100 %, das Bild wird vor dem Senden abgedunkelt |
 | Während des Leerlaufs dimmen | dimmt, sobald nichts abgespielt wird; eine Pause zählt weiterhin als Wiedergabe |
 | Helligkeit im Leerlauf | AX206: Stufe 0–7, solange nichts läuft |
-| Helligkeit im Leerlauf (Software) | Samsung: 0–100 %, 0 % zeigt ein schwarzes Bild |
+| Helligkeit im Leerlauf (Software) | Samsung und Netzwerkdisplay: 0–100 %, 0 % zeigt ein schwarzes Bild |
 | Display beim Beenden von Kodi löschen | schwarzes Bild beim Herunterfahren |
 
 Je nach *Displaytyp* ist immer nur das passende Paar sichtbar. Samsung-Rahmen
@@ -644,7 +739,7 @@ resources/lib/lcd4linux/
     ax206.py                  AX206-Protokoll (SCSI über USB)
     spf.py                    Samsung-SPF-Protokoll (Mode-Switch, JPEG-Frames)
     jpegenc.py                JPEG-Encoder mit Blockzeilen-Cache
-    display.py                Ausgabeziele, Drehung, Teilaktualisierung
+    display.py                Ausgabeziele (USB, Netzwerk, Vorschau), Drehung
     canvas.py                 RGB565-Framebuffer und Zeichenprimitive
     bmfont.py                 Bitmap-Schriften
     pngio.py / jpegio.py      Bilddekoder in reinem Python
@@ -676,7 +771,9 @@ tools/mkfont.py               Schriften neu erzeugen (benötigt Pillow)
 Kodi/CoreELEC add-on for two families of USB display: the 3.5" 480×320 panels
 based on the **AX206** controller (sold as AIDA64 screens, known from `dpf-ax`
 and `lcd4linux`), and the **Samsung SPF** photo frames (SPF-72H, SPF-87H,
-SPF-107H and relatives) in their mini monitor mode.
+SPF-107H and relatives) in their mini monitor mode. Without a USB panel it
+also drives a **network display**: any browser in full screen, typically an
+old tablet on the wall.
 
 It shows what Kodi is playing (title, artist, album, cover art, a progress bar
 with elapsed and remaining time) plus clock, CPU load, temperature and any Kodi
@@ -696,6 +793,12 @@ images only, only the MCU rows that changed are re-encoded.
   mouse, and the preview next to them is drawn by the add-on's own renderer,
   so it is exactly what the panel will show. On a PC without Kodi:
   `python3 tools/webeditor.py`
+* **Network display**: set *Output* to `Network display` and point a browser
+  at `http://<box>:8050/display`. The page is a plain `<img>` fed by a
+  `multipart/x-mixed-replace` MJPEG stream - no WebSocket, no canvas, so it
+  renders on the ancient WebKit of an Android 4.x tablet. A web interface
+  password is passed as `?key=...` because a kiosk browser cannot answer a
+  Basic auth challenge for a sub resource.
 * Design layouts without hardware: `python3 tools/preview.py --out preview.png`
 * Verify an installation: `python3 tools/selftest.py`
 * Settings, bundled layouts, remote-control actions and troubleshooting are

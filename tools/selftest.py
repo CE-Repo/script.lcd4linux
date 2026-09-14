@@ -903,17 +903,61 @@ def test_settings_xml():
 
     # Options that only one display type understands must be hidden for the
     # other one, otherwise the dialog offers AX206 settings for a Samsung
-    # frame and the other way round.
-    for key, display_type in (("device_ids", "ax206"), ("byte_order", "ax206"),
-                              ("reset_on_open", "ax206"), ("brightness", "ax206"),
-                              ("dim_brightness", "ax206"), ("spf_model", "spf"),
-                              ("jpeg_quality", "spf"), ("jpeg_subsample", "spf"),
-                              ("spf_brightness", "spf"),
-                              ("spf_dim_brightness", "spf")):
-        visible = [element.text for element in settings[key].iter("dependency")
-                   if element.get("type") == "visible"]
-        check(visible == [display_type],
-              "%s is only shown for %s displays" % (key, display_type))
+    # frame and the other way round.  The JPEG encoder and the software
+    # dimming are shared with the network display, so those follow both; the
+    # AX206 backlight levels are meaningless in a browser.
+    def visible_conditions(setting):
+        """``(setting, operator, value)`` of every visibility condition.
+
+        A dependency is either a single condition written on the element
+        itself or an <and>/<or> holding several, so both shapes are flattened
+        into one list here.
+        """
+        found = []
+        for dependency in setting.iter("dependency"):
+            if dependency.get("type") != "visible":
+                continue
+            nested = list(dependency.iter("condition"))
+            if nested:
+                found.extend((element.get("setting"),
+                              element.get("operator") or "is",
+                              element.text) for element in nested)
+            else:
+                found.append((dependency.get("setting"),
+                              dependency.get("operator") or "is",
+                              dependency.text))
+        return found
+
+    ax206_only = [("display_type", "is", "ax206"),
+                  ("output_mode", "!is", "network")]
+    spf_or_network = [("display_type", "is", "spf"),
+                      ("output_mode", "is", "network")]
+    expected = {
+        "device_ids": [("display_type", "is", "ax206")],
+        "byte_order": [("display_type", "is", "ax206")],
+        "reset_on_open": [("display_type", "is", "ax206")],
+        "spf_model": [("display_type", "is", "spf")],
+        "brightness": ax206_only,
+        "dim_brightness": ax206_only,
+        "jpeg_quality": spf_or_network,
+        "jpeg_subsample": spf_or_network,
+        "spf_brightness": spf_or_network,
+        "spf_dim_brightness": spf_or_network,
+    }
+    for key, conditions in sorted(expected.items()):
+        check(visible_conditions(settings[key]) == conditions,
+              "%s is shown for the right display types" % key)
+
+    # The size is what the network display renders at, so it must not be
+    # locked away behind "override the display size".
+    for key in ("width", "height"):
+        enable = []
+        for dependency in settings[key].iter("dependency"):
+            if dependency.get("type") == "enable":
+                enable.extend((element.get("setting"), element.text)
+                              for element in dependency.iter("condition"))
+        check(("output_mode", "network") in enable,
+              "%s can be set in network mode" % key)
 
 
 def test_tokens():
@@ -1107,6 +1151,151 @@ def test_web_editor():
     check(not editor.running, "and it stops again")
 
 
+def test_network_display():
+    """The wall panel: a NetworkTarget and the endpoints that serve it."""
+    print("network display")
+    import socket
+    import threading
+    import urllib.error
+    import urllib.request
+    from lcd4linux import display as display_module
+    from lcd4linux import webui
+    from lcd4linux.settings import Config
+
+    # -- built from the settings like every other target ------------------
+    config = Config({"output_mode": "network", "width": 320, "height": 240,
+                     "jpeg_quality": 70})
+    target = display_module.make_target(config)
+    check(isinstance(target, display_module.NetworkTarget),
+          "network mode builds a network target")
+    check((target.width, target.height) == (320, 240),
+          "the configured size is the panel size (%dx%d)"
+          % (target.width, target.height))
+    check(target.quality == 70,
+          "JPEG quality reaches the encoder: %d" % target.quality)
+    check(not target.is_open, "and it is closed until the service opens it")
+
+    target.open()
+    check(target.latest() == (b"", 0), "no frame before the first render")
+
+    canvas = Canvas(320, 240, parse_color("#0b0d12"))
+    canvas.fill_rect(10, 10, 300, 60, parse_color("#17b2e2"))
+    target.present(canvas, force=True)
+    frame, serial = target.latest()
+    check(frame[:2] == b"\xff\xd8" and frame[-2:] == b"\xff\xd9",
+          "the frame on offer is a whole JPEG (%d bytes)" % len(frame))
+    check(serial == 1, "and it is counted")
+
+    # A frame that changes nothing still counts, so a client that missed the
+    # last one is not left waiting for a picture that never comes.
+    canvas.fill_rect(10, 100, 100, 20, parse_color("#f0a020"))
+    target.present(canvas)
+    check(target.latest()[1] == 2, "the next frame gets the next serial")
+
+    # -- wait() is what the streaming threads block on --------------------
+    target.keepalive = 0.2
+    check(target.wait(target.latest()[1])[1] == 2,
+          "wait() returns the unchanged frame as a keep-alive")
+
+    ready = threading.Event()
+
+    def render_later():
+        ready.wait(5)
+        canvas.fill_rect(10, 140, 100, 20, parse_color("#c04040"))
+        target.present(canvas)
+
+    worker = threading.Thread(target=render_later)
+    worker.daemon = True
+    worker.start()
+    ready.set()
+    check(target.wait(2, timeout=5)[1] == 3, "and wakes up on a new frame")
+    worker.join(timeout=5)
+
+    target.blank()
+    dark, serial = target.latest()
+    check(serial == 4 and dark[:2] == b"\xff\xd8",
+          "blanking pushes a black frame at shutdown")
+
+    # -- the endpoints ----------------------------------------------------
+    probe = socket.socket()
+    probe.bind(("127.0.0.1", 0))
+    port = probe.getsockname()[1]
+    probe.close()
+
+    class FakeService(object):
+        """Just enough of the service for the handlers: a target."""
+
+        def __init__(self, config, target):
+            self.config = config
+            self.target = target
+
+    served = Config({"web_port": port, "web_bind": "local",
+                     "web_password": "secret", "output_mode": "network",
+                     "width": 320, "height": 240})
+    editor = webui.WebEditor(served, FakeService(served, target))
+    check(editor.display_target() is target, "the editor finds the live target")
+    check(webui.WebEditor(served).display_target() is None,
+          "and finds none without a running service")
+    check(editor.display_url().endswith("/display?key=secret"),
+          "the wall panel URL carries the password: %s" % editor.display_url())
+
+    check(editor.start(), "the server starts")
+    base = "http://127.0.0.1:%d" % port
+    try:
+        # The kiosk browser cannot answer a Basic auth challenge for an
+        # <img>, so the display endpoints take the password in the query.
+        try:
+            urllib.request.urlopen(base + "/display", timeout=10)
+            check(False, "the display page asks for the password")
+        except urllib.error.HTTPError as failure:
+            check(failure.code == 401,
+                  "without the key the display page is 401")
+        try:
+            urllib.request.urlopen(base + "/display?key=wrong", timeout=10)
+            check(False, "a wrong key is refused")
+        except urllib.error.HTTPError as failure:
+            check(failure.code == 401, "and a wrong key is 401 too")
+
+        page = urllib.request.urlopen(base + "/display?key=secret", timeout=10)
+        body = page.read().decode("utf-8")
+        check(page.status == 200 and "/display/stream?key=secret" in body,
+              "the page points at the stream with the key")
+        check("<img" in body and "multipart" not in body,
+              "and it is a plain <img>, no framework")
+
+        still = urllib.request.urlopen(base + "/display/frame.jpg?key=secret",
+                                       timeout=10)
+        shot = still.read()
+        check(still.headers.get("Content-Type") == "image/jpeg"
+              and shot[:2] == b"\xff\xd8",
+              "a single still is served (%d bytes)" % len(shot))
+
+        stream = urllib.request.urlopen(base + "/display/stream?key=secret",
+                                        timeout=10)
+        kind = stream.headers.get("Content-Type") or ""
+        check(kind.startswith("multipart/x-mixed-replace"),
+              "the stream announces itself as MJPEG: %s" % kind)
+        head = stream.read(len(shot) + 128)
+        stream.close()
+        check(webui.STREAM_BOUNDARY.encode("ascii") in head
+              and b"\xff\xd8" in head,
+              "and the first frame arrives without waiting for a redraw")
+
+        # With the display closed the stream must end rather than hold a
+        # thread until the socket times out.
+        target.close()
+        check(not target.is_open, "the target closes")
+        stream = urllib.request.urlopen(base + "/display/stream?key=secret",
+                                        timeout=10)
+        rest = stream.read()
+        stream.close()
+        check(b"\xff\xd8" in rest, "a late client still gets the last frame")
+    finally:
+        target.close()
+        editor.stop()
+    check(not editor.running, "and the server stops again")
+
+
 def _read_text(path):
     with open(path, "r", encoding="utf-8") as handle:
         return handle.read()
@@ -1124,6 +1313,7 @@ def main():
                  test_samsung_spf, test_brightness, test_localisation,
                  test_settings_xml, test_layout_chooser,
                  test_power_hooks, test_rotation, test_web_editor,
+                 test_network_display,
                  test_layouts):
         test()
         print("")

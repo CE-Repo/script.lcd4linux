@@ -175,7 +175,14 @@ def show_status():
     lines.append("%s: %s" % (localize.text(32330, "Service"),
                              status or localize.text(32331, "not running")))
     try:
-        if config.display_type == "spf":
+        if config.output_mode == "network":
+            # Nothing to probe on the USB bus; what the user needs is the
+            # address to point the tablet at.
+            lines.append("%s %dx%d" % (localize.text(32522,
+                                                     "Network display"),
+                                       int(config.width), int(config.height)))
+            lines.append(_display_url(config))
+        elif config.display_type == "spf":
             frames = spf.SamsungSPF.enumerate()
             if frames:
                 for info, mode, model in frames:
@@ -203,12 +210,40 @@ def show_status():
     dialog.textviewer(localize.text(32335, "Display status"), "\n".join(lines))
 
 
-def show_web_editor():
-    """Tell the user where the browser based layout editor is listening."""
+def _base_url(config):
+    """Where the add-on's HTTP server is (or will be) listening."""
     from . import webui
 
+    if xbmcgui is not None:
+        try:
+            url = xbmcgui.Window(10000).getProperty("lcd4linux.weburl")
+        except Exception:
+            url = ""
+        if url:
+            return url
+    # The service is not up (yet); show where it will be listening.
+    host = "127.0.0.1" if config.get("web_bind") == "local" else "0.0.0.0"
+    return "http://%s:%d/" % (webui.local_address(host),
+                              int(config.get("web_port", 8050)))
+
+
+def _display_url(config):
+    """The address a wall panel browser should open."""
+    from urllib.parse import quote
+
+    url = _base_url(config) + "display"
+    password = str(config.get("web_password", "") or "")
+    if password:
+        url += "?key=" + quote(password, safe="")
+    return url
+
+
+def show_web_editor():
+    """Tell the user where the browser based layout editor is listening."""
     config = Config()
-    if not config.get("web_enabled", True):
+    # In network mode the server is the display, so it runs regardless of
+    # the editor switch.
+    if not config.get("web_enabled", True) and config.output_mode != "network":
         _toast(localize.text(32346, "The web editor is switched off"))
         return
     url = ""
@@ -219,11 +254,13 @@ def show_web_editor():
             url = ""
     running = bool(url)
     if not url:
-        # The service is not up (yet); show where it will be listening.
-        host = "127.0.0.1" if config.get("web_bind") == "local" else "0.0.0.0"
-        url = "http://%s:%d/" % (webui.local_address(host),
-                                 int(config.get("web_port", 8050)))
+        url = _base_url(config)
     lines = [localize.text(32345, "Open this address in a browser:"), "", url, ""]
+    if config.output_mode == "network":
+        lines.append(localize.text(32521, "Wall panel address:"))
+        lines.append("")
+        lines.append(_display_url(config))
+        lines.append("")
     if not running:
         lines.append(localize.text(32344, "The web editor is not running yet"))
         lines.append("")

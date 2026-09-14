@@ -1,13 +1,15 @@
 """Presentation targets.
 
 A target takes a finished :class:`~.canvas.Canvas` and puts it somewhere:
-on the AX206 panel over USB, or into a PNG file when the user only wants to
-preview a layout.  The AX206 target keeps a copy of the last frame so that
-only the changed region has to travel over the bus, which is what keeps the
-refresh rate usable on a 480x320 panel.
+on the AX206 panel over USB, on a Samsung frame as JPEG, over the network to
+a browser, or into a PNG file when the user only wants to preview a layout.
+The AX206 target keeps a copy of the last frame so that only the changed
+region has to travel over the bus, which is what keeps the refresh rate
+usable on a 480x320 panel.
 """
 
 import os
+import threading
 from array import array
 
 from . import ax206
@@ -386,6 +388,133 @@ class SPFTarget(Target):
         self._redraw = True
 
 
+class NetworkTarget(Target):
+    """Serves the frames over HTTP instead of pushing them down a USB bus.
+
+    A browser opens ``/display`` on the add-on's own web server and gets an
+    MJPEG stream - typically an old tablet on the wall running a kiosk app.
+    A ``multipart/x-mixed-replace`` stream inside a plain ``<img>`` needs no
+    JavaScript at all, which is what makes this work on the ancient WebKit
+    of an Android 4.x tablet.
+
+    There is no partial update on the wire the way the AX206 has one, but
+    :class:`~.jpegenc.JpegEncoder` re-encodes only the MCU rows that changed,
+    so a ticking clock costs a fraction of a full frame.
+
+    The service thread writes frames and the server threads read them, so
+    everything shared goes through :attr:`_condition`.
+    """
+
+    #: Re-send the current frame after this long without a new one.  It
+    #: keeps NAT table entries and idle proxies from dropping the stream,
+    #: and lets a client that connected mid-frame see a picture at all.
+    keepalive = 10.0
+
+    def __init__(self, width=800, height=480, rotation=0, mirror=False,
+                 quality=85, subsample=True):
+        self.width = int(width)
+        self.height = int(height)
+        self.rotation = int(rotation) % 360
+        self.mirror = bool(mirror)
+        self.quality = int(quality)
+        self.subsample = bool(subsample)
+        self.brightness = 100
+        self.frames = 0
+        self.last_frame_bytes = 0
+        self.encoder = None
+        self._redraw = False
+        self._frame = b""
+        self._condition = threading.Condition()
+
+    def open(self):
+        self.encoder = JpegEncoder(self.width, self.height, self.quality,
+                                   self.subsample)
+        self.encoder.set_gain(self.brightness)
+        self._redraw = True
+        return True
+
+    def close(self):
+        # Wake every streaming client so its thread notices the frames have
+        # stopped instead of sitting in wait() until the socket times out.
+        with self._condition:
+            self.encoder = None
+            self._condition.notify_all()
+
+    @property
+    def is_open(self):
+        return self.encoder is not None
+
+    def describe(self):
+        return "network display"
+
+    def set_brightness(self, percent):
+        """Dim in software, 0 (black) to 100 (untouched).
+
+        Same trick as the Samsung frame: the scaling lives in the encoder's
+        colour table, so it costs nothing per frame.  Only the next frame
+        has to be re-encoded in full because the cached rows still carry the
+        old brightness.
+        """
+        percent = max(0, min(100, int(percent)))
+        if percent == self.brightness and self.encoder is not None:
+            return True
+        self.brightness = percent
+        if self.encoder is not None and self.encoder.set_gain(percent):
+            self._redraw = True
+        return True
+
+    def present(self, canvas, force=False):
+        if self.encoder is None:
+            return False
+        frame = canvas
+        if self.mirror:
+            frame = _mirror(frame)
+        if self.rotation:
+            frame = frame.rotated(self.rotation)
+        if frame.width != self.width or frame.height != self.height:
+            raise DisplayError(
+                "frame is %dx%d but the display is %dx%d"
+                % (frame.width, frame.height, self.width, self.height))
+        jpeg = self.encoder.encode(frame.buf, force=force or self._redraw)
+        self._redraw = False
+        self.last_frame_bytes = len(jpeg)
+        self._publish(jpeg)
+        return True
+
+    def blank(self):
+        """Push a black picture, so a browser that stays open goes dark."""
+        if self.encoder is None:
+            return
+        dark = Canvas(self.width, self.height, (0, 0, 0, 255))
+        self._publish(self.encoder.encode(dark.buf, force=True))
+        self._redraw = True
+
+    # -- what the web server reads ----------------------------------------
+    def _publish(self, jpeg):
+        with self._condition:
+            self._frame = jpeg
+            self.frames += 1
+            self._condition.notify_all()
+
+    def latest(self):
+        """``(jpeg, serial)`` of the frame on screen right now."""
+        with self._condition:
+            return self._frame, self.frames
+
+    def wait(self, seen, timeout=None):
+        """Block until a frame newer than ``seen`` exists.
+
+        Returns ``(jpeg, serial)`` either way: on timeout the caller gets
+        the unchanged frame back and re-sends it as a keep-alive.
+        """
+        if timeout is None:
+            timeout = self.keepalive
+        with self._condition:
+            if self.frames == seen:
+                self._condition.wait(timeout)
+            return self._frame, self.frames
+
+
 def _mirror(canvas):
     """Flip a canvas horizontally."""
     out = Canvas(canvas.width, canvas.height)
@@ -409,6 +538,16 @@ def make_target(config):
         return target
     if config.output_mode == "none":
         return NullTarget(config.width, config.height, config.rotation)
+    if config.output_mode == "network":
+        # No panel reports a size here, so the configured one is the truth.
+        log("network mode: frames are served at /display, %dx%d"
+            % (config.width, config.height))
+        return NetworkTarget(width=config.width,
+                             height=config.height,
+                             rotation=config.rotation,
+                             mirror=config.mirror,
+                             quality=config.jpeg_quality,
+                             subsample=config.jpeg_subsample)
     override = None
     if config.force_size:
         override = (config.width, config.height)
