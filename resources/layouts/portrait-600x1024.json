@@ -1,0 +1,63 @@
+{
+  "name": "$LOCALIZE[32505] (600x1024)",
+  "size": [600, 1024],
+  "background": "#0b0d12",
+  "accent": "auto:${player.thumb}",
+  "defaults": {"font": "sans", "size": 42, "color": "#ffffff"},
+
+  "pages": [
+    {
+      "name": "$LOCALIZE[32400]",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {"type": "image", "x": 30, "y": 29, "w": 540, "h": 614,
+         "src": "${player.thumb}", "fallback": "${player.poster}",
+         "fit": "cover", "radius": 22},
+        {"type": "rect", "x": 30, "y": 29, "w": 540, "h": 614,
+         "radius": 22, "border": 3, "bordercolor": "#33ffffff"},
+        {"type": "text", "x": 30, "y": 675, "w": 540, "h": 163,
+         "text": "${player.title}", "size": 60, "bold": true,
+         "wrap": true, "lines": 2, "valign": "middle", "align": "center"},
+        {"type": "text", "x": 30, "y": 845, "w": 540, "h": 64,
+         "text": "${player.artist}${player.showtitle}", "size": 47,
+         "align": "center", "color": "accent", "scroll": "bounce"},
+        {"type": "progress", "x": 30, "y": 922, "w": 540, "h": 35,
+         "value": "${player.percent}", "radius": 17, "color": "accent",
+         "background": "#262b36"},
+        {"type": "text", "x": 30, "y": 964, "w": 262, "h": 60,
+         "text": "${player.time}", "font": "mono", "size": 42,
+         "color": "#c8cede"},
+        {"type": "text", "x": 308, "y": 964, "w": 262, "h": 60,
+         "text": "-${player.remaining}", "font": "mono", "size": 42,
+         "align": "right", "color": "#c8cede"}
+      ]
+    },
+    {
+      "name": "$LOCALIZE[32401]",
+      "condition": "!active",
+      "widgets": [
+        {"type": "text", "x": 0, "y": 256, "w": 600, "h": 214,
+         "text": "${system.time}", "size": 205, "bold": true,
+         "align": "center"},
+        {"type": "text", "x": 0, "y": 495, "w": 600, "h": 68,
+         "text": "${system.weekday}", "size": 51, "align": "center",
+         "color": "#9aa3b5"},
+        {"type": "text", "x": 0, "y": 563, "w": 600, "h": 64,
+         "text": "${system.date}", "size": 45, "align": "center",
+         "color": "#6b7488"},
+        {"type": "line", "x": 112, "y": 682, "w": 375, "h": 4,
+         "color": "#1e2330"},
+        {"type": "text", "x": 0, "y": 726, "w": 600, "h": 64,
+         "text": "CPU ${system.cpu}%", "size": 47, "align": "center",
+         "color": "#9aa3b5"},
+        {"type": "text", "x": 0, "y": 797, "w": 600, "h": 64,
+         "text": "${system.cputemp}°C", "size": 47, "align": "center",
+         "color": "#9aa3b5"},
+        {"type": "text", "x": 0, "y": 905, "w": 600, "h": 60,
+         "text": "${system.ip}", "size": 41, "align": "center",
+         "color": "#4a5266"}
+      ]
+    }
+  ]
+}

@@ -52,7 +52,8 @@ def main():
     parser.add_argument("--tile-width", type=int, default=360)
     parser.add_argument("--tile-height", type=int, default=240)
     parser.add_argument("--all-sizes", action="store_true",
-                        help="include the -800x480 and -480x800 variants")
+                        help="include the -800x480, -1024x600 and portrait "
+                             "variants")
     arguments = parser.parse_args()
 
     directory = os.path.join(ROOT, "resources", "layouts")

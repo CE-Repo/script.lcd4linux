@@ -1,0 +1,43 @@
+{
+  "name": "$LOCALIZE[32502] (1024x600)",
+  "size": [1024, 600],
+  "background": "#000000",
+  "accent": "auto:${player.thumb}",
+  "defaults": {"font": "sans", "size": 41, "color": "#ffffff"},
+
+  "pages": [
+    {
+      "name": "Cover",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {"type": "image", "x": 0, "y": 0, "w": 1024, "h": 600,
+         "src": "${player.thumb}", "fallback": "${player.fanart}",
+         "fit": "cover"},
+        {"type": "rect", "x": 0, "y": 502, "w": 1024, "h": 98,
+         "color": "#cc000000"},
+        {"type": "text", "x": 35, "y": 514, "w": 640, "h": 52,
+         "text": "${player.title}", "size": 42, "bold": true,
+         "scroll": "marquee", "scrollspeed": 41, "shadow": "#000000"},
+        {"type": "text", "x": 691, "y": 518, "w": 298, "h": 49,
+         "text": "-${player.remaining}", "font": "mono-bold", "size": 41,
+         "align": "right", "color": "#ffffff", "shadow": "#000000"},
+        {"type": "progress", "x": 0, "y": 585, "w": 1024, "h": 15,
+         "value": "${player.percent}", "color": "accent",
+         "background": "#40ffffff"}
+      ]
+    },
+    {
+      "name": "$LOCALIZE[32401]",
+      "condition": "!active",
+      "widgets": [
+        {"type": "text", "x": 0, "y": 112, "w": 1024, "h": 248,
+         "text": "${system.time}", "size": 240, "bold": true,
+         "align": "center", "color": "#ffffff"},
+        {"type": "text", "x": 0, "y": 390, "w": 1024, "h": 68,
+         "text": "${system.date_long}", "size": 49, "align": "center",
+         "color": "#a8b0c0"}
+      ]
+    }
+  ]
+}

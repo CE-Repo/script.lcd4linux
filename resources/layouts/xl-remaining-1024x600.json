@@ -1,0 +1,50 @@
+{
+  "name": "$LOCALIZE[32510] (1024x600)",
+  "size": [1024, 600],
+  "background": "#000000",
+  "accent": "auto:${player.thumb}",
+  "defaults": {"font": "sans", "size": 45, "color": "#ffffff"},
+
+  "pages": [
+    {
+      "name": "$LOCALIZE[32408]",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {"type": "text", "x": 38, "y": 26, "w": 947, "h": 68,
+         "text": "${player.title}", "size": 52, "bold": true,
+         "scroll": "marquee", "scrollspeed": 45, "color": "#ffffff"},
+        {"type": "text", "x": 38, "y": 101, "w": 947, "h": 52,
+         "text": "${player.showtitle}${player.artist}", "size": 40,
+         "color": "accent"},
+        {"type": "text", "x": 0, "y": 184, "w": 1024, "h": 199,
+         "text": "-${player.remaining}", "font": "mono-bold", "size": 180,
+         "align": "center", "color": "#ffffff"},
+        {"type": "text", "x": 0, "y": 382, "w": 1024, "h": 52,
+         "text": "$LOCALIZE[32427] ${player.finishtime}", "size": 38,
+         "align": "center", "color": "#a8b0c0"},
+        {"type": "progress", "x": 38, "y": 469, "w": 947, "h": 49,
+         "value": "${player.percent}", "radius": 25, "color": "accent",
+         "background": "#262b36"},
+        {"type": "text", "x": 38, "y": 532, "w": 426, "h": 56,
+         "text": "${player.time}", "font": "mono", "size": 41,
+         "color": "#a8b0c0"},
+        {"type": "text", "x": 559, "y": 532, "w": 426, "h": 56,
+         "text": "${player.duration}", "font": "mono", "size": 41,
+         "align": "right", "color": "#a8b0c0"}
+      ]
+    },
+    {
+      "name": "$LOCALIZE[32401]",
+      "condition": "!active",
+      "widgets": [
+        {"type": "text", "x": 0, "y": 128, "w": 1024, "h": 248,
+         "text": "${system.time}", "size": 240, "bold": true,
+         "align": "center", "color": "#ffffff"},
+        {"type": "text", "x": 0, "y": 398, "w": 1024, "h": 64,
+         "text": "${system.weekday}, ${system.date}", "size": 45,
+         "align": "center", "color": "#a8b0c0"}
+      ]
+    }
+  ]
+}

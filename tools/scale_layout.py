@@ -8,6 +8,11 @@ given.  Positions and box sizes follow the two axes separately, while
 anything measured in "how big does this look" - font sizes, radii, line
 thickness - follows the vertical scale so the proportions of the type stay
 the same.  Percentage values are left alone because they already scale.
+
+A box that is exactly square keeps its shape instead, because a square box
+is a circle, a cover or an icon; scaling 800x480 to 1024x600 moves the two
+axes by 1.28 and 1.25, which is just enough to turn the record on the
+"vinyl" layout into a visible ellipse.
 """
 
 import argparse
@@ -44,6 +49,15 @@ def scale_value(value, factor):
     return value
 
 
+def square_side(widget):
+    """The side length of an exactly square box, ``None`` for anything else."""
+    width, height = widget.get("w"), widget.get("h")
+    for value in (width, height):
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            return None
+    return width if width == height else None
+
+
 def scale_widget(widget, sx, sy):
     out = {}
     for key, value in widget.items():
@@ -57,6 +71,10 @@ def scale_widget(widget, sx, sy):
             out[key] = max(2, scale_value(value, sx))
         else:
             out[key] = value
+    side = square_side(widget)
+    if side is not None:
+        # The smaller factor, so the box still fits where it did before.
+        out["w"] = out["h"] = scale_value(side, min(sx, sy))
     return out
 
 

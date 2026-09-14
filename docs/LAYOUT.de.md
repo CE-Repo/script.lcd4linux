@@ -29,18 +29,28 @@ geändert, entsteht das Bild beim nächsten Öffnen neu.
 Layoutdateien werden als **UTF-8** gelesen; eine Byte-Reihenfolge-Markierung
 (BOM), wie sie manche Windows-Editoren schreiben, wird toleriert.
 
-Die Größe im Feld `size` muss zum Display passen. Für die beiden
-unterstützten Displaygrößen gibt es jeweils eigene Dateien: heißt das
-ausgewählte Layout `default.json` und ist ein 800×480-Panel angeschlossen,
-verwendet das Add-on automatisch `default-800x480.json`, sofern vorhanden.
-Eigene Layouts folgen derselben Regel – `meins-800x480.json` neben
-`meins.json`.
+Die Größe im Feld `size` muss zum Display passen. Für jede unterstützte
+Displaygröße gibt es eigene Dateien: heißt das ausgewählte Layout
+`default.json` und ist ein 1024×600-Rahmen angeschlossen, verwendet das
+Add-on automatisch `default-1024x600.json`, sofern vorhanden. Eigene Layouts
+folgen derselben Regel – `meins-1024x600.json` neben `meins.json`.
+
+| Panel | Dateiname |
+|---|---|
+| AX206 480×320 | `meins.json` |
+| SPF 800×480 | `meins-800x480.json` |
+| SPF 1024×600 | `meins-1024x600.json` |
 
 Umrechnen muss man nicht von Hand:
 
 ```sh
-python3 tools/scale_layout.py meins.json 800 480
+python3 tools/scale_layout.py meins.json 1024 600
 ```
+
+Positionen und Kästen folgen dabei beiden Achsen getrennt, Schriftgrößen und
+Radien der senkrechten. Ein exakt quadratischer Kasten bleibt quadratisch –
+sonst würde aus einer Schallplatte beim Sprung von 800×480 auf 1024×600 eine
+Ellipse, weil sich die Achsen um 1,28 und 1,25 unterscheiden.
 
 ### Aus der Ferne lesbar
 

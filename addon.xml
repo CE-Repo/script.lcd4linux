@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="script.lcd4linux"
        name="LCD4Linux"
-       version="1.9.0"
+       version="1.10.0"
        provider-name="U3knOwn">
   <requires>
     <import addon="xbmc.python" version="3.0.0"/>
@@ -31,7 +31,16 @@ Zusätzliche Python-Module werden nicht benötigt: Der USB-Zugriff läuft über 
     <platform>linux</platform>
     <license>MIT</license>
     <source>https://github.com/CE-Repo/script.lcd4linux</source>
-    <news>v1.8.0
+    <news>v1.10.0
+- Layouts for 1024x600: every bundled design ships a third size, so the 10
+  inch Samsung frames (SPF-105P, SPF-107H, SPF-1000P) get a layout drawn for
+  their panel instead of an 800x480 one stretched over it
+- The layout setting still stores the name without a size, so an existing
+  setup keeps working and a 10 inch frame simply gets the larger file
+- Width and height can be set in steps of 8 pixels, which is what makes 600
+  selectable for the network display
+
+v1.8.0
 - New output mode "Network display": the frames are served over HTTP, so any
   browser in full screen can be the display - a wall mounted tablet, a phone
 - The page at /display is a plain &lt;img&gt; fed by an MJPEG stream, so it

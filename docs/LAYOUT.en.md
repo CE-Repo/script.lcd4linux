@@ -27,17 +27,28 @@ picture be rendered again the next time.
 Layout files are read as **UTF-8**; a byte order mark, as written by some
 Windows editors, is tolerated.
 
-The `size` field has to match the display. Each bundled layout exists for both
-supported sizes: if the selected layout is `default.json` and an 800x480 panel
-is attached, the add-on automatically uses `default-800x480.json` when that
-file exists. Your own layouts follow the same rule - `mine-800x480.json` next
-to `mine.json`.
+The `size` field has to match the display. Each bundled layout exists for
+every supported size: if the selected layout is `default.json` and a 1024x600
+frame is attached, the add-on automatically uses `default-1024x600.json` when
+that file exists. Your own layouts follow the same rule -
+`mine-1024x600.json` next to `mine.json`.
+
+| Panel | File name |
+|---|---|
+| AX206 480x320 | `mine.json` |
+| SPF 800x480 | `mine-800x480.json` |
+| SPF 1024x600 | `mine-1024x600.json` |
 
 Rescaling does not have to be done by hand:
 
 ```sh
-python3 tools/scale_layout.py mine.json 800 480
+python3 tools/scale_layout.py mine.json 1024 600
 ```
+
+Positions and boxes follow the two axes separately, font sizes and radii the
+vertical one. A box that is exactly square stays square - otherwise the
+record on the "vinyl" layout turns into an ellipse going from 800x480 to
+1024x600, where the axes differ by 1.28 and 1.25.
 
 ### Readable from a distance
 
