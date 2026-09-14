@@ -1,3 +1,22 @@
+v1.10.1
+- A display that takes longer to boot than Kodi does is picked up on its
+  own.  A Samsung frame needs about half a minute after power on, so the
+  service started without it, built the renderer from the configured size
+  and then rejected every frame as being the wrong size once the panel
+  finally answered - which dropped the USB link again and left the frame on
+  its "USB" screen until the service was restarted by hand.  Layout and
+  canvas are now rebuilt for the size the display really reports
+- While the box is starting up the display is looked for every few seconds
+  instead of once per reconnect interval, so the picture appears seconds
+  after the panel is ready instead of up to five minutes later.  The new
+  "Start-up grace period" setting says how long that lasts (default 180 s)
+- No warning popup while the display may still be booting; the first
+  attempts only go into the log, and the warning follows if it is still
+  missing when the grace period is over
+- Samsung frames that answer the switch request while still booting and
+  come back as a USB drive anyway are asked again instead of being given up
+  on after a single try
+
 v1.10.0
 - Layouts for 1024x600: every bundled design now ships a third size, so the
   10 inch Samsung frames (SPF-105P, SPF-107H, SPF-1000P) get a layout drawn

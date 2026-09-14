@@ -36,6 +36,7 @@ DEFAULTS = {
     "usb_timeout": 3000,
     "reset_on_open": False,
     "retry_seconds": 20,
+    "startup_grace": 180,
     "brightness": 7,
     "dim_brightness": 1,
     "spf_brightness": 100,

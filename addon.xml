@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="script.lcd4linux"
        name="LCD4Linux"
-       version="1.10.0"
+       version="1.10.1"
        provider-name="U3knOwn">
   <requires>
     <import addon="xbmc.python" version="3.0.0"/>
@@ -31,7 +31,17 @@ Zusätzliche Python-Module werden nicht benötigt: Der USB-Zugriff läuft über 
     <platform>linux</platform>
     <license>MIT</license>
     <source>https://github.com/CE-Repo/script.lcd4linux</source>
-    <news>v1.10.0
+    <news>v1.10.1
+- A display that needs longer to boot than Kodi does - a Samsung frame takes
+  about half a minute - is now picked up by itself.  It used to stay on its
+  USB screen until the service was restarted by hand
+- While the box is still starting up the display is looked for every few
+  seconds instead of once per reconnect interval, and the warning about a
+  missing display only appears once that grace period is over
+- A frame that answers the first switch request but comes back as a USB
+  drive anyway, because it was not done booting, is simply asked again
+
+v1.10.0
 - Layouts for 1024x600: every bundled design ships a third size, so the 10
   inch Samsung frames (SPF-105P, SPF-107H, SPF-1000P) get a layout drawn for
   their panel instead of an 800x480 one stretched over it
