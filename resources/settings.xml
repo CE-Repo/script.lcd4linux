@@ -108,6 +108,18 @@
             <popup>true</popup>
           </control>
         </setting>
+        <setting id="startup_grace" type="integer" label="32151" help="32152">
+          <level>2</level>
+          <default>180</default>
+          <constraints>
+            <minimum>0</minimum>
+            <step>30</step>
+            <maximum>600</maximum>
+          </constraints>
+          <control type="slider" format="integer">
+            <popup>true</popup>
+          </control>
+        </setting>
       </group>
 
       <group id="2" label="32021">

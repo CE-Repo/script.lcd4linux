@@ -62,6 +62,11 @@ ENDPOINT_OUT = 0x02
 KEEPALIVE_REQUEST_TYPE = 0xC0
 KEEPALIVE_REQUEST = 0x01
 
+#: How long a frame gets to re-enumerate before the switch request is sent
+#: again.  It drops off the bus for a second or two, so asking sooner would
+#: only pile requests onto a frame that is already on its way.
+SWITCH_RETRY_SECONDS = 2.5
+
 #: The descriptor request that flips a frame out of mass storage mode.
 SWITCH_REQUEST_TYPE = 0x80
 SWITCH_REQUEST = 0x06
@@ -100,7 +105,7 @@ def model_by_name(name):
 class SamsungSPF(object):
     """One connected Samsung photo frame in monitor mode."""
 
-    def __init__(self, index=0, serial=None, timeout=5000, switch_wait=8.0,
+    def __init__(self, index=0, serial=None, timeout=5000, switch_wait=10.0,
                  model=None):
         self.index = int(index)
         self.serial = serial or None
@@ -149,6 +154,16 @@ class SamsungSPF(object):
         return found
 
     # -- mode switching ---------------------------------------------------
+    def _count_storage(self, context):
+        """How many frames are (still) in mass storage mode."""
+        devices = None
+        try:
+            devices, _count, matches = context.find(storage_ids())
+            return len(matches)
+        finally:
+            if devices is not None:
+                context.release_list(devices)
+
     def _switch_to_monitor(self, context):
         """Ask every frame still in storage mode to become a monitor."""
         devices = None
@@ -186,21 +201,7 @@ class SamsungSPF(object):
                 return
             context = usbdev.Context()
             try:
-                if not self._find_monitor(context):
-                    if not self._switch_to_monitor(context):
-                        raise DisplayError(
-                            "no Samsung photo frame found (looked for %d known models)"
-                            % len(MODELS))
-                    # The frame re-enumerates with a new product id.
-                    deadline = time.time() + self.switch_wait
-                    while time.time() < deadline:
-                        time.sleep(0.5)
-                        if self._find_monitor(context):
-                            break
-                    else:
-                        raise DisplayError(
-                            "the frame did not come back in monitor mode within %.0f s"
-                            % self.switch_wait)
+                self._connect(context)
                 log("Samsung %s opened: %s, %dx%d"
                     % (self.name, self.info, self.width, self.height))
             except Exception:
@@ -213,6 +214,45 @@ class SamsungSPF(object):
                 context.close()
                 raise
             self._context = context
+
+    def _connect(self, context):
+        """Open the frame, switching it out of storage mode when needed.
+
+        A frame that is still booting - the usual case when the box and the
+        frame are switched on together - answers the switch request but
+        comes back in mass storage mode anyway.  So the request is repeated
+        as long as the frame keeps showing up as a USB drive, instead of
+        giving up after the first try and leaving the panel stuck on its
+        "USB" screen until someone restarts the service.
+        """
+        if self._find_monitor(context):
+            return
+        deadline = time.time() + self.switch_wait
+        attempts = 0
+        while True:
+            attempts += self._switch_to_monitor(context)
+            if not attempts:
+                raise DisplayError(
+                    "no Samsung photo frame found (looked for %d known models)"
+                    % len(MODELS))
+            # The frame drops off the bus and re-enumerates with a new
+            # product id, which takes a second or two.
+            retry_at = time.time() + SWITCH_RETRY_SECONDS
+            while time.time() < deadline:
+                time.sleep(0.5)
+                if self._find_monitor(context):
+                    if attempts > 1:
+                        log("the frame needed %d switch requests" % attempts)
+                    return
+                if time.time() >= retry_at and self._count_storage(context):
+                    # Still a USB drive well after the request: it was not
+                    # ready for it, so ask again rather than sit out the
+                    # whole deadline.
+                    break
+            if time.time() >= deadline:
+                raise DisplayError(
+                    "the frame stayed in USB mass storage mode for %.0f s "
+                    "(%d switch request(s) sent)" % (self.switch_wait, attempts))
 
     def _find_monitor(self, context):
         """Open the frame if one is already in monitor mode."""

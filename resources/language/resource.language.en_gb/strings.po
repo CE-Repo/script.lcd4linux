@@ -240,6 +240,14 @@ msgctxt "#32150"
 msgid "Reload service"
 msgstr ""
 
+msgctxt "#32151"
+msgid "Start-up grace period (s)"
+msgstr ""
+
+msgctxt "#32152"
+msgid "How long after the service starts the display is looked for every few seconds, for a panel that needs longer to boot than Kodi does."
+msgstr ""
+
 msgctxt "#32160"
 msgid "Updates per second while playing"
 msgstr ""

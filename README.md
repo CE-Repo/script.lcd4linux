@@ -130,6 +130,16 @@ kommt mit einer neuen Produkt-ID im Monitor-Modus zurück – das dauert ein bis
 drei Sekunden und passiert bei jedem Einschalten neu. `usb_modeswitch` wird
 nicht benötigt.
 
+Box und Rahmen werden meist gemeinsam eingeschaltet, und der Rahmen braucht
+etwa eine halbe Minute länger als Kodi. Solange er noch bootet, ist er
+entweder gar nicht am Bus oder beantwortet die Umschaltung zwar, kommt aber
+trotzdem wieder als USB-Laufwerk. Der Dienst startet deshalb auch ohne
+Display, sucht in den ersten Minuten alle paar Sekunden danach (siehe
+*Wartezeit beim Start*), wiederholt die Umschaltanforderung, solange sich der
+Rahmen als Laufwerk meldet, und baut Layout und Bildgröße neu auf, sobald der
+Rahmen seine tatsächliche Auflösung nennt. Ein Neustart des Dienstes von Hand
+ist dafür nicht mehr nötig.
+
 ##### Anschluss Schritt für Schritt
 
 1. **Netzteil des Rahmens anschließen.** Ein 7"-Rahmen zieht mehr Strom, als
@@ -315,6 +325,7 @@ auf. Bei fest montierten Tablets gelegentlich die Rückseite prüfen.
 | Displaynummer | wenn mehrere Panels angeschlossen sind |
 | USB-Gerät zurücksetzen | hilft, wenn ein anderes Programm das Display hängen ließ (nur AX206) |
 | Wiederverbindungsintervall | Wartezeit, bis nach einem abgezogenen Display erneut gesucht wird |
+| Wartezeit beim Start | Wie lange nach dem Start des Dienstes alle paar Sekunden nach dem Display gesucht wird, Standard 180 s. Gedacht für Displays, die länger hochfahren als Kodi – ein Samsung-Rahmen braucht rund eine halbe Minute. In dieser Zeit erscheint auch keine Warnung über ein fehlendes Display |
 
 **Anzeige → Verbindung → Displaytyp**
 
@@ -695,9 +706,11 @@ mit großen einfarbigen Flächen kodieren deutlich schneller als solche mit
 bildschirmfüllendem Hintergrundbild (siehe Tabelle unten).
 
 **Samsung: Rahmen bleibt im Massenspeicher-Modus**
-Im Protokoll steht dann „the frame did not come back in monitor mode".
-Rahmen einmal aus- und wieder einstecken. Manche Modelle schalten nur um, wenn
-sie eingeschaltet sind und nicht gerade eine Diashow abspielen.
+Im Protokoll steht dann „the frame stayed in USB mass storage mode". Das
+Add-on wiederholt die Umschaltung von sich aus und versucht es beim nächsten
+Durchlauf erneut; hilft das nicht, den Rahmen einmal aus- und wieder
+einstecken. Manche Modelle schalten nur um, wenn sie eingeschaltet sind und
+nicht gerade eine Diashow abspielen.
 
 **Samsung: Bild bleibt stehen**
 Der Rahmen fällt ohne den Keep-Alive nach einiger Zeit aus dem Monitor-Modus.

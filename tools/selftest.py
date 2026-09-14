@@ -278,8 +278,13 @@ class FakeSPFDevice(object):
     def control_read(self, request_type, request, value, index, length,
                      timeout=1000):
         if (request_type, request, value, index) == (0x80, 0x06, 0x00FE, 0x00FE):
-            self.bus.mode = "monitor"
             self.bus.switch_requests += 1
+            if self.bus.ignore_switches > 0:
+                # Still booting: the request is answered but the frame
+                # comes back as a USB drive again.
+                self.bus.ignore_switches -= 1
+                return b""
+            self.bus.mode = "monitor"
             return b"\x00" * 8
         if (request_type, request) == (0xC0, 0x01):
             self.keepalives += 1
@@ -291,16 +296,25 @@ class FakeSPFBus(object):
     """Presents the frame in storage mode until it is switched."""
 
     def __init__(self, mode="storage"):
+        #: ``"absent"`` is a frame that has not finished booting yet and is
+        #: not on the USB bus at all.
         self.mode = mode
         self.switch_requests = 0
+        #: Switch requests the frame answers but ignores, the way a frame
+        #: that is still booting does.
+        self.ignore_switches = 0
         self.device = None
 
     def product_id(self):
-        return 0x200A if self.mode == "storage" else 0x200B
+        if self.mode == "storage":
+            return 0x200A
+        if self.mode == "monitor":
+            return 0x200B
+        return None
 
     def find(self, matches):
         wanted = set(matches)
-        if (0x04E8, self.product_id()) not in wanted:
+        if self.product_id() is None or (0x04E8, self.product_id()) not in wanted:
             return None, 0, []
         if self.device is None:
             self.device = FakeSPFDevice(self)
@@ -395,6 +409,80 @@ def test_samsung_spf():
           and spf.SamsungSPF(model="spf-72h").model == "SPF-72H",
           "the driver normalises the configured model")
     target.close()
+
+
+def test_late_display():
+    """A display that is slower to boot than Kodi must still come up.
+
+    The box, Kodi and the picture frame are switched on together and the
+    frame needs the better part of a minute before it appears on the USB
+    bus.  The service therefore starts without a display, and everything the
+    panel size decides - the layout variant and the canvas - has to be
+    redone once the frame finally answers.
+    """
+    print("display that boots later than Kodi")
+    from lcd4linux.service import Service, STARTUP_RETRY_SECONDS
+
+    bus = install_fake_spf("absent")
+    service = Service(overrides={"output_mode": "usb", "display_type": "spf",
+                                 "width": 480, "height": 320,
+                                 "layout": "default.json",
+                                 "retry_seconds": 60, "startup_grace": 180,
+                                 "web_enabled": False})
+    check(service.setup() is False,
+          "the service starts even though the frame is not on the bus yet")
+    check(not service.target.is_open, "and knows the display is not open")
+    check((service.renderer.canvas.width, service.renderer.canvas.height)
+          == (480, 320),
+          "until then it renders at the configured size")
+    delay = service._next_open_attempt - time.time()
+    check(0 < delay <= STARTUP_RETRY_SECONDS + 0.5,
+          "the next attempt is %.1f s away while the box is still starting"
+          % delay)
+    check(not service._open_warned,
+          "a display that may still be booting does not warn the user")
+
+    # The frame finished booting: it shows up as a USB drive and needs a
+    # second switch request because the first one came too early.
+    bus.mode = "storage"
+    bus.device = FakeSPFDevice(bus)
+    bus.ignore_switches = 1
+    service.target.device.switch_wait = 4.0
+    service._next_open_attempt = 0.0
+    service._tick(time.time())
+    check(service.target.is_open, "the frame is picked up as soon as it appears")
+    check(bus.switch_requests >= 2,
+          "a frame that ignored the first switch request is asked again (%d requests)"
+          % bus.switch_requests)
+    check(bus.mode == "monitor", "and ends up in monitor mode, not on its USB screen")
+    check((service.renderer.canvas.width, service.renderer.canvas.height)
+          == (800, 480),
+          "the renderer is rebuilt for the size the frame really has")
+    check((service.layout.width, service.layout.height) == (800, 480),
+          "and the layout variant for that size is loaded")
+    check(len(bus.device.frames) == 1, "a frame reaches the panel right away")
+
+    frames = len(bus.device.frames)
+    service._tick(time.time() + 1.0)
+    check(len(bus.device.frames) > frames,
+          "and the next tick keeps drawing instead of dropping the link")
+    check(service.renderer.canvas.width == 800,
+          "the renderer is not rebuilt again once the size is known")
+
+    # A display that is still missing when the grace period is over is
+    # reported once and then retried at the configured interval.
+    bus2 = install_fake_spf("absent")
+    late = Service(overrides={"output_mode": "usb", "display_type": "spf",
+                              "retry_seconds": 45, "startup_grace": 0,
+                              "web_enabled": False})
+    late.setup()
+    check(late._open_warned, "a display that is simply missing is reported")
+    delay = late._next_open_attempt - time.time()
+    check(40 < delay <= 45.5,
+          "and looked for again after the reconnect interval (%.0f s)" % delay)
+    check(bus2.switch_requests == 0, "with nothing to switch on an empty bus")
+
+    service.shutdown()
 
 
 def test_jpeg_encoder():
@@ -1613,7 +1701,8 @@ def main():
                  test_media_info,
                  test_pixel_conversion, test_frame_cache, test_image_cache,
                  test_jpeg_encoder, test_protocol, test_target_from_settings,
-                 test_samsung_spf, test_brightness, test_localisation,
+                 test_samsung_spf, test_late_display, test_brightness,
+                 test_localisation,
                  test_settings_xml, test_layout_chooser,
                  test_power_hooks, test_rotation, test_web_editor,
                  test_network_display,

@@ -49,6 +49,13 @@ RELOAD_SETTINGS = frozenset((
 WEB_SETTINGS = frozenset(("web_enabled", "web_port", "web_bind",
                           "web_password", "output_mode"))
 
+#: How often the display is looked for while the box is still starting up.
+#: A Samsung frame needs the better part of a minute after power on before
+#: it even appears on the USB bus, and waiting out the full reconnect
+#: interval for every one of those attempts is what made the panel sit on
+#: its "USB" screen long after Kodi was up.
+STARTUP_RETRY_SECONDS = 3.0
+
 #: Commands accepted through ``NotifyAll(script.lcd4linux, <command>)``.
 CONTROL_COMMANDS = ("reload", "next_page", "test_pattern", "message",
                     "brightness_up", "brightness_down")
@@ -118,6 +125,9 @@ class Service(object):
         self._brightness = None
         self._next_open_attempt = 0.0
         self._open_failures = 0
+        self._started_at = time.time()
+        self._ever_opened = False
+        self._open_warned = False
         self._test_until = 0.0
         self._start_command_done = False
 
@@ -243,10 +253,41 @@ class Service(object):
             self._start_command_done = True
         self.target = display_module.make_target(self.config)
         opened = self._open_target()
+        self._build_renderer(force=True)
+        self.start_web_editor()
+        return opened
 
-        width, height = self.target.logical_size
+    def _render_size(self):
+        """The size to draw at: the panel's own, or the configured one.
+
+        A display that is not open yet reports no size at all - a Samsung
+        frame only tells us its model once it is in monitor mode - so until
+        then the settings are the best guess available.
+        """
+        width = height = 0
+        if self.target is not None:
+            width, height = self.target.logical_size
         if not width or not height:
-            width, height = self.config.width, self.config.height
+            width, height = int(self.config.width), int(self.config.height)
+        return width, height
+
+    def _build_renderer(self, force=False):
+        """(Re)build layout and renderer for the size the display has now.
+
+        Called again once a display that was missing at start-up finally
+        turns up: the first renderer had to be built from the configured
+        fallback size, and sending 480x320 frames to an 800x480 frame only
+        ends in "frame is 480x320 but the display is 800x480" - over and
+        over, because every one of those errors drops the connection and
+        the frame falls back to its USB screen.  ``force`` rebuilds even
+        when the size did not change, which is what a reload after a
+        settings change needs.
+        """
+        width, height = self._render_size()
+        if not force and self.renderer is not None \
+                and (self.renderer.canvas.width,
+                     self.renderer.canvas.height) == (width, height):
+            return False
         self.layout = layout_module.load_layout(self.config.layout,
                                                 self.config.layout_directories,
                                                 (width, height))
@@ -259,8 +300,7 @@ class Service(object):
             self.layout, self.provider, self.fonts, self.images,
             float(self.config.page_interval), bool(self.config.smooth_images),
             size=(width, height))
-        self.start_web_editor()
-        return opened
+        return True
 
     # -- web editor -------------------------------------------------------
     def start_web_editor(self):
@@ -379,10 +419,38 @@ class Service(object):
         except Exception:
             pass
 
+    def _waiting_for_boot(self):
+        """True while a display that never opened may still be booting.
+
+        The box, the TV and the picture frame come up together, and the
+        frame is the slowest of the three.  Complaining about it before it
+        had a chance to finish booting is noise, so the first minutes only
+        go into the log.
+        """
+        if self._ever_opened:
+            return False
+        grace = max(0, int(self.config.get("startup_grace", 0)))
+        return time.time() - self._started_at < grace
+
+    def _schedule_retry(self):
+        """Decide when to look for the display again.
+
+        While it has never been open and the box is still starting up, that
+        is every few seconds: the frame turns up on the bus when it is
+        ready, and nobody wants to stare at a blank panel for another full
+        reconnect interval afterwards.
+        """
+        interval = max(5, int(self.config.retry_seconds))
+        if self._waiting_for_boot():
+            interval = min(interval, STARTUP_RETRY_SECONDS)
+        self._next_open_attempt = time.time() + interval
+
     def _open_target(self):
         try:
             self.target.open()
             self._open_failures = 0
+            self._ever_opened = True
+            self._open_warned = False
             self._brightness = None
             # Before the first level is sent, not after the first frame: the
             # panel would otherwise start at the idle brightness.
@@ -399,10 +467,18 @@ class Service(object):
             return True
         except Exception as err:
             self._open_failures += 1
-            self._next_open_attempt = time.time() + max(
-                5, int(self.config.retry_seconds))
+            waiting = self._waiting_for_boot()
+            self._schedule_retry()
             self._publish_status(str(err))
-            if self._open_failures == 1:
+            if waiting:
+                # Still inside the start-up grace period: the display is
+                # most likely just slower than Kodi.
+                if self._open_failures == 1:
+                    log("the display is not ready yet, waiting for it: %s" % err)
+                else:
+                    debug("display not ready yet: %s" % err)
+            elif not self._open_warned:
+                self._open_warned = True
                 error("cannot open the display: %s" % err)
                 self._notify_user(err)
             else:
@@ -549,9 +625,20 @@ class Service(object):
         if getattr(self.target, "is_open", True) is False:
             if now < self._next_open_attempt:
                 return
+            first = not self._ever_opened
             if not self._open_target():
                 return
-            log("display reconnected")
+            log("display opened" if first else "display reconnected")
+
+        # A display that was missing when the service started reports its
+        # real size only once it is open, so the renderer may have to be
+        # built again - otherwise every frame would be rejected for being
+        # the wrong size, the connection would drop, and a Samsung frame
+        # would fall back to its USB screen for good.  Nothing happens here
+        # while the size matches, which is every frame but that one.
+        if self._build_renderer():
+            log("rendering at %dx%d" % (self.renderer.canvas.width,
+                                        self.renderer.canvas.height))
 
         # Open the frame here rather than leaving it to the renderer: the
         # idle check below needs fresh data, and while the test pattern is
@@ -613,8 +700,7 @@ class Service(object):
                 self.target.close()
             except Exception:
                 pass
-        self._next_open_attempt = time.time() + max(
-            5, int(self.config.retry_seconds))
+        self._schedule_retry()
 
     def _wait(self, seconds):
         if self.monitor is not None:
