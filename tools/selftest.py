@@ -975,6 +975,147 @@ def test_tokens():
     check(tokens.evaluate("audio+playing", provider), "and combination")
 
 
+def test_pixel_conversion():
+    """RGB565 -> RGB888 must be exact, whatever the shortcut inside.
+
+    The conversion expands whole byte planes at once instead of walking the
+    framebuffer pixel by pixel, which is worth the trick only if it agrees
+    with the straightforward version on every one of the 65536 values.
+    """
+    print("pixel conversion")
+    from lcd4linux.canvas import unpack565
+
+    canvas = Canvas(256, 256)
+    for value in range(65536):
+        canvas.buf[value] = value
+    expected = bytearray(65536 * 3)
+    position = 0
+    for value in canvas.buf:
+        red, green, blue = unpack565(value)
+        expected[position] = red
+        expected[position + 1] = green
+        expected[position + 2] = blue
+        position += 3
+    check(canvas.to_rgb888() == bytes(expected),
+          "every RGB565 value expands to the same RGB triplet as before")
+    check(Canvas(0, 0).to_rgb888() == b"", "an empty canvas converts to nothing")
+
+    # The PNG preview writer is the real caller, so check the whole way out.
+    from lcd4linux import pngio
+    picture = Canvas(9, 5)
+    picture.fill_rect(1, 1, 4, 3, (255, 128, 0, 255))
+    data = pngio.encode_rgb(picture.width, picture.height, picture.to_rgb888())
+    width, height, rgba = pngio.decode(data)
+    check((width, height) == (9, 5), "the preview PNG keeps its size")
+    middle = (2 * 9 + 2) * 4
+    check(abs(rgba[middle] - 255) <= 8 and abs(rgba[middle + 1] - 128) <= 8
+          and rgba[middle + 2] <= 8, "and its colours survive the round trip")
+
+
+def test_frame_cache():
+    """Kodi is asked for each value once per frame, not once per token."""
+    print("frame cache")
+    from lcd4linux import kodidata
+
+    counted = {"conditions": 0, "labels": 0}
+
+    class CountingProvider(kodidata.KodiProvider):
+        """A KodiProvider with the two calls into Kodi counted."""
+
+        def __init__(self):
+            kodidata.BaseProvider.__init__(self)
+            self.addon_name = self.addon_version = ""
+            self.player = None
+            self.cpu = kodidata.CpuSampler()
+            # Pretend the library counts were fetched a moment ago.
+            self._library_cache = {"songs": "1"}
+            self._library_time = time.time()
+
+        def _info(self, label):
+            counted["labels"] += 1
+            return ""
+
+        def _kodi_condition(self, name):
+            counted["conditions"] += 1
+            return False
+
+    provider = CountingProvider()
+    provider.begin_frame(1000.0)
+    for key in ("player.title", "player.artist", "player.album", "player.time",
+                "player.duration", "player.percent", "player.state",
+                "player.thumb", "player.codec", "player.year"):
+        provider.value(key)
+    # Player.Playing, Player.Paused and the HasVideo/HasAudio/HasPicture
+    # probes; without the per-frame cache every player.* key repeated them.
+    check(counted["conditions"] <= 5,
+          "a page full of player tokens costs %d visibility calls"
+          % counted["conditions"])
+
+    # /proc/meminfo is one file, however many keys are read out of it.
+    provider = CountingProvider()
+    provider.begin_frame(1000.0)
+    check("__meminfo" not in provider._cache,
+          "the memory file is not touched until a key asks for it")
+    for key in ("system.memory", "system.memoryfree", "system.memorytotal"):
+        provider.value(key)
+    check("__meminfo" in provider._cache,
+          "and is then read once for all three memory keys")
+
+    # The service opens the frame before the renderer does; the second call
+    # with the same timestamp must not throw the cache away.
+    provider = CountingProvider()
+    provider.begin_frame(2000.0)
+    provider.value("player.state")
+    so_far = counted["conditions"]
+    provider.begin_frame(2000.0)
+    provider.value("player.state")
+    check(counted["conditions"] == so_far,
+          "re-announcing the same frame keeps the cached values")
+    provider.begin_frame(2001.0)
+    provider.value("player.state")
+    check(counted["conditions"] > so_far, "and the next frame asks again")
+
+
+def test_image_cache():
+    """A picture that is not there must not be re-opened on every frame."""
+    print("image cache")
+    import shutil
+    import tempfile
+    from lcd4linux import images, pngio
+
+    reads = {"count": 0}
+    original = images.read_bytes
+
+    def counting_read(path):
+        reads["count"] += 1
+        return original(path)
+
+    images.read_bytes = counting_read
+    directory = tempfile.mkdtemp(prefix="lcd4linux-cache-")
+    try:
+        cache = ImageCache(limit=4)
+        missing = os.path.join(directory, "no-cover-yet.png")
+        result = None
+        for _ in range(10):
+            result = cache.get(missing)
+        check(result is None, "a missing picture resolves to nothing")
+        check(reads["count"] == 1,
+              "and is looked for once, not once per frame (%d reads)"
+              % reads["count"])
+
+        # It must still appear on its own once the file turns up.
+        cache.MISS_SECONDS = 0.0
+        canvas = Canvas(4, 4)
+        canvas.clear((10, 200, 90, 255))
+        with open(missing, "wb") as handle:
+            handle.write(pngio.encode_rgb(4, 4, canvas.to_rgb888()))
+        check(cache.get(missing) is not None,
+              "a picture that arrives late is still picked up")
+    finally:
+        images.read_bytes = original
+        shutil.rmtree(directory, ignore_errors=True)
+
+
 def test_web_editor():
     """The browser editor: its API, its guards and its field catalogue."""
     print("web editor")
@@ -1309,6 +1450,7 @@ def _png_size(data):
 def main():
     print("script.lcd4linux self test\n")
     for test in (test_encoding, test_fonts, test_images, test_tokens,
+                 test_pixel_conversion, test_frame_cache, test_image_cache,
                  test_jpeg_encoder, test_protocol, test_target_from_settings,
                  test_samsung_spf, test_brightness, test_localisation,
                  test_settings_xml, test_layout_chooser,

@@ -8,6 +8,8 @@ assumed to be little endian (every board Kodi runs on is), which is exactly
 what the AX206 expects on the wire.
 """
 
+import sys
+
 from array import array
 
 # ---------------------------------------------------------------------------
@@ -83,6 +85,16 @@ def unpack565(value):
     g = (value >> 5) & 0x3F
     b = value & 0x1F
     return (r << 3) | (r >> 2), (g << 2) | (g >> 4), (b << 3) | (b >> 2)
+
+
+#: Lookup tables for :meth:`Canvas.to_rgb888`, which expands whole planes of
+#: the framebuffer at once instead of walking it pixel by pixel.
+_LITTLE_ENDIAN = sys.byteorder == "little"
+_RED = bytes(((v >> 3) << 3) | (v >> 5) for v in range(256))
+_GREEN_HIGH = bytes((v & 0x07) << 3 for v in range(256))
+_GREEN_LOW = bytes(v >> 5 for v in range(256))
+_GREEN = bytes(((v & 0x3F) << 2) | ((v & 0x3F) >> 4) for v in range(256))
+_BLUE = bytes(((v & 0x1F) << 3) | ((v & 0x1F) >> 2) for v in range(256))
 
 
 def mix(color_a, color_b, factor):
@@ -537,15 +549,28 @@ class Canvas(object):
         return self.buf.tobytes()
 
     def to_rgb888(self):
-        """Expand to plain RGB bytes (used by the PNG preview writer)."""
-        out = bytearray(self.width * self.height * 3)
-        i = 0
-        for value in self.buf:
-            r = (value >> 11) & 0x1F
-            g = (value >> 5) & 0x3F
-            b = value & 0x1F
-            out[i] = (r << 3) | (r >> 2)
-            out[i + 1] = (g << 2) | (g >> 4)
-            out[i + 2] = (b << 3) | (b >> 2)
-            i += 3
+        """Expand to plain RGB bytes (used by the PNG preview writer).
+
+        Done with whole-buffer byte operations rather than a per-pixel loop:
+        every preview the web editor draws goes through here, and on a low
+        power box the loop version cost more than the rendering did.  The
+        two bytes of a pixel are split into planes, each plane is expanded
+        through a 256 entry table, and the two halves of the green channel
+        are merged with a single big-integer ``or`` before being interleaved
+        back into RGB triplets.
+        """
+        data = self.buf.tobytes()
+        high, low = (data[1::2], data[0::2]) if _LITTLE_ENDIAN \
+            else (data[0::2], data[1::2])
+        count = len(high)
+        if not count:
+            return b""
+        # Green straddles both bytes: the top three bits sit in the high
+        # byte, the bottom three in the low one.
+        green = (int.from_bytes(high.translate(_GREEN_HIGH), "big")
+                 | int.from_bytes(low.translate(_GREEN_LOW), "big"))
+        out = bytearray(count * 3)
+        out[0::3] = high.translate(_RED)
+        out[1::3] = green.to_bytes(count, "big").translate(_GREEN)
+        out[2::3] = low.translate(_BLUE)
         return bytes(out)

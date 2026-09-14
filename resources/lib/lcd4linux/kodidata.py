@@ -115,6 +115,16 @@ class BaseProvider(object):
         self.now = None
 
     def begin_frame(self, now=None):
+        """Start a frame, dropping the values cached for the previous one.
+
+        Both the service and the renderer announce the frame - the service
+        needs the player state before it decides on brightness and frame
+        rate, the renderer needs it while drawing - so a second call with
+        the same timestamp is ignored instead of throwing the cache away and
+        asking Kodi for everything twice.
+        """
+        if now is not None and now == self.now and self._frame:
+            return
         self._cache = {}
         self._frame += 1
         self.now = now
@@ -198,8 +208,16 @@ class BaseProvider(object):
             value /= 1000.0
         return "%.0f" % value
 
-    @staticmethod
-    def _meminfo():
+    def _meminfo(self):
+        """``/proc/meminfo`` as a dict, read at most once per frame.
+
+        A layout that shows used, free and total memory asks three separate
+        keys, and each one is a different cache entry, so without this the
+        file was opened three times for a single frame.
+        """
+        if "__meminfo" in self._cache:
+            return self._cache["__meminfo"]
+        fields = None
         try:
             with open("/proc/meminfo", "r", encoding="ascii") as handle:
                 fields = {}
@@ -207,7 +225,8 @@ class BaseProvider(object):
                     name, _, rest = line.partition(":")
                     fields[name.strip()] = int(rest.strip().split()[0])
         except (IOError, OSError, ValueError, IndexError):
-            return None
+            fields = None
+        self._cache["__meminfo"] = fields
         return fields
 
     #: Checked in order; the first one that exists is reported.
@@ -342,22 +361,41 @@ class KodiProvider(BaseProvider):
         return result
 
     def _state(self):
+        """``playing``/``paused``/``stopped``, resolved once per frame.
+
+        Every ``player.*`` key needs the state, but each key is cached under
+        its own name, so a page with a dozen of them used to ask Kodi for
+        the same two visibility conditions a dozen times per frame.
+        """
+        cached = self._cache.get("__state")
+        if cached is not None:
+            return cached
         if xbmc is None:
-            return "stopped"
-        if self._kodi_condition("Player.Playing"):
-            return "playing"
-        if self._kodi_condition("Player.Paused"):
-            return "paused"
-        return "stopped"
+            state = "stopped"
+        elif self._kodi_condition("Player.Playing"):
+            state = "playing"
+        elif self._kodi_condition("Player.Paused"):
+            state = "paused"
+        else:
+            state = "stopped"
+        self._cache["__state"] = state
+        return state
 
     def _media_type(self):
+        """``video``/``audio``/``picture``/``none``, resolved once per frame."""
+        cached = self._cache.get("__mediatype")
+        if cached is not None:
+            return cached
         if self._kodi_condition("Player.HasVideo"):
-            return "video"
-        if self._kodi_condition("Player.HasAudio"):
-            return "audio"
-        if self._kodi_condition("Player.HasPicture"):
-            return "picture"
-        return "none"
+            media = "video"
+        elif self._kodi_condition("Player.HasAudio"):
+            media = "audio"
+        elif self._kodi_condition("Player.HasPicture"):
+            media = "picture"
+        else:
+            media = "none"
+        self._cache["__mediatype"] = media
+        return media
 
     def _library_counts(self):
         now = time.time()

@@ -32,6 +32,7 @@ API
 """
 
 import base64
+import hmac
 import json
 import os
 import re
@@ -124,6 +125,12 @@ img.fill { width: 100%%; height: 100%%; max-width: none; max-height: none; }
 
 class EditorError(Exception):
     """Something the browser did wrong; reported as a 400 with a message."""
+
+
+def _same_secret(given, expected):
+    """Compare a password without leaking its length through timing."""
+    return hmac.compare_digest(str(given).encode("utf-8"),
+                               str(expected).encode("utf-8"))
 
 
 # ---------------------------------------------------------------------------
@@ -376,6 +383,10 @@ class Handler(BaseHTTPRequestHandler):
         if length <= 0:
             return {}
         if length > MAX_BODY:
+            # The body is never read, so the bytes still queued on the
+            # socket would be parsed as the next request.  End the
+            # connection instead of leaving it out of step.
+            self.close_connection = True
             raise EditorError("the request is too large")
         try:
             return json.loads(self.rfile.read(length).decode("utf-8"))
@@ -390,14 +401,14 @@ class Handler(BaseHTTPRequestHandler):
         # a Basic auth challenge for a sub resource, so the read only display
         # endpoints take the password as a query parameter instead.
         if path == "/display" or path.startswith("/display/"):
-            return (query or {}).get("key") == password
+            return _same_secret((query or {}).get("key") or "", password)
         header = self.headers.get("Authorization") or ""
         if header.startswith("Basic "):
             try:
                 decoded = base64.b64decode(header[6:]).decode("utf-8")
             except Exception:
                 return False
-            return decoded.partition(":")[2] == password
+            return _same_secret(decoded.partition(":")[2], password)
         return False
 
     # -- entry points -----------------------------------------------------
