@@ -9,6 +9,7 @@ add-on ships with.
 """
 
 import os
+import re
 import struct
 import sys
 import time
@@ -661,6 +662,35 @@ def test_layouts():
     directories = [os.path.join(ROOT, "resources", "layouts")]
     available = discover(directories)
     check(bool(available), "found %d bundled layouts" % len(available))
+
+    # Every design ships one file per panel the add-on drives.  A missing
+    # variant is not an error at runtime - load_layout quietly falls back to
+    # some other design that fits - so nothing but this check would notice.
+    from lcd4linux.thumbs import design_name
+    variants = {}
+    for name in available:
+        variants.setdefault(design_name(name), set()).add(name)
+    portrait = {"portrait.json", "portrait-480x800.json",
+                "portrait-600x1024.json"}
+    incomplete = []
+    for design, names in sorted(variants.items()):
+        wanted = portrait if design == "portrait" else {
+            design + ".json", design + "-800x480.json",
+            design + "-1024x600.json"}
+        if names != wanted:
+            incomplete.append("%s: %s" % (design, sorted(names)))
+    check(not incomplete, "every design ships 480x320, 800x480 and 1024x600 "
+          "(%s)" % (incomplete or "none",))
+
+    mismatched = []
+    for name, path in sorted(available.items()):
+        match = re.search(r"-(\d+)x(\d+)$", os.path.splitext(name)[0])
+        if match and tuple(Layout.load(path).size) != (int(match.group(1)),
+                                                       int(match.group(2))):
+            mismatched.append(name)
+    check(not mismatched, "every variant declares the size in its name (%s)"
+          % (mismatched or "none",))
+
     fonts = FontCache([os.path.join(ROOT, "resources", "fonts")])
     images = ImageCache()
     art = os.path.join(ROOT, "resources", "media", "demo-cover.jpg")
@@ -792,13 +822,16 @@ def test_layout_chooser():
     check(all(name in available for name in names),
           "every entry names a layout file that exists")
     check(dict(entries).get("default.json")
-          == ["default-800x480.json", "default.json"],
+          == ["default-1024x600.json", "default-800x480.json", "default.json"],
           "the size variants of a design share one entry")
     # Storing the name without the size is only safe because loading picks
     # the variant that fits the panel.
     check(tuple(load_layout("default.json", [directory], (800, 480)).size)
           == (800, 480),
           "the stored name still resolves to the 800x480 variant")
+    check(tuple(load_layout("default.json", [directory], (1024, 600)).size)
+          == (1024, 600),
+          "and to the 1024x600 variant on a 10 inch frame")
 
     unpictured = [name for name in names if thumbs.shipped_path(name) is None]
     check(not unpictured, "every bundled design ships a preview (%s)"

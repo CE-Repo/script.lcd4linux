@@ -1,0 +1,43 @@
+{
+  "name": "$LOCALIZE[32508] (1024x600)",
+  "size": [1024, 600],
+  "background": "#000000",
+  "accent": "auto:${player.thumb}",
+  "defaults": {"font": "sans", "size": 45, "color": "#ffffff"},
+
+  "pages": [
+    {
+      "name": "$LOCALIZE[32402]",
+      "widgets": [
+        {"type": "text", "x": 0, "y": 30, "w": 1024, "h": 248,
+         "text": "${system.time}", "size": 240, "bold": true,
+         "align": "center", "color": "#ffffff", "condition": "active"},
+        {"type": "text", "x": 0, "y": 98, "w": 1024, "h": 248,
+         "text": "${system.time}", "size": 240, "bold": true,
+         "align": "center", "color": "#ffffff", "condition": "!active"},
+        {"type": "text", "x": 0, "y": 368, "w": 1024, "h": 68,
+         "text": "${system.date_long}", "size": 49, "align": "center",
+         "color": "#a8b0c0", "condition": "!active"},
+        {"type": "text", "x": 0, "y": 469, "w": 1024, "h": 56,
+         "text": "${system.cpu}%   ·   ${system.cputemp}°C", "size": 41,
+         "align": "center", "color": "#6b7488", "condition": "!active"},
+        {"type": "text", "x": 38, "y": 315, "w": 947, "h": 68,
+         "text": "${player.title}", "size": 50, "bold": true,
+         "align": "center", "scroll": "marquee", "scrollspeed": 45,
+         "color": "#ffffff", "condition": "active"},
+        {"type": "text", "x": 38, "y": 386, "w": 947, "h": 56,
+         "text": "${player.artist}${player.showtitle}", "size": 41,
+         "align": "center", "color": "accent", "condition": "active"},
+        {"type": "progress", "x": 38, "y": 469, "w": 947, "h": 34,
+         "value": "${player.percent}", "radius": 18, "color": "accent",
+         "background": "#262b36", "condition": "active"},
+        {"type": "text", "x": 38, "y": 518, "w": 426, "h": 56,
+         "text": "${player.time}", "font": "mono", "size": 41,
+         "color": "#a8b0c0", "condition": "active"},
+        {"type": "text", "x": 559, "y": 518, "w": 426, "h": 56,
+         "text": "-${player.remaining}", "font": "mono", "size": 41,
+         "align": "right", "color": "#a8b0c0", "condition": "active"}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "name": "$LOCALIZE[32506] (1024x600)",
+  "size": [1024, 600],
+  "background": "#0b0d12",
+  "accent": "auto:${player.thumb}",
+  "defaults": {"font": "sans", "size": 38, "color": "#ffffff"},
+
+  "pages": [
+    {
+      "name": "$LOCALIZE[32405]",
+      "condition": "audio",
+      "priority": 10,
+      "widgets": [
+        {"type": "image", "x": 35, "y": 26, "w": 221, "h": 195,
+         "src": "${player.thumb}", "fit": "cover", "radius": 15},
+        {"type": "text", "x": 285, "y": 26, "w": 704, "h": 64,
+         "text": "${player.title}", "size": 50, "bold": true,
+         "scroll": "marquee", "scrollspeed": 45},
+        {"type": "text", "x": 285, "y": 98, "w": 704, "h": 52,
+         "text": "${player.artist}", "size": 41, "color": "accent",
+         "scroll": "bounce"},
+        {"type": "text", "x": 285, "y": 158, "w": 704, "h": 49,
+         "text": "${player.album}", "size": 34, "color": "#9aa3b5"},
+        {"type": "progress", "x": 35, "y": 248, "w": 956, "h": 26,
+         "value": "${player.percent}", "radius": 12, "color": "accent",
+         "background": "#262b36"},
+        {"type": "text", "x": 35, "y": 289, "w": 426, "h": 56,
+         "text": "${player.time}", "font": "mono", "size": 41,
+         "color": "#c8cede"},
+        {"type": "text", "x": 563, "y": 289, "w": 426, "h": 56,
+         "text": "-${player.remaining}", "font": "mono", "size": 41,
+         "align": "right", "color": "#c8cede"},
+        {"type": "line", "x": 35, "y": 368, "w": 956, "h": 4,
+         "color": "#262b36"},
+        {"type": "text", "x": 35, "y": 390, "w": 640, "h": 45,
+         "text": "$LOCALIZE[32421]", "size": 32, "color": "#6b7488"},
+        {"type": "text", "x": 563, "y": 390, "w": 426, "h": 45,
+         "text": "${player.playlistposition|prefix:$LOCALIZE[32422] }${player.playlistlength|prefix: $LOCALIZE[32423] }",
+         "size": 32, "align": "right", "color": "#6b7488"},
+        {"type": "text", "x": 35, "y": 439, "w": 956, "h": 68,
+         "text": "${player.next|default:—}", "size": 52, "bold": true,
+         "scroll": "bounce", "color": "#ffffff"},
+        {"type": "text", "x": 35, "y": 514, "w": 704, "h": 56,
+         "text": "${player.nextartist}", "size": 40, "color": "#9aa3b5"},
+        {"type": "text", "x": 746, "y": 518, "w": 243, "h": 52,
+         "text": "${system.time}", "size": 38, "align": "right",
+         "color": "#6b7488"}
+      ]
+    },
+    {
+      "name": "Video",
+      "condition": "video",
+      "priority": 10,
+      "widgets": [
+        {"type": "text", "x": 38, "y": 45, "w": 947, "h": 180,
+         "text": "${player.title}", "size": 68, "bold": true,
+         "wrap": true, "lines": 2, "valign": "middle"},
+        {"type": "text", "x": 38, "y": 244, "w": 947, "h": 64,
+         "text": "${player.showtitle}${player.artist}", "size": 48,
+         "color": "accent"},
+        {"type": "text", "x": 38, "y": 315, "w": 947, "h": 52,
+         "text": "${player.episodelabel}${player.year}", "size": 38,
+         "color": "#9aa3b5"},
+        {"type": "progress", "x": 38, "y": 398, "w": 947, "h": 34,
+         "value": "${player.percent}", "radius": 18, "color": "accent",
+         "background": "#262b36"},
+        {"type": "text", "x": 38, "y": 454, "w": 426, "h": 79,
+         "text": "${player.time}", "font": "mono-bold", "size": 60},
+        {"type": "text", "x": 559, "y": 454, "w": 426, "h": 79,
+         "text": "-${player.remaining}", "font": "mono-bold", "size": 60,
+         "align": "right", "color": "#9aa3b5"},
+        {"type": "text", "x": 38, "y": 540, "w": 947, "h": 49,
+         "text": "${player.finishtime|prefix:$LOCALIZE[32426] }",
+         "size": 35, "align": "center", "color": "#6b7488"}
+      ]
+    },
+    {
+      "name": "$LOCALIZE[32401]",
+      "condition": "!active",
+      "widgets": [
+        {"type": "text", "x": 0, "y": 124, "w": 1024, "h": 240,
+         "text": "${system.time}", "size": 225, "bold": true,
+         "align": "center"},
+        {"type": "text", "x": 0, "y": 394, "w": 1024, "h": 64,
+         "text": "${system.date_long}", "size": 45, "align": "center",
+         "color": "#9aa3b5"}
+      ]
+    }
+  ]
+}

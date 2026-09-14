@@ -1,0 +1,88 @@
+{
+  "name": "$LOCALIZE[32507] (1024x600)",
+  "size": [1024, 600],
+  "background": "#0b1020",
+  "defaults": {"font": "sans", "size": 38, "color": "#ffffff"},
+
+  "pages": [
+    {
+      "name": "$LOCALIZE[32407]",
+      "condition": "!active+${weather.temperature}",
+      "widgets": [
+        {"type": "text", "x": 42, "y": 56, "w": 572, "h": 165,
+         "text": "${system.time}", "size": 142, "bold": true,
+         "color": "#ffffff"},
+        {"type": "text", "x": 47, "y": 240, "w": 563, "h": 56,
+         "text": "${system.weekday}", "size": 45, "color": "#7fb0ff"},
+        {"type": "text", "x": 47, "y": 300, "w": 563, "h": 52,
+         "text": "${system.date}", "size": 38, "color": "#8892a8"},
+        {"type": "line", "x": 640, "y": 56, "w": 4, "h": 300,
+         "color": "#1c2740"},
+        {"type": "text", "x": 675, "y": 49, "w": 316, "h": 161,
+         "text": "${weather.temperature}°", "size": 135, "bold": true,
+         "align": "right", "color": "#ffd166"},
+        {"type": "text", "x": 675, "y": 221, "w": 316, "h": 105,
+         "text": "${weather.conditions}", "size": 38, "align": "right",
+         "wrap": true, "lines": 2, "color": "#c8d4ea"},
+        {"type": "text", "x": 675, "y": 330, "w": 316, "h": 49,
+         "text": "${weather.location}", "size": 34, "align": "right",
+         "color": "#8892a8"},
+        {"type": "line", "x": 42, "y": 405, "w": 947, "h": 4,
+         "color": "#1c2740"},
+        {"type": "text", "x": 42, "y": 439, "w": 298, "h": 49,
+         "text": "CPU", "size": 32, "color": "#6b7899"},
+        {"type": "text", "x": 42, "y": 480, "w": 298, "h": 75,
+         "text": "${system.cpu}%", "size": 60, "bold": true},
+        {"type": "text", "x": 367, "y": 439, "w": 298, "h": 49,
+         "text": "TEMP", "size": 32, "color": "#6b7899"},
+        {"type": "text", "x": 367, "y": 480, "w": 298, "h": 75,
+         "text": "${system.cputemp}°C", "size": 60, "bold": true},
+        {"type": "text", "x": 691, "y": 439, "w": 298, "h": 49,
+         "text": "RAM", "size": 32, "align": "right", "color": "#6b7899"},
+        {"type": "text", "x": 691, "y": 480, "w": 298, "h": 75,
+         "text": "${system.memory}%", "size": 60, "bold": true,
+         "align": "right"}
+      ]
+    },
+    {
+      "name": "$LOCALIZE[32402]",
+      "condition": "!active",
+      "widgets": [
+        {"type": "text", "x": 0, "y": 120, "w": 1024, "h": 240,
+         "text": "${system.time}", "size": 225, "bold": true,
+         "align": "center"},
+        {"type": "text", "x": 0, "y": 390, "w": 1024, "h": 64,
+         "text": "${system.date_long}", "size": 45, "align": "center",
+         "color": "#8892a8"}
+      ]
+    },
+    {
+      "name": "$LOCALIZE[32400]",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {"type": "text", "x": 42, "y": 56, "w": 938, "h": 172,
+         "text": "${player.title}", "size": 64, "bold": true,
+         "wrap": true, "lines": 2, "valign": "middle"},
+        {"type": "text", "x": 42, "y": 248, "w": 938, "h": 64,
+         "text": "${player.artist}${player.showtitle}", "size": 48,
+         "color": "#7fb0ff"},
+        {"type": "progress", "x": 42, "y": 360, "w": 938, "h": 34,
+         "value": "${player.percent}", "radius": 18, "color": "#ffd166",
+         "background": "#1c2740"},
+        {"type": "text", "x": 42, "y": 416, "w": 426, "h": 79,
+         "text": "${player.time}", "font": "mono-bold", "size": 60},
+        {"type": "text", "x": 554, "y": 416, "w": 426, "h": 79,
+         "text": "-${player.remaining}", "font": "mono-bold", "size": 60,
+         "align": "right", "color": "#8892a8"},
+        {"type": "line", "x": 42, "y": 521, "w": 938, "h": 4,
+         "color": "#1c2740"},
+        {"type": "text", "x": 42, "y": 540, "w": 426, "h": 52,
+         "text": "${system.time}", "size": 38, "color": "#8892a8"},
+        {"type": "text", "x": 554, "y": 540, "w": 426, "h": 52,
+         "text": "${weather.temperature|suffix:°}${weather.conditions|prefix:  |trunc:14}",
+         "size": 38, "align": "right", "color": "#8892a8"}
+      ]
+    }
+  ]
+}

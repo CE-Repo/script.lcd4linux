@@ -1,0 +1,87 @@
+{
+  "name": "Vinyl (1024x600)",
+  "size": [1024, 600],
+  "background": "#0a0a0c",
+  "accent": "auto:${player.thumb}",
+  "defaults": {"font": "sans", "size": 28, "color": "#ffffff"},
+
+  "pages": [
+    {
+      "name": "$LOCALIZE[32400]",
+      "condition": "audio",
+      "priority": 10,
+      "widgets": [
+        {"type": "circle", "x": 20, "y": 100, "w": 395, "h": 395,
+         "color": "#1c1c22"},
+        {"type": "image", "x": 31, "y": 110, "w": 375, "h": 375,
+         "src": "${player.thumb}", "fit": "cover", "radius": 188},
+        {"type": "circle", "x": 195, "y": 270, "w": 55, "h": 55,
+         "color": "#0a0a0c"},
+        {"type": "circle", "x": 211, "y": 286, "w": 22, "h": 22,
+         "color": "#3a3a44"},
+        {"type": "text", "x": 461, "y": 120, "w": 538, "h": 155,
+         "text": "${player.title}", "size": 55, "bold": true,
+         "wrap": true, "lines": 2, "valign": "middle", "color": "#ffffff"},
+        {"type": "text", "x": 461, "y": 288, "w": 538, "h": 58,
+         "text": "${player.artist}", "size": 42, "color": "accent",
+         "scroll": "bounce"},
+        {"type": "text", "x": 461, "y": 352, "w": 538, "h": 48,
+         "text": "${player.album}", "size": 34, "color": "#9aa3b5",
+         "scroll": "bounce"},
+        {"type": "text", "x": 461, "y": 405, "w": 538, "h": 42,
+         "text": "${player.year}${player.genre|prefix: · |trunc:20}",
+         "size": 29, "color": "#6b7488"},
+        {"type": "progress", "x": 461, "y": 478, "w": 538, "h": 22,
+         "value": "${player.percent}", "radius": 11, "color": "accent",
+         "background": "#26262e"},
+        {"type": "text", "x": 461, "y": 512, "w": 256, "h": 50,
+         "text": "${player.time}", "font": "mono", "size": 36,
+         "color": "#c8cede"},
+        {"type": "text", "x": 742, "y": 512, "w": 256, "h": 50,
+         "text": "${player.duration}", "font": "mono", "size": 36,
+         "align": "right", "color": "#c8cede"}
+      ]
+    },
+    {
+      "name": "$LOCALIZE[32406]",
+      "condition": "video",
+      "priority": 10,
+      "widgets": [
+        {"type": "text", "x": 41, "y": 75, "w": 942, "h": 188,
+         "text": "${player.title}", "size": 68, "bold": true,
+         "wrap": true, "lines": 2, "valign": "middle"},
+        {"type": "text", "x": 41, "y": 281, "w": 942, "h": 62,
+         "text": "${player.showtitle}${player.artist}", "size": 46,
+         "color": "accent"},
+        {"type": "progress", "x": 41, "y": 394, "w": 942, "h": 32,
+         "value": "${player.percent}", "radius": 16, "color": "accent",
+         "background": "#26262e"},
+        {"type": "text", "x": 41, "y": 450, "w": 435, "h": 78,
+         "text": "${player.time}", "font": "mono-bold", "size": 60},
+        {"type": "text", "x": 548, "y": 450, "w": 435, "h": 78,
+         "text": "-${player.remaining}", "font": "mono-bold", "size": 60,
+         "align": "right", "color": "#9aa3b5"}
+      ]
+    },
+    {
+      "name": "$LOCALIZE[32401]",
+      "condition": "!active",
+      "widgets": [
+        {"type": "circle", "x": 320, "y": 75, "w": 375, "h": 375,
+         "color": "#15151a"},
+        {"type": "circle", "x": 320, "y": 75, "w": 375, "h": 375,
+         "color": "#2a2a33", "thickness": 4},
+        {"type": "circle", "x": 387, "y": 140, "w": 245, "h": 245,
+         "color": "#2a2a33", "thickness": 2},
+        {"type": "circle", "x": 484, "y": 235, "w": 55, "h": 55,
+         "color": "#3a3a44"},
+        {"type": "text", "x": 0, "y": 215, "w": 1024, "h": 100,
+         "text": "${system.time}", "size": 90, "bold": true,
+         "align": "center", "color": "#ffffff"},
+        {"type": "text", "x": 0, "y": 495, "w": 1024, "h": 55,
+         "text": "${system.date_long}", "size": 38, "align": "center",
+         "color": "#6b7488"}
+      ]
+    }
+  ]
+}

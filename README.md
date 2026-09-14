@@ -39,6 +39,9 @@ Und auf dem 800×480-Rahmen:
   Samsung werden nur die geänderten JPEG-Blockzeilen neu kodiert.
 * **Frei anpassbare Layouts** als JSON: Seiten, Widgets, Positionen, Farben,
   Schriftgrößen, Bedingungen und Datenquellen.
+* **Jedes Layout in drei Größen** – 480×320, 800×480 und 1024×600 – plus
+  Hochformat. Eingestellt wird nur der Name, das Add-on nimmt automatisch die
+  Fassung, die zum angeschlossenen Panel passt.
 * **Layout-Baukasten im Browser**: Elemente mit der Maus setzen, ziehen und
   in der Größe ändern, mit einer Vorschau, die derselbe Renderer zeichnet wie
   das Display – vom Handy, Tablet oder PC im Netzwerk aus.
@@ -255,10 +258,11 @@ JavaScript zeigt die Seite trotzdem Bilder.
 **Bandbreite:** 800×480 bei Qualität 85 sind rund 28 kB pro Bild. Im Leerlauf
 mit einem Bild pro Sekunde also etwa 0,2 Mbit/s.
 
-**Auflösung und Layouts:** die mitgelieferten Layouts gibt es in 480×320 und
-800×480. Ein 10"-Tablet mit 1280×800 kann entweder auf 800×480 gestellt
-werden – der Browser skaliert dann hoch, alle Layouts passen sofort – oder
-nativ rendern, dann rechnet `tools/scale_layout.py` die Layouts um.
+**Auflösung und Layouts:** die mitgelieferten Layouts gibt es in 480×320,
+800×480 und 1024×600. Ein 10"-Tablet mit 1280×800 kann auf eine dieser
+Größen gestellt werden – der Browser skaliert dann hoch, alle Layouts passen
+sofort – oder nativ rendern, dann rechnet `tools/scale_layout.py` die
+Layouts um.
 
 ##### Tablet einrichten
 
@@ -362,8 +366,9 @@ Zeile darüber. Die Bilder liegen als `resources/thumbs/<design>.png` bei.
 Layouts aus dem eigenen Ordner haben kein mitgeliefertes Bild – sie werden
 beim ersten Öffnen der Liste einmal gerendert und in
 `<Add-on-Daten>/thumbs/` zwischengespeichert. Mehrere Größen desselben
-Designs (`default.json` und `default-800x480.json`) erscheinen als ein
-Eintrag, weil beim Laden ohnehin die zum Panel passende Fassung genommen wird.
+Designs (`default.json`, `default-800x480.json` und
+`default-1024x600.json`) erscheinen als ein Eintrag, weil beim Laden ohnehin
+die zum Panel passende Fassung genommen wird.
 
 **Layout → Web-Editor**
 
@@ -413,13 +418,15 @@ Neu erzeugen lassen sich die Übersichten mit
 ```sh
 python3 tools/contact_sheet.py --state video --out uebersicht.png
 # --state: video | series | normal | music | idle
-# --all-sizes nimmt auch die 800x480-Fassungen mit auf
+# --all-sizes nimmt auch die 800x480- und 1024x600-Fassungen mit auf
 ```
 
 ## Mitgelieferte Layouts
 
 Ausgewählt wird nur der Name (z. B. `default.json`) – passt die Größe nicht,
-nimmt das Add-on automatisch die Variante `default-800x480.json`.
+nimmt das Add-on automatisch die passende Variante, also
+`default-800x480.json` auf einem SPF-87H oder `default-1024x600.json` auf
+einem SPF-107H.
 
 **Viele Details – zum Davorsitzen**
 
@@ -479,9 +486,10 @@ passt.
 ![Wetter](resources/screenshots/weather.png)
 ![Bibliothek](resources/screenshots/library.png)
 
-Von jedem Layout gibt es die 800×480-Fassung mit dem Zusatz `-800x480`
-(beim Hochformat `portrait-480x800.json`); das Add-on wählt sie automatisch,
-wenn ein entsprechendes Panel angeschlossen ist.
+Von jedem Layout gibt es neben dem 480×320-Original eine 800×480- und eine
+1024×600-Fassung mit dem Zusatz `-800x480` bzw. `-1024x600` (beim Hochformat
+`portrait-480x800.json` und `portrait-600x1024.json`); das Add-on wählt die
+passende automatisch, wenn ein entsprechendes Panel angeschlossen ist.
 
 Für das Hochformat zusätzlich *Einstellungen → Anzeige → Bild → Drehung* auf
 90 oder 270 Grad stellen.
@@ -794,6 +802,11 @@ changed rectangle is transferred; on the Samsung, which accepts complete JPEG
 images only, only the MCU rows that changed are re-encoded.
 
 * Layout reference: [docs/LAYOUT.en.md](docs/LAYOUT.en.md)
+* **Every layout in three sizes**: 480x320, 800x480 and 1024x600, plus a
+  portrait design. The setting stores the name only; loading picks the
+  variant that fits the attached panel, so a 10 inch frame (SPF-105P,
+  SPF-107H, SPF-1000P) gets a layout drawn for it rather than a smaller one
+  stretched over it.
 * **Media details in plain words**: Kodi reports `hevc`, `truehd_atmos` and
   `8`; the panel shows H.265, Dolby TrueHD Atmos and 7.1, alongside the
   dynamic range (`${player.hdr}`: Dolby Vision, HDR10+, HDR10, HLG, SDR) and

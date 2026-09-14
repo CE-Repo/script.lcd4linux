@@ -153,7 +153,7 @@
           <default>480</default>
           <constraints>
             <minimum>64</minimum>
-            <step>16</step>
+            <step>8</step>
             <maximum>1920</maximum>
           </constraints>
           <dependencies>
@@ -173,7 +173,7 @@
           <default>320</default>
           <constraints>
             <minimum>64</minimum>
-            <step>16</step>
+            <step>8</step>
             <maximum>1920</maximum>
           </constraints>
           <dependencies>

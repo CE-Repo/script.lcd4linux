@@ -1,3 +1,18 @@
+v1.10.0
+- Layouts for 1024x600: every bundled design now ships a third size, so the
+  10 inch Samsung frames (SPF-105P, SPF-107H, SPF-1000P) get a layout drawn
+  for their panel instead of an 800x480 one stretched over it.  The portrait
+  design gains portrait-600x1024.json for a frame mounted on its side
+- The layout setting still stores the name without a size; loading picks the
+  variant that fits, so an existing setup keeps working after the update and
+  a 10 inch frame simply gets the larger file
+- tools/scale_layout.py keeps an exactly square box square.  Scaling 800x480
+  to 1024x600 moves the two axes by 1.28 and 1.25, which was enough to turn
+  the record on the "vinyl" layout, round cover art and icons into ellipses
+- The width and height sliders step in 8 instead of 16 pixels, so 600 can be
+  selected at all - it was unreachable from 64 in steps of 16, which blocked
+  1024x600 for the network display and for "force size"
+
 v1.9.0
 - Codecs, HDR and resolution are shown as names instead of the raw ids Kodi
   hands out: H.265 instead of hevc, Dolby TrueHD instead of truehd_atmos,

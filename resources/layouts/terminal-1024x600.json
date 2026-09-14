@@ -1,0 +1,68 @@
+{
+  "name": "Terminal (1024x600)",
+  "size": [1024, 600],
+  "background": "#000000",
+  "defaults": {"font": "mono", "size": 38, "color": "#33ff66"},
+
+  "pages": [
+    {
+      "name": "$LOCALIZE[32400]",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {"type": "text", "x": 29, "y": 19, "w": 964, "h": 49,
+         "text": "coreelec:~$ now-playing", "size": 35, "color": "#1f9945"},
+        {"type": "line", "x": 29, "y": 75, "w": 964, "h": 2,
+         "color": "#123d22"},
+        {"type": "text", "x": 29, "y": 101, "w": 964, "h": 75,
+         "text": "${player.title}", "font": "mono-bold", "size": 56,
+         "scroll": "marquee", "scrollspeed": 45, "color": "#33ff66"},
+        {"type": "text", "x": 29, "y": 188, "w": 964, "h": 56,
+         "text": "${player.artist}${player.showtitle}", "size": 41,
+         "color": "#26cc52"},
+        {"type": "text", "x": 29, "y": 248, "w": 964, "h": 52,
+         "text": "${player.album}${player.episodelabel}", "size": 35,
+         "color": "#1f9945"},
+        {"type": "progress", "x": 29, "y": 334, "w": 964, "h": 41,
+         "value": "${player.percent}", "color": "#33ff66",
+         "background": "#000000", "style": "segments", "segments": 68,
+         "gap": 5, "inactivecolor": "#123d22"},
+        {"type": "text", "x": 29, "y": 398, "w": 964, "h": 56,
+         "text": "$LOCALIZE[32439]${player.time}", "size": 41,
+         "color": "#26cc52"},
+        {"type": "text", "x": 29, "y": 454, "w": 964, "h": 56,
+         "text": "$LOCALIZE[32440]${player.remaining}", "size": 41,
+         "color": "#26cc52"},
+        {"type": "line", "x": 29, "y": 529, "w": 964, "h": 2,
+         "color": "#123d22"},
+        {"type": "text", "x": 29, "y": 544, "w": 964, "h": 49,
+         "text": "cpu ${system.cpu}%  temp ${system.cputemp}C  ${system.time}",
+         "size": 34, "color": "#1f9945"}
+      ]
+    },
+    {
+      "name": "$LOCALIZE[32401]",
+      "condition": "!active",
+      "widgets": [
+        {"type": "text", "x": 29, "y": 26, "w": 964, "h": 49,
+         "text": "coreelec:~$ uptime", "size": 35, "color": "#1f9945"},
+        {"type": "text", "x": 0, "y": 124, "w": 1024, "h": 188,
+         "text": "${system.time}", "font": "mono-bold", "size": 180,
+         "align": "center", "color": "#33ff66"},
+        {"type": "text", "x": 0, "y": 330, "w": 1024, "h": 56,
+         "text": "${system.date_iso}", "size": 41, "align": "center",
+         "color": "#26cc52"},
+        {"type": "line", "x": 29, "y": 412, "w": 964, "h": 2,
+         "color": "#123d22"},
+        {"type": "text", "x": 29, "y": 435, "w": 964, "h": 49,
+         "text": "host  ${system.hostname}", "size": 35,
+         "color": "#26cc52"},
+        {"type": "text", "x": 29, "y": 484, "w": 964, "h": 49,
+         "text": "addr  ${system.ip}", "size": 35, "color": "#26cc52"},
+        {"type": "text", "x": 29, "y": 532, "w": 964, "h": 49,
+         "text": "disk  ${system.freespace} $LOCALIZE[32425]", "size": 35,
+         "color": "#26cc52"}
+      ]
+    }
+  ]
+}
