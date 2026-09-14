@@ -975,6 +975,133 @@ def test_tokens():
     check(tokens.evaluate("audio+playing", provider), "and combination")
 
 
+def test_media_info():
+    """Codec, HDR and resolution must reach the panel as names, not raw ids.
+
+    Kodi answers with demuxer ids and a VideoResolution that says "4K" for a
+    2160 line picture; the display is supposed to say H.265, Dolby TrueHD,
+    Dolby Vision and 2160p.
+    """
+    print("media info")
+    from lcd4linux import mediainfo
+
+    check(mediainfo.video_codec("hevc") == "H.265", "hevc is H.265")
+    check(mediainfo.video_codec("avc1") == "H.264", "avc1 is H.264")
+    check(mediainfo.video_codec("") == "", "an absent codec stays absent")
+    check(mediainfo.video_codec("weirdcodec") == "WEIRDCODEC",
+          "an unknown codec is still shown")
+
+    check(mediainfo.audio_codec("truehd_atmos") == "Dolby TrueHD",
+          "truehd_atmos is Dolby TrueHD")
+    check(mediainfo.audio_codec("dtshd_ma") == "DTS-HD MA", "dtshd_ma is DTS-HD MA")
+    check(mediainfo.audio_codec("eac3") == "Dolby Digital Plus",
+          "eac3 is Dolby Digital Plus")
+    check(mediainfo.spatial_format("truehd_atmos") == "Atmos", "Atmos is named")
+    check(mediainfo.spatial_format("dtshd_ma_x") == "DTS:X", "DTS:X is named")
+    check(mediainfo.spatial_format("truehd") == "",
+          "plain TrueHD claims no object audio")
+    check(mediainfo.audio_description("truehd_atmos", "8")
+          == "Dolby TrueHD Atmos 7.1", "the audio line reads as one string")
+    check(mediainfo.audio_description("", "") == "",
+          "and stays empty when Kodi knows nothing")
+
+    # Kodi reports the bed count only, so no height channels are invented.
+    check(mediainfo.channel_layout("8") == "7.1", "8 channels is 7.1")
+    check(mediainfo.channel_layout("6") == "5.1", "6 channels is 5.1")
+    check(mediainfo.channel_layout("2") == "2.0", "2 channels is 2.0")
+    check(mediainfo.channel_layout("9") == "9 ch",
+          "an unmapped count is still readable")
+    check(mediainfo.channel_layout("") == "", "no count, no layout")
+
+    for raw, expected, short in (
+            ("dolbyvision", "Dolby Vision", "DV"),
+            ("Dolby Vision", "Dolby Vision", "DV"),
+            ("hdr10+", "HDR10+", "HDR10+"),
+            ("hdr10plus", "HDR10+", "HDR10+"),
+            ("hdr10", "HDR10", "HDR10"),
+            ("hlg", "HLG", "HLG"),
+            ("", "SDR", "SDR")):
+        check(mediainfo.hdr_type(raw) == expected and
+              mediainfo.hdr_short(raw) == short,
+              "%r is %s / %s" % (raw, expected, short))
+
+    # The resolution is the reported bug: "4K" could not have a "p" appended.
+    check(mediainfo.resolution("2160", "") == "2160p", "2160 lines is 2160p")
+    check(mediainfo.resolution("1080", "i") == "1080i", "an interlaced source is i")
+    check(mediainfo.resolution("816", "") == "720p",
+          "a scope transfer keeps the standard below it")
+    check(mediainfo.resolution("", "", "4K") == "2160p",
+          "and Kodi's own '4K' becomes 2160p, not '4Kp'")
+    check(mediainfo.resolution("", "", "1080") == "1080p",
+          "a bare fallback number gains its scan letter")
+    check(mediainfo.resolution("", "", "") == "", "nothing known, nothing shown")
+    check(mediainfo.resolution_name("2160") == "4K UHD", "2160 lines is 4K UHD")
+    check(mediainfo.resolution_name("", "4K") == "4K UHD",
+          "the fallback names itself too")
+    check(mediainfo.resolution_name("1080") == "Full HD", "1080 lines is Full HD")
+
+    check(mediainfo.frame_rate("23.976023") == "23.976", "23.976 snaps to itself")
+    check(mediainfo.frame_rate("25.000") == "25", "a whole rate loses its zeros")
+    check(mediainfo.frame_rate("") == "", "an unknown rate is empty")
+
+    # And the whole way through the provider the layouts actually read.
+    film = DemoProvider(1, 97.0, "playing")
+    film.begin_frame()
+    for key, expected in (("player.codec", "H.265"),
+                          ("player.audiocodec", "Dolby TrueHD"),
+                          ("player.spatial", "Atmos"),
+                          ("player.audio", "Dolby TrueHD Atmos 7.1"),
+                          ("player.channels", "7.1"),
+                          ("player.hdr", "Dolby Vision"),
+                          ("player.hdr_short", "DV"),
+                          ("player.resolution", "2160p"),
+                          ("player.resolution_long", "3840x2160p"),
+                          ("player.resolutionname", "4K UHD"),
+                          ("player.fps", "23.976"),
+                          ("player.video", "H.265 2160p Dolby Vision")):
+        actual = film.value(key)
+        check(actual == expected, "%s is %r" % (key, actual))
+    check(film.value("player.codec_raw") == "hevc",
+          "the raw id stays reachable for a layout that wants it")
+
+    music = DemoProvider(0, 97.0, "playing")
+    music.begin_frame()
+    check(music.value("player.codec") == "FLAC", "a music codec is named too")
+    check(music.value("player.channels") == "2.0", "and stereo is 2.0")
+    check(music.value("player.hdr") == "" and music.value("player.resolution") == "",
+          "a music track claims no picture")
+
+    # The browser editor has to offer the new fields, or nobody finds them.
+    from lcd4linux import webschema
+    offered = set()
+    for group in webschema.TOKEN_GROUPS:
+        for entry in group["tokens"]:
+            offered.add(entry[0])
+    missing = [key for key in ("player.hdr", "player.hdr_short", "player.audio",
+                               "player.spatial", "player.video",
+                               "player.resolutionname", "player.videocodec",
+                               "player.channels_count", "player.fps")
+               if key not in offered]
+    check(not missing, "the editor lists the new fields%s"
+          % ("" if not missing else ": missing " + ", ".join(missing)))
+    demo = DemoProvider(1, 97.0, "playing",
+                        os.path.join(ROOT, "resources", "media",
+                                     "demo-cover.jpg"),
+                        os.path.join(ROOT, "resources", "media",
+                                     "demo-fanart.jpg"))
+    demo.begin_frame()
+    unknown = [key for key in sorted(offered)
+               if key.startswith("player.") and demo.value(key) == ""]
+    # Only the fields this demo track - a film - genuinely has nothing for.
+    allowed = {"player.album", "player.albumartist", "player.showtitle",
+               "player.season", "player.episode", "player.episodelabel",
+               "player.track", "player.samplerate", "player.bitrate",
+               "player.discnumber"}
+    surprises = [key for key in unknown if key not in allowed]
+    check(not surprises, "every offered player field resolves%s"
+          % ("" if not surprises else ": empty " + ", ".join(surprises)))
+
+
 def test_pixel_conversion():
     """RGB565 -> RGB888 must be exact, whatever the shortcut inside.
 
@@ -1450,6 +1577,7 @@ def _png_size(data):
 def main():
     print("script.lcd4linux self test\n")
     for test in (test_encoding, test_fonts, test_images, test_tokens,
+                 test_media_info,
                  test_pixel_conversion, test_frame_cache, test_image_cache,
                  test_jpeg_encoder, test_protocol, test_target_from_settings,
                  test_samsung_spf, test_brightness, test_localisation,
