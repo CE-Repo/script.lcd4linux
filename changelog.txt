@@ -1,3 +1,39 @@
+v1.9.0
+- Codecs, HDR and resolution are shown as names instead of the raw ids Kodi
+  hands out: H.265 instead of hevc, Dolby TrueHD instead of truehd_atmos,
+  DTS-HD MA, Dolby Digital Plus, 7.1 instead of 8
+- New field ${player.hdr}: Dolby Vision, HDR10+, HDR10, HLG or SDR, with
+  ${player.hdr_short} giving DV for a panel that has no room for the rest
+- New field ${player.spatial} names the object audio (Atmos, DTS:X, IMAX
+  Enhanced), which Kodi only encodes in the codec id
+- ${player.resolution} finally reads 2160p / 1080p / 576i.  Kodi answers
+  "4K" for a 2160 line picture and a bare number for everything else, so a
+  layout appending a "p" produced "4Kp"; the geometry now comes from the
+  player process info.  ${player.resolution_long} gives 3840x2160p,
+  ${player.resolutionname} gives 4K UHD
+- New fields ${player.audio} and ${player.video} put the whole line
+  together: "Dolby TrueHD Atmos 7.1" and "H.265 2160p Dolby Vision"
+- Also new: ${player.videocodec}, ${player.channels_count},
+  ${player.videowidth}, ${player.videoheight}, ${player.fps}, and the
+  ${player.*_raw} fields for anyone who was matching on the raw ids
+- The bundled default layouts show the dynamic range next to the resolution
+  and the codec; the tables follow TinyPPI, so a box running both names a
+  stream the same way on the television and on the panel
+
+v1.8.1
+- Preview rendering is about 17x faster: RGB565 is expanded to RGB by
+  translating whole byte planes instead of walking the framebuffer pixel by
+  pixel, which is what the browser editor waited for on every drag
+- The Kodi data provider resolves the player state, the media type and
+  /proc/meminfo once per frame instead of once per token; a page with a
+  dozen player fields went from 36 visibility calls per frame to 3
+- The service opens the data frame itself, so dimming and the frame rate
+  keep reacting while the test pattern is on screen
+- Cover art that is not there yet is looked for once every few seconds
+  rather than on every frame
+- The editor compares its password in constant time and closes the
+  connection when it refuses an oversized request
+
 v1.8.0
 - New output mode "Network display": the service serves the rendered frames
   over HTTP instead of a USB panel, so any browser in full screen can be the

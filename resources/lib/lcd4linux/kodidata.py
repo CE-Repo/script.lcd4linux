@@ -12,6 +12,7 @@ import socket
 import time
 
 from . import localize
+from . import mediainfo
 from .logger import debug
 
 try:
@@ -115,6 +116,16 @@ class BaseProvider(object):
         self.now = None
 
     def begin_frame(self, now=None):
+        """Start a frame, dropping the values cached for the previous one.
+
+        Both the service and the renderer announce the frame - the service
+        needs the player state before it decides on brightness and frame
+        rate, the renderer needs it while drawing - so a second call with
+        the same timestamp is ignored instead of throwing the cache away and
+        asking Kodi for everything twice.
+        """
+        if now is not None and now == self.now and self._frame:
+            return
         self._cache = {}
         self._frame += 1
         self.now = now
@@ -198,8 +209,16 @@ class BaseProvider(object):
             value /= 1000.0
         return "%.0f" % value
 
-    @staticmethod
-    def _meminfo():
+    def _meminfo(self):
+        """``/proc/meminfo`` as a dict, read at most once per frame.
+
+        A layout that shows used, free and total memory asks three separate
+        keys, and each one is a different cache entry, so without this the
+        file was opened three times for a single frame.
+        """
+        if "__meminfo" in self._cache:
+            return self._cache["__meminfo"]
+        fields = None
         try:
             with open("/proc/meminfo", "r", encoding="ascii") as handle:
                 fields = {}
@@ -207,7 +226,8 @@ class BaseProvider(object):
                     name, _, rest = line.partition(":")
                     fields[name.strip()] = int(rest.strip().split()[0])
         except (IOError, OSError, ValueError, IndexError):
-            return None
+            fields = None
+        self._cache["__meminfo"] = fields
         return fields
 
     #: Checked in order; the first one that exists is reported.
@@ -342,22 +362,62 @@ class KodiProvider(BaseProvider):
         return result
 
     def _state(self):
+        """``playing``/``paused``/``stopped``, resolved once per frame.
+
+        Every ``player.*`` key needs the state, but each key is cached under
+        its own name, so a page with a dozen of them used to ask Kodi for
+        the same two visibility conditions a dozen times per frame.
+        """
+        cached = self._cache.get("__state")
+        if cached is not None:
+            return cached
         if xbmc is None:
-            return "stopped"
-        if self._kodi_condition("Player.Playing"):
-            return "playing"
-        if self._kodi_condition("Player.Paused"):
-            return "paused"
-        return "stopped"
+            state = "stopped"
+        elif self._kodi_condition("Player.Playing"):
+            state = "playing"
+        elif self._kodi_condition("Player.Paused"):
+            state = "paused"
+        else:
+            state = "stopped"
+        self._cache["__state"] = state
+        return state
+
+    def _process(self, field):
+        """A ``Player.Process(...)`` value, e.g. the real picture height.
+
+        Kodi's ``VideoPlayer.VideoResolution`` rounds to a handful of names
+        and answers ``4K`` for anything 2160 lines tall, so the exact
+        geometry has to come from the process info instead.
+        """
+        return self._info("Player.Process(%s)" % field).strip()
+
+    def _raw_codec(self):
+        return (self._info("MusicPlayer.Codec")
+                or self._info("VideoPlayer.VideoCodec"))
+
+    def _raw_audio_codec(self):
+        return (self._info("VideoPlayer.AudioCodec")
+                or self._info("MusicPlayer.Codec"))
+
+    def _raw_channels(self):
+        return (self._info("MusicPlayer.Channels")
+                or self._info("VideoPlayer.AudioChannels"))
 
     def _media_type(self):
+        """``video``/``audio``/``picture``/``none``, resolved once per frame."""
+        cached = self._cache.get("__mediatype")
+        if cached is not None:
+            return cached
         if self._kodi_condition("Player.HasVideo"):
-            return "video"
-        if self._kodi_condition("Player.HasAudio"):
-            return "audio"
-        if self._kodi_condition("Player.HasPicture"):
-            return "picture"
-        return "none"
+            media = "video"
+        elif self._kodi_condition("Player.HasAudio"):
+            media = "audio"
+        elif self._kodi_condition("Player.HasPicture"):
+            media = "picture"
+        else:
+            media = "none"
+        self._cache["__mediatype"] = media
+        return media
 
     def _library_counts(self):
         now = time.time()
@@ -483,20 +543,79 @@ class KodiProvider(BaseProvider):
             return self._info("Player.Filename")
         if name == "path":
             return self._info("Player.Folderpath")
+        # -- codecs, HDR and geometry -------------------------------------
+        # Kodi hands out demuxer ids (hevc, truehd_atmos, a bare channel
+        # count); mediainfo turns them into what a display should read.
+        # The raw value stays reachable under the "_raw" keys for anyone
+        # who was matching on it.
         if name == "codec":
-            return (self._info("MusicPlayer.Codec")
-                    or self._info("VideoPlayer.VideoCodec"))
+            return mediainfo.video_codec(self._raw_codec()) if media == "video" \
+                else mediainfo.audio_codec(self._raw_codec())
+        if name == "codec_raw":
+            return self._raw_codec()
+        if name == "videocodec":
+            return mediainfo.video_codec(self._info("VideoPlayer.VideoCodec"))
+        if name == "videocodec_raw":
+            return self._info("VideoPlayer.VideoCodec")
         if name == "audiocodec":
-            return self._info("VideoPlayer.AudioCodec")
+            return mediainfo.audio_codec(self._raw_audio_codec())
+        if name == "audiocodec_raw":
+            return self._raw_audio_codec()
+        if name == "spatial":
+            return mediainfo.spatial_format(self._raw_audio_codec())
+        if name == "audio":
+            # The whole audio line: "Dolby TrueHD Atmos 7.1".
+            return mediainfo.audio_description(self._raw_audio_codec(),
+                                               self._raw_channels())
+        if name == "hdr":
+            return mediainfo.hdr_type(self._info("VideoPlayer.HDRType")) \
+                if media == "video" else ""
+        if name in ("hdr_short", "hdrshort"):
+            return mediainfo.hdr_short(self._info("VideoPlayer.HDRType")) \
+                if media == "video" else ""
+        if name == "hdr_raw":
+            return self._info("VideoPlayer.HDRType")
         if name == "bitrate":
             return self._info("MusicPlayer.BitRate")
         if name == "samplerate":
             return self._info("MusicPlayer.SampleRate")
         if name == "channels":
-            return (self._info("MusicPlayer.Channels")
-                    or self._info("VideoPlayer.AudioChannels"))
+            return mediainfo.channel_layout(self._raw_channels())
+        if name in ("channels_count", "channels_raw"):
+            return self._raw_channels()
         if name == "resolution":
-            return self._info("VideoPlayer.VideoResolution")
+            return mediainfo.resolution(self._process("videoheight"),
+                                        self._process("videoscantype"),
+                                        self._info("VideoPlayer.VideoResolution"))
+        if name == "resolutionname":
+            return mediainfo.resolution_name(
+                self._process("videoheight"),
+                self._info("VideoPlayer.VideoResolution"))
+        if name == "resolution_long":
+            width = self._process("videowidth")
+            height = self._process("videoheight")
+            if not width or not height:
+                return mediainfo.resolution(
+                    "", self._process("videoscantype"),
+                    self._info("VideoPlayer.VideoResolution"))
+            return "%sx%s%s" % (width, height,
+                                mediainfo.scan_suffix(
+                                    self._process("videoscantype")))
+        if name == "videowidth":
+            return self._process("videowidth")
+        if name == "videoheight":
+            return self._process("videoheight")
+        if name == "fps":
+            return mediainfo.frame_rate(self._process("videofps"))
+        if name == "video":
+            # "H.265 2160p HDR10" - the video counterpart of player.audio.
+            return " ".join(part for part in (
+                mediainfo.video_codec(self._info("VideoPlayer.VideoCodec")),
+                mediainfo.resolution(self._process("videoheight"),
+                                     self._process("videoscantype"),
+                                     self._info("VideoPlayer.VideoResolution")),
+                mediainfo.hdr_type(self._info("VideoPlayer.HDRType")),
+            ) if part)
         if name == "aspect":
             return self._info("VideoPlayer.VideoAspect")
         if name == "next":
@@ -634,26 +753,34 @@ class KodiProvider(BaseProvider):
 class DemoProvider(BaseProvider):
     """Fake data so layouts can be designed without Kodi or hardware."""
 
+    #: The codec ids are spelled the way Kodi spells them, so the demo runs
+    #: through the same :mod:`~.mediainfo` tables as a real stream and a
+    #: preview shows the labels the panel will show.
     TRACKS = (
         {
             "title": "Enjoy the Silence", "artist": "Depeche Mode",
             "album": "Violator", "year": "1990", "genre": "Synth-Pop",
+            "albumartist": "Depeche Mode",
             "duration": 372, "mediatype": "audio", "track": "4",
             "codec": "flac", "samplerate": "44100", "bitrate": "1006",
-            "channels": "2",
+            "channels": "2", "audiocodec": "flac",
         },
         {
             "title": "The Dark Knight", "artist": "Christopher Nolan",
             "album": "", "year": "2008", "genre": "Action",
             "duration": 9120, "mediatype": "video", "track": "",
-            "codec": "h264", "resolution": "2160", "channels": "8",
+            "codec": "hevc", "audiocodec": "truehd_atmos",
+            "width": "3840", "height": "2160", "fps": "23.976023",
+            "hdr": "dolbyvision", "channels": "8", "aspect": "2.39",
             "showtitle": "", "season": "", "episode": "",
         },
         {
             "title": "Winter Is Coming", "artist": "",
             "album": "", "year": "2011", "genre": "Fantasy",
             "duration": 3720, "mediatype": "video", "track": "",
-            "codec": "h265", "resolution": "1080", "channels": "6",
+            "codec": "h264", "audiocodec": "dtshd_ma",
+            "width": "1920", "height": "1080", "fps": "25",
+            "hdr": "", "channels": "6", "aspect": "1.78",
             "showtitle": "Game of Thrones", "season": "1", "episode": "1",
         },
     )
@@ -673,6 +800,50 @@ class DemoProvider(BaseProvider):
         if self._fixed_elapsed is not None:
             return float(self._fixed_elapsed)
         return (self.clock() - self._start) % max(1, self.track["duration"])
+
+    def _media_values(self):
+        """Codec, HDR and geometry keys, through the same tables as live data.
+
+        Keeping the demo on :mod:`~.mediainfo` rather than on hand written
+        strings is the point: the editor preview then shows exactly what the
+        panel shows, spacing and abbreviations included.
+        """
+        track = self.track
+        video = track["mediatype"] == "video"
+        codec = track.get("codec", "")
+        audio_codec = track.get("audiocodec", "") or codec
+        channels = track.get("channels", "")
+        height = track.get("height", "")
+        hdr = track.get("hdr", "")
+        resolution = mediainfo.resolution(height) if video else ""
+        return {
+            "codec": (mediainfo.video_codec(codec) if video
+                      else mediainfo.audio_codec(codec)),
+            "codec_raw": codec,
+            "videocodec": mediainfo.video_codec(codec) if video else "",
+            "videocodec_raw": codec if video else "",
+            "audiocodec": mediainfo.audio_codec(audio_codec),
+            "audiocodec_raw": audio_codec,
+            "spatial": mediainfo.spatial_format(audio_codec),
+            "audio": mediainfo.audio_description(audio_codec, channels),
+            "channels": mediainfo.channel_layout(channels),
+            "channels_count": channels, "channels_raw": channels,
+            "hdr": mediainfo.hdr_type(hdr) if video else "",
+            "hdr_short": mediainfo.hdr_short(hdr) if video else "",
+            "hdrshort": mediainfo.hdr_short(hdr) if video else "",
+            "hdr_raw": hdr,
+            "resolution": resolution,
+            "resolutionname": mediainfo.resolution_name(height) if video else "",
+            "resolution_long": ("%sx%s" % (track.get("width", ""), height)
+                                + mediainfo.scan_suffix("")) if video else "",
+            "videowidth": track.get("width", "") if video else "",
+            "videoheight": height if video else "",
+            "fps": mediainfo.frame_rate(track.get("fps", "")) if video else "",
+            "aspect": track.get("aspect", ""),
+            "video": " ".join(part for part in (
+                mediainfo.video_codec(codec), resolution,
+                mediainfo.hdr_type(hdr)) if part) if video else "",
+        }
 
     def _kodi_condition(self, name):
         lowered = name.lower()
@@ -715,8 +886,8 @@ class DemoProvider(BaseProvider):
                 "plot": "A demo synopsis so wrapped text can be checked "
                         "while a layout is being designed.",
                 "filename": "demo.mkv", "path": "/storage/demo/",
-                "audiocodec": "dts", "aspect": "2.35",
             }
+            values.update(self._media_values())
             show = self.track.get("showtitle", "")
             season = self.track.get("season", "")
             episode = self.track.get("episode", "")
@@ -731,11 +902,9 @@ class DemoProvider(BaseProvider):
                 "title": self.track["title"], "artist": self.track["artist"],
                 "album": self.track["album"], "year": self.track["year"],
                 "genre": self.track["genre"], "track": self.track["track"],
-                "codec": self.track["codec"],
+                "albumartist": self.track.get("albumartist", ""),
                 "samplerate": self.track.get("samplerate", ""),
                 "bitrate": self.track.get("bitrate", ""),
-                "channels": self.track.get("channels", ""),
-                "resolution": self.track.get("resolution", ""),
             })
             return values.get(name, "")
         if namespace == "system":

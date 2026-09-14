@@ -330,8 +330,22 @@ in colours and in conditions.
 | `track`, `discnumber`, `rating` | Music details |
 | `showtitle`, `season`, `episode`, `episodelabel`, `plot` | TV details (`episodelabel` gives `S02E05`) |
 | `thumb` / `cover` / `art`, `poster`, `fanart` | Artwork sources |
-| `codec`, `audiocodec`, `bitrate`, `samplerate`, `channels` | Audio format |
-| `resolution`, `aspect` | Video format |
+| `codec` | Codec of the running stream, spelled out: `H.265`, `FLAC` |
+| `videocodec`, `audiocodec` | picture and sound separately: `H.265`, `Dolby TrueHD` |
+| `spatial` | Object audio: `Atmos`, `DTS:X`, `IMAX Enhanced`, else empty |
+| `audio` | The whole audio line: `Dolby TrueHD Atmos 7.1` |
+| `channels` | Speaker layout: `2.0`, `5.1`, `7.1` |
+| `channels_count` | Bare channel count: `6` |
+| `bitrate`, `samplerate` | Bitrate and sample rate |
+| `hdr` | Dynamic range: `Dolby Vision`, `HDR10+`, `HDR10`, `HLG`, `SDR` |
+| `hdr_short` | The same, abbreviated for a narrow field: `DV` |
+| `resolution` | `2160p`, `1080p`, `576i` - scan type included |
+| `resolution_long` | `3840x2160p` |
+| `resolutionname` | `4K UHD`, `Full HD`, `HD`, `SD` |
+| `videowidth`, `videoheight`, `fps` | Raw values: `3840`, `2160`, `23.976` |
+| `video` | The whole video line: `H.265 2160p Dolby Vision` |
+| `aspect` | Aspect ratio |
+| `codec_raw`, `videocodec_raw`, `audiocodec_raw`, `hdr_raw` | The ids as Kodi hands them out (`hevc`, `truehd_atmos`) |
 | `next`, `nextartist` | Next item |
 | `playlistposition`, `playlistlength` | Position in the playlist |
 | `starttime`, `finishtime` | Wall clock start and end |

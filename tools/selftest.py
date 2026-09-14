@@ -975,6 +975,274 @@ def test_tokens():
     check(tokens.evaluate("audio+playing", provider), "and combination")
 
 
+def test_media_info():
+    """Codec, HDR and resolution must reach the panel as names, not raw ids.
+
+    Kodi answers with demuxer ids and a VideoResolution that says "4K" for a
+    2160 line picture; the display is supposed to say H.265, Dolby TrueHD,
+    Dolby Vision and 2160p.
+    """
+    print("media info")
+    from lcd4linux import mediainfo
+
+    check(mediainfo.video_codec("hevc") == "H.265", "hevc is H.265")
+    check(mediainfo.video_codec("avc1") == "H.264", "avc1 is H.264")
+    check(mediainfo.video_codec("") == "", "an absent codec stays absent")
+    check(mediainfo.video_codec("weirdcodec") == "WEIRDCODEC",
+          "an unknown codec is still shown")
+
+    check(mediainfo.audio_codec("truehd_atmos") == "Dolby TrueHD",
+          "truehd_atmos is Dolby TrueHD")
+    check(mediainfo.audio_codec("dtshd_ma") == "DTS-HD MA", "dtshd_ma is DTS-HD MA")
+    check(mediainfo.audio_codec("eac3") == "Dolby Digital Plus",
+          "eac3 is Dolby Digital Plus")
+    check(mediainfo.spatial_format("truehd_atmos") == "Atmos", "Atmos is named")
+    check(mediainfo.spatial_format("dtshd_ma_x") == "DTS:X", "DTS:X is named")
+    check(mediainfo.spatial_format("truehd") == "",
+          "plain TrueHD claims no object audio")
+    check(mediainfo.audio_description("truehd_atmos", "8")
+          == "Dolby TrueHD Atmos 7.1", "the audio line reads as one string")
+    check(mediainfo.audio_description("", "") == "",
+          "and stays empty when Kodi knows nothing")
+
+    # Kodi reports the bed count only, so no height channels are invented.
+    check(mediainfo.channel_layout("8") == "7.1", "8 channels is 7.1")
+    check(mediainfo.channel_layout("6") == "5.1", "6 channels is 5.1")
+    check(mediainfo.channel_layout("2") == "2.0", "2 channels is 2.0")
+    check(mediainfo.channel_layout("9") == "9 ch",
+          "an unmapped count is still readable")
+    check(mediainfo.channel_layout("") == "", "no count, no layout")
+
+    for raw, expected, short in (
+            ("dolbyvision", "Dolby Vision", "DV"),
+            ("Dolby Vision", "Dolby Vision", "DV"),
+            ("hdr10+", "HDR10+", "HDR10+"),
+            ("hdr10plus", "HDR10+", "HDR10+"),
+            ("hdr10", "HDR10", "HDR10"),
+            ("hlg", "HLG", "HLG"),
+            ("", "SDR", "SDR")):
+        check(mediainfo.hdr_type(raw) == expected and
+              mediainfo.hdr_short(raw) == short,
+              "%r is %s / %s" % (raw, expected, short))
+
+    # The resolution is the reported bug: "4K" could not have a "p" appended.
+    check(mediainfo.resolution("2160", "") == "2160p", "2160 lines is 2160p")
+    check(mediainfo.resolution("1080", "i") == "1080i", "an interlaced source is i")
+    check(mediainfo.resolution("816", "") == "720p",
+          "a scope transfer keeps the standard below it")
+    check(mediainfo.resolution("", "", "4K") == "2160p",
+          "and Kodi's own '4K' becomes 2160p, not '4Kp'")
+    check(mediainfo.resolution("", "", "1080") == "1080p",
+          "a bare fallback number gains its scan letter")
+    check(mediainfo.resolution("", "", "") == "", "nothing known, nothing shown")
+    check(mediainfo.resolution_name("2160") == "4K UHD", "2160 lines is 4K UHD")
+    check(mediainfo.resolution_name("", "4K") == "4K UHD",
+          "the fallback names itself too")
+    check(mediainfo.resolution_name("1080") == "Full HD", "1080 lines is Full HD")
+
+    check(mediainfo.frame_rate("23.976023") == "23.976", "23.976 snaps to itself")
+    check(mediainfo.frame_rate("25.000") == "25", "a whole rate loses its zeros")
+    check(mediainfo.frame_rate("") == "", "an unknown rate is empty")
+
+    # And the whole way through the provider the layouts actually read.
+    film = DemoProvider(1, 97.0, "playing")
+    film.begin_frame()
+    for key, expected in (("player.codec", "H.265"),
+                          ("player.audiocodec", "Dolby TrueHD"),
+                          ("player.spatial", "Atmos"),
+                          ("player.audio", "Dolby TrueHD Atmos 7.1"),
+                          ("player.channels", "7.1"),
+                          ("player.hdr", "Dolby Vision"),
+                          ("player.hdr_short", "DV"),
+                          ("player.resolution", "2160p"),
+                          ("player.resolution_long", "3840x2160p"),
+                          ("player.resolutionname", "4K UHD"),
+                          ("player.fps", "23.976"),
+                          ("player.video", "H.265 2160p Dolby Vision")):
+        actual = film.value(key)
+        check(actual == expected, "%s is %r" % (key, actual))
+    check(film.value("player.codec_raw") == "hevc",
+          "the raw id stays reachable for a layout that wants it")
+
+    music = DemoProvider(0, 97.0, "playing")
+    music.begin_frame()
+    check(music.value("player.codec") == "FLAC", "a music codec is named too")
+    check(music.value("player.channels") == "2.0", "and stereo is 2.0")
+    check(music.value("player.hdr") == "" and music.value("player.resolution") == "",
+          "a music track claims no picture")
+
+    # The browser editor has to offer the new fields, or nobody finds them.
+    from lcd4linux import webschema
+    offered = set()
+    for group in webschema.TOKEN_GROUPS:
+        for entry in group["tokens"]:
+            offered.add(entry[0])
+    missing = [key for key in ("player.hdr", "player.hdr_short", "player.audio",
+                               "player.spatial", "player.video",
+                               "player.resolutionname", "player.videocodec",
+                               "player.channels_count", "player.fps")
+               if key not in offered]
+    check(not missing, "the editor lists the new fields%s"
+          % ("" if not missing else ": missing " + ", ".join(missing)))
+    demo = DemoProvider(1, 97.0, "playing",
+                        os.path.join(ROOT, "resources", "media",
+                                     "demo-cover.jpg"),
+                        os.path.join(ROOT, "resources", "media",
+                                     "demo-fanart.jpg"))
+    demo.begin_frame()
+    unknown = [key for key in sorted(offered)
+               if key.startswith("player.") and demo.value(key) == ""]
+    # Only the fields this demo track - a film - genuinely has nothing for.
+    allowed = {"player.album", "player.albumartist", "player.showtitle",
+               "player.season", "player.episode", "player.episodelabel",
+               "player.track", "player.samplerate", "player.bitrate",
+               "player.discnumber"}
+    surprises = [key for key in unknown if key not in allowed]
+    check(not surprises, "every offered player field resolves%s"
+          % ("" if not surprises else ": empty " + ", ".join(surprises)))
+
+
+def test_pixel_conversion():
+    """RGB565 -> RGB888 must be exact, whatever the shortcut inside.
+
+    The conversion expands whole byte planes at once instead of walking the
+    framebuffer pixel by pixel, which is worth the trick only if it agrees
+    with the straightforward version on every one of the 65536 values.
+    """
+    print("pixel conversion")
+    from lcd4linux.canvas import unpack565
+
+    canvas = Canvas(256, 256)
+    for value in range(65536):
+        canvas.buf[value] = value
+    expected = bytearray(65536 * 3)
+    position = 0
+    for value in canvas.buf:
+        red, green, blue = unpack565(value)
+        expected[position] = red
+        expected[position + 1] = green
+        expected[position + 2] = blue
+        position += 3
+    check(canvas.to_rgb888() == bytes(expected),
+          "every RGB565 value expands to the same RGB triplet as before")
+    check(Canvas(0, 0).to_rgb888() == b"", "an empty canvas converts to nothing")
+
+    # The PNG preview writer is the real caller, so check the whole way out.
+    from lcd4linux import pngio
+    picture = Canvas(9, 5)
+    picture.fill_rect(1, 1, 4, 3, (255, 128, 0, 255))
+    data = pngio.encode_rgb(picture.width, picture.height, picture.to_rgb888())
+    width, height, rgba = pngio.decode(data)
+    check((width, height) == (9, 5), "the preview PNG keeps its size")
+    middle = (2 * 9 + 2) * 4
+    check(abs(rgba[middle] - 255) <= 8 and abs(rgba[middle + 1] - 128) <= 8
+          and rgba[middle + 2] <= 8, "and its colours survive the round trip")
+
+
+def test_frame_cache():
+    """Kodi is asked for each value once per frame, not once per token."""
+    print("frame cache")
+    from lcd4linux import kodidata
+
+    counted = {"conditions": 0, "labels": 0}
+
+    class CountingProvider(kodidata.KodiProvider):
+        """A KodiProvider with the two calls into Kodi counted."""
+
+        def __init__(self):
+            kodidata.BaseProvider.__init__(self)
+            self.addon_name = self.addon_version = ""
+            self.player = None
+            self.cpu = kodidata.CpuSampler()
+            # Pretend the library counts were fetched a moment ago.
+            self._library_cache = {"songs": "1"}
+            self._library_time = time.time()
+
+        def _info(self, label):
+            counted["labels"] += 1
+            return ""
+
+        def _kodi_condition(self, name):
+            counted["conditions"] += 1
+            return False
+
+    provider = CountingProvider()
+    provider.begin_frame(1000.0)
+    for key in ("player.title", "player.artist", "player.album", "player.time",
+                "player.duration", "player.percent", "player.state",
+                "player.thumb", "player.codec", "player.year"):
+        provider.value(key)
+    # Player.Playing, Player.Paused and the HasVideo/HasAudio/HasPicture
+    # probes; without the per-frame cache every player.* key repeated them.
+    check(counted["conditions"] <= 5,
+          "a page full of player tokens costs %d visibility calls"
+          % counted["conditions"])
+
+    # /proc/meminfo is one file, however many keys are read out of it.
+    provider = CountingProvider()
+    provider.begin_frame(1000.0)
+    check("__meminfo" not in provider._cache,
+          "the memory file is not touched until a key asks for it")
+    for key in ("system.memory", "system.memoryfree", "system.memorytotal"):
+        provider.value(key)
+    check("__meminfo" in provider._cache,
+          "and is then read once for all three memory keys")
+
+    # The service opens the frame before the renderer does; the second call
+    # with the same timestamp must not throw the cache away.
+    provider = CountingProvider()
+    provider.begin_frame(2000.0)
+    provider.value("player.state")
+    so_far = counted["conditions"]
+    provider.begin_frame(2000.0)
+    provider.value("player.state")
+    check(counted["conditions"] == so_far,
+          "re-announcing the same frame keeps the cached values")
+    provider.begin_frame(2001.0)
+    provider.value("player.state")
+    check(counted["conditions"] > so_far, "and the next frame asks again")
+
+
+def test_image_cache():
+    """A picture that is not there must not be re-opened on every frame."""
+    print("image cache")
+    import shutil
+    import tempfile
+    from lcd4linux import images, pngio
+
+    reads = {"count": 0}
+    original = images.read_bytes
+
+    def counting_read(path):
+        reads["count"] += 1
+        return original(path)
+
+    images.read_bytes = counting_read
+    directory = tempfile.mkdtemp(prefix="lcd4linux-cache-")
+    try:
+        cache = ImageCache(limit=4)
+        missing = os.path.join(directory, "no-cover-yet.png")
+        result = None
+        for _ in range(10):
+            result = cache.get(missing)
+        check(result is None, "a missing picture resolves to nothing")
+        check(reads["count"] == 1,
+              "and is looked for once, not once per frame (%d reads)"
+              % reads["count"])
+
+        # It must still appear on its own once the file turns up.
+        cache.MISS_SECONDS = 0.0
+        canvas = Canvas(4, 4)
+        canvas.clear((10, 200, 90, 255))
+        with open(missing, "wb") as handle:
+            handle.write(pngio.encode_rgb(4, 4, canvas.to_rgb888()))
+        check(cache.get(missing) is not None,
+              "a picture that arrives late is still picked up")
+    finally:
+        images.read_bytes = original
+        shutil.rmtree(directory, ignore_errors=True)
+
+
 def test_web_editor():
     """The browser editor: its API, its guards and its field catalogue."""
     print("web editor")
@@ -1309,6 +1577,8 @@ def _png_size(data):
 def main():
     print("script.lcd4linux self test\n")
     for test in (test_encoding, test_fonts, test_images, test_tokens,
+                 test_media_info,
+                 test_pixel_conversion, test_frame_cache, test_image_cache,
                  test_jpeg_encoder, test_protocol, test_target_from_settings,
                  test_samsung_spf, test_brightness, test_localisation,
                  test_settings_xml, test_layout_chooser,

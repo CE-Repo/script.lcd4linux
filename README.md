@@ -44,6 +44,12 @@ Und auf dem 800×480-Rahmen:
   das Display – vom Handy, Tablet oder PC im Netzwerk aus.
 * **Alle Kodi-InfoLabels** sind verwendbar (`${info:MusicPlayer.Album}`),
   ebenso alle Kodi-Bedingungen (`Player.HasVideo`).
+* **Medienangaben im Klartext**: Kodi liefert `hevc`, `truehd_atmos` und `8`
+  – das Display zeigt H.265, Dolby TrueHD Atmos und 7.1. Dazu der
+  Dynamikumfang (Dolby Vision, HDR10+, HDR10, HLG, SDR) und eine Auflösung,
+  die wirklich `2160p` heißt und nicht `4K`. Die Tabellen folgen
+  [TinyPPI](https://github.com/CE-Repo/script.tinyppi), damit eine Box mit
+  beiden Add-ons denselben Film gleich benennt.
 * **Mehrere Seiten** mit Bedingungen und automatischem Wechsel
   (z. B. Musik-, Video-, Uhr- und Systemseite).
 * **Widgets**: Text (mit Lauftext, Umbruch, Schatten), Fortschrittsbalken
@@ -748,6 +754,7 @@ resources/lib/lcd4linux/
     widgets.py                Widgets
     tokens.py                 ${...}-Ersetzung, Filter, Bedingungen
     kodidata.py               Datenquellen (Kodi, System, Demo)
+    mediainfo.py              Codec-, HDR- und Auflösungsnamen
     settings.py               Einstellungen
     service.py                Hauptschleife
     ui.py                     Menü
@@ -787,6 +794,12 @@ changed rectangle is transferred; on the Samsung, which accepts complete JPEG
 images only, only the MCU rows that changed are re-encoded.
 
 * Layout reference: [docs/LAYOUT.en.md](docs/LAYOUT.en.md)
+* **Media details in plain words**: Kodi reports `hevc`, `truehd_atmos` and
+  `8`; the panel shows H.265, Dolby TrueHD Atmos and 7.1, alongside the
+  dynamic range (`${player.hdr}`: Dolby Vision, HDR10+, HDR10, HLG, SDR) and
+  a resolution that really reads `2160p` rather than Kodi's `4K`. The tables
+  follow [TinyPPI](https://github.com/CE-Repo/script.tinyppi), so a box
+  running both names a stream the same way on the television and on the panel.
 * **Layout editor in the browser**: the service serves a drag and drop editor
   at `http://<box>:8050/` (*Add-ons → LCD4Linux → Web editor* shows the
   address). Pages, widgets, colours and data fields are edited with the

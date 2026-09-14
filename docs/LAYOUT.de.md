@@ -335,8 +335,22 @@ Tokens stehen in `${...}` und dürfen überall im Text, in Zahlenfeldern
 | `track`, `discnumber`, `rating` | Musikangaben |
 | `showtitle`, `season`, `episode`, `episodelabel`, `plot` | Serienangaben (`episodelabel` ergibt z. B. `S02E05`) |
 | `thumb` / `cover` / `art`, `poster`, `fanart` | Bildquellen |
-| `codec`, `audiocodec`, `bitrate`, `samplerate`, `channels` | Tonformat |
-| `resolution`, `aspect` | Bildformat |
+| `codec` | Codec des laufenden Stroms, ausgeschrieben: `H.265`, `FLAC` |
+| `videocodec`, `audiocodec` | getrennt nach Bild und Ton: `H.265`, `Dolby TrueHD` |
+| `spatial` | Objektton: `Atmos`, `DTS:X`, `IMAX Enhanced`, sonst leer |
+| `audio` | die ganze Tonzeile: `Dolby TrueHD Atmos 7.1` |
+| `channels` | Kanalbild: `2.0`, `5.1`, `7.1` |
+| `channels_count` | bloße Kanalzahl: `6` |
+| `bitrate`, `samplerate` | Bitrate und Abtastrate |
+| `hdr` | Dynamikumfang: `Dolby Vision`, `HDR10+`, `HDR10`, `HLG`, `SDR` |
+| `hdr_short` | dasselbe kurz, für schmale Felder: `DV` statt Dolby Vision |
+| `resolution` | `2160p`, `1080p`, `576i` – mit Zeilensprung, ohne Zutun |
+| `resolution_long` | `3840x2160p` |
+| `resolutionname` | `4K UHD`, `Full HD`, `HD`, `SD` |
+| `videowidth`, `videoheight`, `fps` | Rohwerte: `3840`, `2160`, `23.976` |
+| `video` | die ganze Bildzeile: `H.265 2160p Dolby Vision` |
+| `aspect` | Seitenverhältnis |
+| `codec_raw`, `videocodec_raw`, `audiocodec_raw`, `hdr_raw` | die Kennungen, wie Kodi sie liefert (`hevc`, `truehd_atmos`) |
 | `next`, `nextartist` | nächster Titel |
 | `playlistposition`, `playlistlength` | Position in der Wiedergabeliste |
 | `starttime`, `finishtime` | Uhrzeit von Beginn und Ende |

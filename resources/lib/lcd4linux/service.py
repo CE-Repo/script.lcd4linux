@@ -553,6 +553,11 @@ class Service(object):
                 return
             log("display reconnected")
 
+        # Open the frame here rather than leaving it to the renderer: the
+        # idle check below needs fresh data, and while the test pattern is
+        # up the renderer never runs at all - which used to freeze the
+        # dimming and the frame rate at whatever they were ten seconds ago.
+        self.provider.begin_frame(now)
         self._update_idle()
         self._apply_brightness()
 

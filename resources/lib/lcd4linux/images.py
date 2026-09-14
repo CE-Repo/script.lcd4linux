@@ -358,9 +358,16 @@ def read_bytes(path):
 class ImageCache(object):
     """Decoded images keyed by source path and requested size."""
 
+    #: How long a path that could not be read is remembered as missing.
+    #: Long enough that a wall of cover art Kodi has not downloaded yet is
+    #: not re-opened on every frame, short enough that the picture appears
+    #: on its own once the file is there.
+    MISS_SECONDS = 5.0
+
     def __init__(self, limit=24):
         self.limit = limit
         self._entries = {}
+        self._misses = {}
 
     def get(self, path, max_size=None):
         key = (path, max_size)
@@ -368,9 +375,20 @@ class ImageCache(object):
         if entry is not None:
             entry[1] = time.time()
             return entry[0]
+        now = time.time()
+        missed_at = self._misses.get(key)
+        if missed_at is not None and now - missed_at < self.MISS_SECONDS:
+            return None
         data = read_bytes(path)
         if not data:
+            # Remembered briefly rather than cached for good: the file may
+            # still be on its way, but retrying it every frame means a
+            # failing open per frame for as long as the page is up.
+            if len(self._misses) > 4 * self.limit:
+                self._misses.clear()
+            self._misses[key] = now
             return None
+        self._misses.pop(key, None)
         try:
             image = decode_bytes(data, max_size)
         except Exception as error:
@@ -398,6 +416,7 @@ class ImageCache(object):
 
     def clear(self):
         self._entries.clear()
+        self._misses.clear()
 
 
 def load_file(path, max_size=None):
