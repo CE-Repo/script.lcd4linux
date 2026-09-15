@@ -118,13 +118,18 @@ class Font(object):
     def measure(self, text):
         """Return the advance width of ``text`` in pixels."""
         width = 0
-        get = self._glyphs.get
-        fallback = self._fallback
+        # Through advance_of() rather than the glyph table: a scaled font
+        # fills that table on demand and can answer a width without
+        # rasterising the character first.
+        get = self.advance_of
         for ch in text:
-            glyph = get(ord(ch), fallback)
-            if glyph is not None:
-                width += glyph.advance
+            width += get(ord(ch))
         return width
+
+    def advance_of(self, code):
+        """Advance width of one codepoint, 0 if the font has no glyph."""
+        glyph = self._glyphs.get(code, self._fallback)
+        return glyph.advance if glyph is not None else 0
 
     def ellipsize(self, text, max_width, ellipsis=u"…"):
         """Shorten ``text`` so it fits into ``max_width`` pixels."""
@@ -136,15 +141,13 @@ class Font(object):
         budget = max_width - dots
         out = []
         width = 0
-        get = self._glyphs.get
+        get = self.advance_of
         for ch in text:
-            glyph = get(ord(ch), self._fallback)
-            if glyph is None:
-                continue
-            if width + glyph.advance > budget:
+            advance = get(ord(ch))
+            if width + advance > budget:
                 break
             out.append(ch)
-            width += glyph.advance
+            width += advance
         return u"".join(out).rstrip() + ellipsis
 
     def wrap(self, text, max_width):
@@ -167,20 +170,44 @@ class Font(object):
 class _ScaledFont(Font):
     """A font resampled from a neighbouring size.
 
-    Only used when a layout asks for a pixel size that is not bundled; the
-    alpha bitmaps are resampled with bilinear interpolation once and then
-    cached like any other font.
+    Only used when a layout asks for a pixel size that is not bundled.
+
+    Characters are resampled the first time they are actually drawn, not all
+    of them up front.  A bundled font carries some 360 glyphs while a page
+    uses a few dozen, and resampling the whole set in pure Python is what
+    used to make the first frame after a cold start take seconds per font -
+    on a slow box, long enough to look like the add-on was not running.
+    Advances are derived from the base font, so measuring, wrapping and
+    ellipsizing never rasterise anything.
     """
 
     def __init__(self, base, size):
         factor = float(size) / float(base.size)
-        glyphs = {}
-        for code, glyph in base._glyphs.items():
-            glyphs[code] = _scale_glyph(glyph, factor)
+        self._base = base
+        self._factor = factor
         Font.__init__(self, "%s@%d" % (base.name, size), size,
                       int(round(base.ascent * factor)),
                       int(round(base.descent * factor)),
-                      max(1, int(round(base.line_height * factor))), glyphs)
+                      max(1, int(round(base.line_height * factor))), {})
+
+    def glyph(self, code):
+        # The base font resolves its own fallback, so cache under the
+        # codepoint it actually returned - otherwise every unknown character
+        # would resample the fallback glyph again.
+        source = self._base.glyph(code)
+        if source is None:
+            return None
+        cached = self._glyphs.get(source.code)
+        if cached is None:
+            cached = _scale_glyph(source, self._factor)
+            self._glyphs[source.code] = cached
+        return cached
+
+    def advance_of(self, code):
+        source = self._base.glyph(code)
+        if source is None:
+            return 0
+        return int(round(source.advance * self._factor))
 
 
 def _scale_glyph(glyph, factor):
@@ -203,23 +230,47 @@ def _scale_glyph(glyph, factor):
 
     dst = bytearray(width * height)
     sw, sh = glyph.width, glyph.height
+
+    # The horizontal sample positions do not depend on the row, so they are
+    # worked out once instead of once per pixel.  That keeps the inner loop
+    # down to four lookups and a handful of multiplications, which matters
+    # because this is the hottest pure-Python loop in the add-on.
+    columns = []
+    for x in range(width):
+        fx = (x + 0.5) * sw / width - 0.5
+        x0 = int(fx) if fx >= 0 else 0
+        x1 = x0 + 1
+        if x1 > sw - 1:
+            x1 = sw - 1
+        wx = fx - x0
+        if wx < 0.0:
+            wx = 0.0
+        columns.append((x0, x1, wx, 1.0 - wx))
+
+    pos = 0
     for y in range(height):
         fy = (y + 0.5) * sh / height - 0.5
         y0 = int(fy) if fy >= 0 else 0
-        y1 = min(y0 + 1, sh - 1)
+        y1 = y0 + 1
+        if y1 > sh - 1:
+            y1 = sh - 1
         wy = fy - y0
-        if wy < 0:
+        if wy < 0.0:
             wy = 0.0
-        for x in range(width):
-            fx = (x + 0.5) * sw / width - 0.5
-            x0 = int(fx) if fx >= 0 else 0
-            x1 = min(x0 + 1, sw - 1)
-            wx = fx - x0
-            if wx < 0:
-                wx = 0.0
-            a = (src[y0 * sw + x0] * (1 - wx) + src[y0 * sw + x1] * wx) * (1 - wy) \
-                + (src[y1 * sw + x0] * (1 - wx) + src[y1 * sw + x1] * wx) * wy
-            dst[y * width + x] = int(a + 0.5)
+        row0 = y0 * sw
+        row1 = y1 * sw
+        if row0 == row1 or wy == 0.0:
+            # Sampling lands on a source row: no vertical blend needed.
+            for x0, x1, wx, ix in columns:
+                dst[pos] = int(src[row0 + x0] * ix + src[row0 + x1] * wx + 0.5)
+                pos += 1
+        else:
+            iwy = 1.0 - wy
+            for x0, x1, wx, ix in columns:
+                top = src[row0 + x0] * ix + src[row0 + x1] * wx
+                bottom = src[row1 + x0] * ix + src[row1 + x1] * wx
+                dst[pos] = int(top * iwy + bottom * wy + 0.5)
+                pos += 1
     return Glyph(glyph.code, advance, bx, by, width, height,
                  _trim_rows(bytes(dst), width, height))
 

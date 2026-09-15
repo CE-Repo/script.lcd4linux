@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <addon id="script.lcd4linux"
        name="LCD4Linux"
-       version="1.10.1"
+       version="1.10.2"
        provider-name="U3knOwn">
   <requires>
     <import addon="xbmc.python" version="3.0.0"/>
@@ -31,7 +31,19 @@ Zusätzliche Python-Module werden nicht benötigt: Der USB-Zugriff läuft über 
     <platform>linux</platform>
     <license>MIT</license>
     <source>https://github.com/CE-Repo/script.lcd4linux</source>
-    <news>v1.10.1
+    <news>v1.10.2
+- The first picture after a cold start arrives seconds earlier.  A layout
+  that asks for a font size which is not bundled had every character of that
+  font resampled before the first frame could be drawn - some 360 glyphs per
+  font in pure Python, which on a slow box was long enough to look like the
+  add-on had not started at all.  Characters are now resampled the first time
+  they are actually drawn
+- The resampler itself is about four times faster, so the few characters that
+  do get scaled cost far less than they used to
+- The log records how long the first picture took, so a slow start can be
+  told apart from a display that is not answering
+
+v1.10.1
 - A display that needs longer to boot than Kodi does - a Samsung frame takes
   about half a minute - is now picked up by itself.  It used to stay on its
   USB screen until the service was restarted by hand

@@ -130,6 +130,7 @@ class Service(object):
         self._open_warned = False
         self._test_until = 0.0
         self._start_command_done = False
+        self._first_frame_logged = False
 
     # -- helpers ----------------------------------------------------------
     @staticmethod
@@ -657,6 +658,10 @@ class Service(object):
             canvas = self.renderer.render(now)
             self._draw_notification(canvas, now)
         self.target.present(canvas, force=force_redraw)
+        if not self._first_frame_logged:
+            self._first_frame_logged = True
+            log("first picture on the display %.1f s after the service started"
+                % (time.time() - self._started_at))
 
     def _draw_test_pattern(self, canvas):
         """A calibration image: colour bars, a grid and the panel geometry."""
