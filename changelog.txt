@@ -1,3 +1,20 @@
+v1.10.2
+- The first picture after a cold start arrives seconds earlier.  Whenever a
+  layout asks for a font size that is not bundled, the nearest bundled size
+  is resampled - and that was done for the whole font, every one of its ~360
+  glyphs, before the first frame could be drawn.  With several fonts on a
+  page that added up to seconds on a fast machine and far longer on an
+  Amlogic box, which is what made the panel stay dark long after Kodi was
+  up.  Glyphs are now resampled the first time they are really drawn, and
+  text is measured, wrapped and ellipsized from the base font's advances
+  without rasterising anything
+- The resampling loop works the horizontal sample positions out once per
+  glyph instead of once per pixel, which makes it about four times faster
+  and removes roughly two million operations from the first frame of a
+  1024x600 layout
+- New log line "first picture on the display N s after the service started",
+  so a slow first frame can be told apart from a display that never answered
+
 v1.10.1
 - A display that takes longer to boot than Kodi does is picked up on its
   own.  A Samsung frame needs about half a minute after power on, so the
