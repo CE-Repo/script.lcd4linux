@@ -1,89 +1,89 @@
-# LCD4Linux für CoreELEC / Kodi
+# LCD4Linux for CoreELEC / Kodi
 
-Kodi-Add-on für zwei Familien von USB-Displays:
+A Kodi add-on for two families of USB display:
 
-* die 3,5" Panels mit **AX206**-Controller (480×320) – als **AIDA64-Displays**,
-  „SmartDisplay" oder „USB Mini Screen" verkauft und aus den Projekten
-  [dpf-ax](http://dpf-ax.sourceforge.net/) und
-  [lcd4linux](https://lcd4linux.bulix.org/) bekannt;
-* die **Samsung-SPF-Bilderrahmen** (SPF-72H, SPF-87H, SPF-107H und Verwandte,
-  800×480 bis 1024×600) im „Mini-Monitor"-Modus.
+* the 3.5" panels built around the **AX206** controller (480×320) — sold as
+  **AIDA64 displays**, "SmartDisplay" or "USB Mini Screen", and known from the
+  [dpf-ax](http://dpf-ax.sourceforge.net/) and
+  [lcd4linux](https://lcd4linux.bulix.org/) projects;
+* the **Samsung SPF photo frames** (SPF-72H, SPF-87H, SPF-107H and relatives,
+  800×480 up to 1024×600) in their "mini monitor" mode.
 
-Ohne USB-Panel geht es auch: als **Netzwerkdisplay** liefert das Add-on die
-Bilder an einen Browser im Vollbild – etwa ein altes Tablet an der Wand.
+No USB panel? It works without one: as a **network display** the add-on serves
+its frames to any browser in full screen — typically an old tablet on the wall.
 
-Das Add-on zeigt, was Kodi gerade abspielt – Titel, Interpret, Album, Cover,
-Fortschrittsbalken mit gespielter und verbleibender Zeit – dazu Uhr,
-CPU-Auslastung, Temperatur, Bibliotheksdaten und alles andere, was Kodi kennt.
-**Der komplette Bildschirminhalt wird über JSON-Layoutdateien beschrieben** und
-kann frei angepasst werden.
+The add-on shows what Kodi is playing — title, artist, album, cover art, a
+progress bar with elapsed and remaining time — plus a clock, CPU load,
+temperature, library counts and anything else Kodi knows.
+**Everything on screen is described by JSON layout files** and can be changed
+freely.
 
-![Musikwiedergabe](resources/screenshots/default-music.png)
-![Videowiedergabe](resources/screenshots/default-video.png)
-![Großes Cover](resources/screenshots/bigcover.png)
+![Music playback](resources/screenshots/default-music.png)
+![Video playback](resources/screenshots/default-video.png)
+![Large cover](resources/screenshots/bigcover.png)
 ![Dashboard](resources/screenshots/dashboard.png)
 
-Und auf dem 800×480-Rahmen:
+And on the 800×480 frame:
 
-![Samsung Musik](resources/screenshots/spf-music.png)
-![Samsung Dashboard](resources/screenshots/spf-dashboard.png)
+![Samsung music](resources/screenshots/spf-music.png)
+![Samsung dashboard](resources/screenshots/spf-dashboard.png)
 
 ---
 
-## Eigenschaften
+## Features
 
-* **Direkter USB-Zugriff** über `libusb` (ctypes) – keine zusätzlichen
-  Python-Module, kein `pyusb`, kein Compiler nötig.
-* **Nur geänderte Bildbereiche** werden übertragen. Beim AX206 kostet ein
-  tickender Sekundenzeiger ein paar hundert Bytes statt 300 kB pro Bild; beim
-  Samsung werden nur die geänderten JPEG-Blockzeilen neu kodiert.
-* **Frei anpassbare Layouts** als JSON: Seiten, Widgets, Positionen, Farben,
-  Schriftgrößen, Bedingungen und Datenquellen.
-* **Jedes Layout in drei Größen** – 480×320, 800×480 und 1024×600 – plus
-  Hochformat. Eingestellt wird nur der Name, das Add-on nimmt automatisch die
-  Fassung, die zum angeschlossenen Panel passt.
-* **Layout-Baukasten im Browser**: Elemente mit der Maus setzen, ziehen und
-  in der Größe ändern, mit einer Vorschau, die derselbe Renderer zeichnet wie
-  das Display – vom Handy, Tablet oder PC im Netzwerk aus.
-* **Alle Kodi-InfoLabels** sind verwendbar (`${info:MusicPlayer.Album}`),
-  ebenso alle Kodi-Bedingungen (`Player.HasVideo`).
-* **Medienangaben im Klartext**: Kodi liefert `hevc`, `truehd_atmos` und `8`
-  – das Display zeigt H.265, Dolby TrueHD Atmos und 7.1. Dazu der
-  Dynamikumfang (Dolby Vision, HDR10+, HDR10, HLG, SDR) und eine Auflösung,
-  die wirklich `2160p` heißt und nicht `4K`. Die Tabellen folgen
-  [TinyPPI](https://github.com/CE-Repo/script.tinyppi), damit eine Box mit
-  beiden Add-ons denselben Film gleich benennt.
-* **Mehrere Seiten** mit Bedingungen und automatischem Wechsel
-  (z. B. Musik-, Video-, Uhr- und Systemseite).
-* **Widgets**: Text (mit Lauftext, Umbruch, Schatten), Fortschrittsbalken
-  (Balken/Segmente, waagerecht/senkrecht, mit Knopf), Verlaufsdiagramm,
-  Rechteck, Linie, Kreis, Bild, Symbol, Analoguhr.
-* **Cover und Fanart** werden angezeigt – PNG- und JPEG-Dekoder sind im Add-on
-  enthalten und laufen ohne Pillow/ffmpeg.
-* **Weichgezeichnete Schriften** (DejaVu, vorgerendert) in jeder Größe.
-* **Drehung** um 0/90/180/270 Grad, Spiegelung, einstellbare Byte-Reihenfolge.
-* **Hintergrundbeleuchtung** dimmt, solange nichts abgespielt wird – beim
-  AX206 über die Beleuchtung, beim Samsung-Rahmen softwareseitig.
-* **Deutsch und Englisch** auf dem Display: die mitgelieferten Layouts, die
-  Seitennamen sowie Wochentage und Monate folgen der Sprache von Kodi. Eigene
-  Layouts können mit `$LOCALIZE[...]` dasselbe tun.
-* **Netzwerkdisplay**: statt eines USB-Panels kann jedes Gerät mit Browser
-  das Bild zeigen – als MJPEG-Strom in einem schlichten `<img>`, der auch auf
-  einem Android-4.4-Tablet läuft.
-* **Vorschau ohne Hardware**: Layouts lassen sich als PNG rendern.
+* **Direct USB access** through `libusb` (ctypes) — no extra Python modules,
+  no `pyusb`, no compiler needed.
+* **Only changed areas are transferred.** On the AX206 a ticking seconds hand
+  costs a few hundred bytes instead of 300 kB per frame; on the Samsung only
+  the JPEG block rows that changed are re-encoded.
+* **Fully customisable layouts** as JSON: pages, widgets, positions, colours,
+  font sizes, conditions and data sources.
+* **Every layout in three sizes** — 480×320, 800×480 and 1024×600 — plus
+  portrait. The setting stores the name only; the add-on automatically picks
+  the variant that fits the attached panel.
+* **Layout editor in the browser**: place, drag and resize elements with the
+  mouse, with a preview drawn by the same renderer that feeds the display —
+  from a phone, tablet or PC on the network.
+* **All Kodi InfoLabels** can be used (`${info:MusicPlayer.Album}`), as can
+  all Kodi conditions (`Player.HasVideo`).
+* **Media details in plain words**: Kodi reports `hevc`, `truehd_atmos` and
+  `8` — the display shows H.265, Dolby TrueHD Atmos and 7.1, alongside the
+  dynamic range (Dolby Vision, HDR10+, HDR10, HLG, SDR) and a resolution that
+  really reads `2160p` rather than `4K`. The tables follow
+  [TinyPPI](https://github.com/CE-Repo/script.tinyppi), so a box running both
+  add-ons names the same film the same way.
+* **Multiple pages** with conditions and automatic rotation (a music page, a
+  video page, a clock page, a system page and so on).
+* **Widgets**: text (with marquee, wrapping, shadow), progress bar
+  (solid/segmented, horizontal/vertical, with knob), history graph,
+  rectangle, line, circle, image, icon, analogue clock.
+* **Cover art and fanart** are displayed — PNG and JPEG decoders are part of
+  the add-on and run without Pillow or ffmpeg.
+* **Anti-aliased fonts** (DejaVu, pre-rendered) in every size.
+* **Rotation** by 0/90/180/270 degrees, mirroring, selectable byte order.
+* **Backlight dims** while nothing is playing — on the AX206 through the
+  backlight itself, on the Samsung frame in software.
+* **English and German on the display**: the bundled layouts, the page names
+  and the names of weekdays and months follow Kodi's language. Custom layouts
+  can do the same with `$LOCALIZE[...]`.
+* **Network display**: instead of a USB panel, any device with a browser can
+  show the picture — as an MJPEG stream in a plain `<img>` that even works on
+  an Android 4.4 tablet.
+* **Preview without hardware**: layouts can be rendered to PNG.
 
 ---
 
 ## Installation
 
-1. Repository als ZIP herunterladen (`Code → Download ZIP`) oder ein Release
-   verwenden. Der Ordner im ZIP muss `script.lcd4linux` heißen.
-2. Kodi → *Add-ons* → *Aus ZIP-Datei installieren* → ZIP auswählen.
-3. Display anstecken. Der Dienst startet automatisch und sucht das Panel.
-4. *Add-ons → Programm-Add-ons → LCD4Linux* öffnet das Menü
-   (Layout wählen, Testbild, Status, Einstellungen).
+1. Download the repository as a ZIP (`Code → Download ZIP`) or use a release.
+   The folder inside the ZIP must be named `script.lcd4linux`.
+2. Kodi → *Add-ons* → *Install from zip file* → pick the ZIP.
+3. Plug in the display. The service starts automatically and looks for the panel.
+4. *Add-ons → Program add-ons → LCD4Linux* opens the menu (choose layout, test
+   pattern, status, settings).
 
-Alternativ direkt auf die Box kopieren:
+Or copy it straight onto the box:
 
 ```sh
 cd /storage/.kodi/addons
@@ -91,20 +91,20 @@ git clone https://github.com/CE-Repo/script.lcd4linux.git
 systemctl restart kodi
 ```
 
-### Unterstützte Hardware
+### Supported hardware
 
-Der **Displaytyp** wird in den Einstellungen gewählt – die beiden Familien
-sprechen völlig verschiedene Protokolle.
+The **display type** is chosen in the settings — the two families speak
+completely different protocols.
 
-#### AX206 (AIDA64-Typ)
+#### AX206 (AIDA64 type)
 
 | | |
 |---|---|
-| Controller | AX206 (mit dpf-ax-Firmware) |
-| USB-ID | `1908:0102` |
-| Auflösung | wird vom Display gemeldet, typisch 480×320 |
-| Übertragung | rohe RGB565-Pixel, nur der geänderte Ausschnitt |
-| Helligkeit | 8 Stufen, vom Add-on steuerbar |
+| Controller | AX206 (with dpf-ax firmware) |
+| USB ID | `1908:0102` |
+| Resolution | reported by the display, typically 480×320 |
+| Transfer | raw RGB565 pixels, changed rectangle only |
+| Brightness | 8 levels, controlled by the add-on |
 
 ```sh
 lsusb | grep 1908
@@ -114,492 +114,479 @@ lsusb | grep 1908
 
 | | |
 |---|---|
-| Modelle | SPF-72H, SPF-75H/76H, SPF-83H/83M, SPF-85H/85P, SPF-86H/86P, SPF-87H, SPF-105P, SPF-107H, SPF-700T, SPF-800P, SPF-1000P |
-| USB-ID | `04e8:200a` (Massenspeicher) → `04e8:200b` (Monitor), je nach Modell |
-| Auflösung | 800×480 (SPF-72H), 800×600 oder 1024×600 je nach Modell |
-| Übertragung | vollständiges JPEG pro Bild, kein Teilbereich möglich |
-| Helligkeit | **nicht** über USB steuerbar – das Add-on dunkelt stattdessen das Bild ab |
+| Models | SPF-72H, SPF-75H/76H, SPF-83H/83M, SPF-85H/85P, SPF-86H/86P, SPF-87H, SPF-105P, SPF-107H, SPF-700T, SPF-800P, SPF-1000P |
+| USB ID | `04e8:200a` (mass storage) → `04e8:200b` (monitor), depending on the model |
+| Resolution | 800×480 (SPF-72H), 800×600 or 1024×600 depending on the model |
+| Transfer | a complete JPEG per frame, no partial updates possible |
+| Brightness | **not** controllable over USB — the add-on darkens the picture instead |
 
 ```sh
 lsusb | grep 04e8
 ```
 
-Der Rahmen meldet sich zunächst als USB-Massenspeicher. Das Add-on schickt die
-Umschaltanforderung selbst, der Rahmen verschwindet dann kurz vom Bus und
-kommt mit einer neuen Produkt-ID im Monitor-Modus zurück – das dauert ein bis
-drei Sekunden und passiert bei jedem Einschalten neu. `usb_modeswitch` wird
-nicht benötigt.
+The frame first appears as a USB mass storage device. The add-on sends the
+mode-switch request itself; the frame then briefly disappears from the bus and
+comes back with a new product ID in monitor mode. That takes one to three
+seconds and happens on every power-up. `usb_modeswitch` is not needed.
 
-Box und Rahmen werden meist gemeinsam eingeschaltet, und der Rahmen braucht
-etwa eine halbe Minute länger als Kodi. Solange er noch bootet, ist er
-entweder gar nicht am Bus oder beantwortet die Umschaltung zwar, kommt aber
-trotzdem wieder als USB-Laufwerk. Der Dienst startet deshalb auch ohne
-Display, sucht in den ersten Minuten alle paar Sekunden danach (siehe
-*Wartezeit beim Start*), wiederholt die Umschaltanforderung, solange sich der
-Rahmen als Laufwerk meldet, und baut Layout und Bildgröße neu auf, sobald der
-Rahmen seine tatsächliche Auflösung nennt. Ein Neustart des Dienstes von Hand
-ist dafür nicht mehr nötig.
+Box and frame are usually switched on together, and the frame needs about half
+a minute longer than Kodi. While it is still booting it is either not on the
+bus at all, or it answers the mode switch and still comes back as a USB drive.
+The service therefore starts even without a display, looks for it every few
+seconds during the first minutes (see *Start-up grace period*), repeats the
+mode-switch request for as long as the frame reports itself as a drive, and
+rebuilds the layout and frame size as soon as the frame reports its real
+resolution. Restarting the service by hand is no longer necessary.
 
-##### Anschluss Schritt für Schritt
+##### Connecting it step by step
 
-1. **Netzteil des Rahmens anschließen.** Ein 7"-Rahmen zieht mehr Strom, als
-   ein USB-Port liefern darf – das mitgelieferte Netzteil ist Pflicht, der
-   Rahmen läuft nicht über das USB-Kabel allein.
-2. **USB-Kabel in den *Upstream*-Anschluss des Rahmens** (im Handbuch
-   „up stream terminal", der Anschluss für die PC-Verbindung). Der Rahmen hat
-   daneben noch einen USB-Host-Anschluss für Sticks – der funktioniert dafür
-   nicht. Am besten das mitgelieferte Kabel verwenden.
-3. **Anderes Ende an einen USB-2.0-Port der CoreELEC-Box.** Kein USB-Hub
-   dazwischen, wenn es sich vermeiden lässt.
-4. **Rahmen einschalten.** Fragt er auf dem Bildschirm nach der Betriebsart
-   („Mass Storage" / „Mini Monitor" / Diashow), einmal **Mini Monitor**
-   auswählen. Bleibt die Abfrage aus, macht das Add-on die Umschaltung selbst.
-5. Auf der Box prüfen:
+1. **Connect the frame's power supply.** A 7" frame draws more current than a
+   USB port is allowed to deliver — the supplied power adapter is mandatory,
+   the frame will not run off the USB cable alone.
+2. **Plug the USB cable into the frame's *upstream* port** (the manual calls it
+   the "up stream terminal", the port for the PC connection). Next to it the
+   frame has a USB host port for memory sticks — that one does not work for
+   this. Preferably use the cable that came with the frame.
+3. **Plug the other end into a USB 2.0 port on the CoreELEC box.** Avoid a USB
+   hub in between if you can.
+4. **Switch the frame on.** If it asks on screen for the operating mode
+   ("Mass Storage" / "Mini Monitor" / slideshow), pick **Mini Monitor** once.
+   If it does not ask, the add-on performs the switch itself.
+5. Check on the box:
 
    ```sh
    lsusb | grep 04e8
    ```
 
-   `04e8:200a` = Massenspeicher-Modus (noch nicht umgeschaltet),
-   `04e8:200b` = Monitor-Modus (fertig). Im Add-on-Menü zeigt
-   *Anzeigestatus* dasselbe im Klartext.
-6. Im Add-on: *Einstellungen → Anzeige → Verbindung → Displaytyp* auf
-   **Samsung-SPF-Bilderrahmen** stellen, dann *Dienst neu laden*.
+   `04e8:200a` = mass storage mode (not switched yet),
+   `04e8:200b` = monitor mode (done). The add-on menu shows the same thing in
+   plain words under *Display status*.
+6. In the add-on: *Settings → Display → Connection → Display type* to
+   **Samsung SPF photo frame**, then *Reload service*.
 
-##### Ein- und Ausschalten mit CoreELEC
+##### Switching it on and off with CoreELEC
 
-Ehrliche Einordnung vorweg: **Das Mini-Monitor-Protokoll kennt keinen Befehl
-für Helligkeit oder Ausschalten.** Der Rahmen nimmt ausschließlich Bilder
-entgegen. Was das Add-on kann und was nicht:
+An honest note first: **the mini monitor protocol has no command for
+brightness or for switching off.** The frame only accepts pictures. What the
+add-on can and cannot do:
 
 | | |
 |---|---|
-| Beim Start von Kodi | Rahmen wird in den Monitor-Modus geschaltet, Bild erscheint – das läuft automatisch |
-| Helligkeit | Das Add-on dunkelt das **Bild** ab (Einstellungen *Helligkeit (Software)* und *Helligkeit im Leerlauf (Software)*). Die Hintergrundbeleuchtung selbst bleibt unverändert |
-| Beim Herunterfahren | Das Add-on zeigt ein **schwarzes Bild** (Einstellung *Display beim Beenden von Kodi löschen*). Die Hintergrundbeleuchtung bleibt an |
-| Danach | Ohne Keep-Alive fällt der Rahmen nach kurzer Zeit in seine eigene Diashow zurück |
-| Wirklich aus | Nur durch **Stromtrennung** – das kann kein USB-Befehl |
+| When Kodi starts | The frame is switched into monitor mode and the picture appears — automatically |
+| Brightness | The add-on darkens the **picture** (settings *Brightness (software)* and *Idle brightness (software)*). The backlight itself is untouched |
+| On shutdown | The add-on shows a **black picture** (setting *Clear the display when Kodi stops*). The backlight stays on |
+| After that | Without the keep-alive, the frame falls back into its own slideshow after a while |
+| Really off | Only by **cutting the power** — no USB command can do this |
 
-Für „wirklich aus" hängt man das Netzteil des Rahmens an eine schaltbare
-Steckdose und lässt das Add-on sie mitschalten. Dafür gibt es
-*Einstellungen → Verhalten → Schaltbefehle*:
+For "really off", plug the frame's power supply into a switchable socket and
+let the add-on switch it along. That is what *Settings → Behaviour → Power
+hooks* is for:
 
-| Einstellung | Wann |
+| Setting | When it runs |
 |---|---|
-| Befehl beim Start des Dienstes | läuft, **bevor** das Display geöffnet wird – also zum Einschalten |
-| Befehl beim Beenden des Dienstes | läuft, **nachdem** die USB-Verbindung freigegeben wurde – also zum Ausschalten |
+| Command when the service starts | runs **before** the display is opened — so use it to switch on |
+| Command when the service stops | runs **after** the USB connection has been released — so use it to switch off |
 
-Beispiele, je nach Steckdose:
+Examples, depending on your socket:
 
 ```sh
-# Tasmota / Shelly per HTTP
+# Tasmota / Shelly over HTTP
 curl -s "http://192.168.1.50/cm?cmnd=Power%20On"
 curl -s "http://192.168.1.50/cm?cmnd=Power%20Off"
 
 # Home Assistant
-curl -s -X POST -H "Authorization: Bearer TOKEN"      -H "Content-Type: application/json"      -d '{"entity_id":"switch.bilderrahmen"}'      http://192.168.1.10:8123/api/services/switch/turn_on
+curl -s -X POST -H "Authorization: Bearer TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"entity_id":"switch.photo_frame"}' \
+     http://192.168.1.10:8123/api/services/switch/turn_on
 
 # MQTT
-mosquitto_pub -h 192.168.1.10 -t cmnd/rahmen/POWER -m ON
+mosquitto_pub -h 192.168.1.10 -t cmnd/frame/POWER -m ON
 ```
 
-Zwei Dinge dazu:
+Two things to keep in mind:
 
-* Der Rahmen braucht nach dem Einschalten einige Sekunden, bis er am USB-Bus
-  erscheint. Das ist kein Problem – das Add-on sucht ihn im Abstand von
-  *Wiederverbindungsintervall* (Standard 20 s) erneut und verbindet sich dann
-  von selbst. Wer es eiliger hat, stellt den Wert auf 5 s.
-* Ob der Rahmen nach dem Wiedereinschalten von allein hochfährt oder eine
-  Taste braucht, hängt vom Gerät ab – einmal ausprobieren. Viele SPF gehen bei
-  anliegendem Strom automatisch an; manche haben zusätzlich einen
-  Auto-Ein/Aus-Zeitplan im eigenen Menü.
+* After being switched on, the frame needs a few seconds to appear on the USB
+  bus. That is not a problem — the add-on looks for it again every
+  *Reconnect interval* (20 s by default) and connects on its own. If you want
+  it faster, set the value to 5 s.
+* Whether the frame powers up by itself after the socket comes back on, or
+  needs a button press, depends on the device — try it once. Many SPF models
+  switch on automatically when power is applied; some also have an auto
+  on/off schedule in their own menu.
 
-Ohne schaltbare Steckdose bleibt als Kompromiss: *Während des Leerlaufs
-dimmen* aktivieren und *Helligkeit im Leerlauf (Software)* auf 0 % stellen –
-dann zeigt der Rahmen ein schwarzes Bild, statt in die Diashow zu wechseln,
-solange die Box läuft.
+Without a switchable socket the compromise is: enable *Dim while idle* and set
+*Idle brightness (software)* to 0% — the frame then shows a black picture
+instead of dropping into its slideshow, for as long as the box is running.
 
-Kodi läuft auf CoreELEC als `root`, zusätzliche udev-Regeln sind für beide
-Displays nicht nötig. Hängt ein Kerneltreiber am Gerät, löst das Add-on ihn ab.
+Kodi runs as `root` on CoreELEC, so no extra udev rules are needed for either
+display. If a kernel driver is attached to the device, the add-on detaches it.
 
-#### Netzwerkdisplay (Browser oder Tablet)
+#### Network display (browser or tablet)
 
-Statt eines USB-Panels kann das Add-on die Bilder auch über sein eigenes
-Webinterface ausliefern. Am anderen Ende steht ein Browser im Vollbild –
-typischerweise ein altes Android-Tablet an der Wand.
+Instead of a USB panel, the add-on can serve its frames over its own web
+interface. At the other end is a browser in full screen — typically an old
+Android tablet on the wall.
 
 | | |
 |---|---|
-| Hardware | alles mit einem Browser: Tablet, Handy, alter Laptop, zweiter Monitor |
-| Auflösung | frei wählbar unter *Anzeige → Bild* (Breite/Höhe) |
-| Übertragung | MJPEG über HTTP; pro Bild ein vollständiges JPEG, intern werden nur die geänderten Blockzeilen neu kodiert |
-| Helligkeit | softwareseitig, das Bild wird vor dem Senden abgedunkelt |
+| Hardware | anything with a browser: tablet, phone, old laptop, second monitor |
+| Resolution | freely selectable under *Display → Picture* (width/height) |
+| Transfer | MJPEG over HTTP; a complete JPEG per frame, internally only the changed block rows are re-encoded |
+| Brightness | in software, the picture is darkened before it is sent |
 
-Einschalten: *Einstellungen → Anzeige → Verbindung → Ausgabe* auf
-**Netzwerkdisplay (Browser oder Tablet)** stellen. Der HTTP-Server läuft in
-diesem Modus immer, unabhängig vom Schalter für den Layout-Baukasten – er
-*ist* hier das Display.
+To enable it, set *Settings → Display → Connection → Output* to **Network
+display (browser or tablet)**. In this mode the HTTP server always runs,
+regardless of the switch for the layout editor — here it *is* the display.
 
-Die Adresse für das Tablet steht im Add-on-Menü unter *Anzeigestatus* und
-*Webeditor*:
+The address for the tablet is shown in the add-on menu under *Display status*
+and *Web editor*:
 
 ```
 http://<box>:8050/display
 ```
 
-Ist ein Webinterface-Passwort gesetzt, hängt die Adresse es als
-`?key=<passwort>` an. Das ist Absicht: ein Kiosk-Browser kann für ein
-`<img>` keine Basic-Auth-Abfrage beantworten. Der Layout-Baukasten bleibt
-weiterhin durch Basic Auth geschützt.
+If a web interface password is set, it is appended to the address as
+`?key=<password>`. That is deliberate: a kiosk browser cannot answer a Basic
+auth challenge for an `<img>`. The layout editor itself stays protected by
+Basic auth.
 
-| Adresse | was sie liefert |
+| Address | What it serves |
 |---|---|
-| `/display` | die Vollbildseite fürs Tablet |
-| `/display?fit=fill` | dasselbe, aber auf die volle Bildschirmfläche verzerrt statt mit Rändern |
-| `/display/stream` | der reine MJPEG-Datenstrom |
-| `/display/frame.jpg` | das aktuelle Bild als Einzeldatei |
+| `/display` | the full-screen page for the tablet |
+| `/display?fit=fill` | the same, stretched across the whole screen instead of letterboxed |
+| `/display/stream` | the raw MJPEG stream |
+| `/display/frame.jpg` | the current frame as a single file |
 
-Die Seite ist bewusst winzig: ein `<img>` mit einem
-`multipart/x-mixed-replace`-Strom, ohne WebSocket und ohne Canvas. Genau
-deshalb läuft sie auch auf dem uralten WebKit eines Android-4.4-Tablets. Das
-bisschen JavaScript verbindet nur neu, wenn die Box neu startet – ohne
-JavaScript zeigt die Seite trotzdem Bilder.
+The page is deliberately tiny: an `<img>` fed by a
+`multipart/x-mixed-replace` stream, with no WebSocket and no canvas. That is
+exactly why it runs on the ancient WebKit of an Android 4.4 tablet. The
+little JavaScript there is only reconnects when the box restarts — without
+JavaScript the page still shows pictures.
 
-**Bandbreite:** 800×480 bei Qualität 85 sind rund 28 kB pro Bild. Im Leerlauf
-mit einem Bild pro Sekunde also etwa 0,2 Mbit/s.
+**Bandwidth:** 800×480 at quality 85 is roughly 28 kB per frame. Idling at one
+frame per second, that is about 0.2 Mbit/s.
 
-**Auflösung und Layouts:** die mitgelieferten Layouts gibt es in 480×320,
-800×480 und 1024×600. Ein 10"-Tablet mit 1280×800 kann auf eine dieser
-Größen gestellt werden – der Browser skaliert dann hoch, alle Layouts passen
-sofort – oder nativ rendern, dann rechnet `tools/scale_layout.py` die
-Layouts um.
+**Resolution and layouts:** the bundled layouts come in 480×320, 800×480 and
+1024×600. A 10" tablet running 1280×800 can either be set to one of those
+sizes — the browser then scales up and every layout fits straight away — or
+render natively, in which case `tools/scale_layout.py` converts the layouts.
 
-##### Tablet einrichten
+##### Setting up the tablet
 
-Ein Android-Tablet lässt sich **nicht** fernbedient hochfahren; Auto-Boot am
-Ladegerät braucht Root und geht nicht auf jedem Gerät. Der übliche Weg ist
-deshalb: das Tablet läuft durch, nur der **Bildschirm** geht an und aus.
+An Android tablet **cannot** be booted remotely; auto-boot on the charger
+needs root and does not work on every device. The usual approach is therefore:
+the tablet stays on, only the **screen** goes on and off.
 
-1. Auf dem Tablet einen Kiosk-Browser installieren, z. B. *Fully Kiosk
-   Browser* (ab Android 4.4) oder das quelloffene *WallPanel*.
-2. Als Startadresse die `/display`-Adresse von oben eintragen.
-3. Im Kiosk-Browser *Bildschirm anlassen* aktivieren und den Bildschirmschoner
-   abschalten.
-4. In Kodi unter *Einstellungen → Verhalten → Schaltbefehle* eintragen:
+1. Install a kiosk browser on the tablet, for example *Fully Kiosk Browser*
+   (Android 4.4 and up) or the open source *WallPanel*.
+2. Enter the `/display` address from above as the start page.
+3. In the kiosk browser, enable *keep screen on* and switch off the screensaver.
+4. In Kodi, under *Settings → Behaviour → Power hooks*, enter:
 
 ```sh
-# Befehl beim Start des Dienstes – Bildschirm an
-curl -s --max-time 3 "http://192.168.1.60:2323/?cmd=screenOn&password=GEHEIM"
+# Command when the service starts - screen on
+curl -s --max-time 3 "http://192.168.1.60:2323/?cmd=screenOn&password=SECRET"
 
-# Befehl beim Beenden des Dienstes – Bildschirm aus
-curl -s --max-time 3 "http://192.168.1.60:2323/?cmd=screenOff&password=GEHEIM"
+# Command when the service stops - screen off
+curl -s --max-time 3 "http://192.168.1.60:2323/?cmd=screenOff&password=SECRET"
 ```
 
-Das `--max-time` ist wichtig: der Startbefehl läuft, **bevor** das Display
-geöffnet wird, und würde den Dienststart sonst bis zum *Zeitlimit für
-Schaltbefehle* (Standard 15 s) aufhalten, wenn das Tablet gerade nicht im
-WLAN ist.
+The `--max-time` matters: the start command runs **before** the display is
+opened and would otherwise hold up the service start until the *Command
+timeout* (15 s by default) if the tablet happens to be off the Wi-Fi.
 
-Soll das Tablet auch im Leerlauf normal weiterlaufen und nicht abdunkeln,
-*Während des Leerlaufs dimmen* ausschalten oder *Helligkeit im Leerlauf
-(Software)* auf 100 % stellen.
+If the tablet should carry on at normal brightness while idle instead of
+dimming, switch off *Dim while idle* or set *Idle brightness (software)* to
+100%.
 
-Beim Herunterfahren von Kodi schickt das Add-on noch ein schwarzes Bild
-(*Display beim Beenden von Kodi löschen*), bevor der Schaltbefehl den
-Bildschirm ausmacht – ein Browser, der offen bleibt, friert also nicht auf
-dem letzten Bild ein.
+When Kodi shuts down, the add-on sends one more black picture (*Clear the
+display when Kodi stops*) before the power hook switches the screen off — so a
+browser that stays open does not freeze on the last frame.
 
-**Zum Dauerbetrieb:** alte Li-Ion-Akkus blähen sich am Dauerladegerät gern
-auf. Bei fest montierten Tablets gelegentlich die Rückseite prüfen.
+**On continuous operation:** old Li-ion batteries like to swell up on a
+permanent charger. With permanently mounted tablets, check the back now and
+then.
 
 ---
 
-## Einstellungen
+## Settings
 
-**Anzeige → Verbindung**
+**Display → Connection**
 
-| Einstellung | Bedeutung |
+| Setting | Meaning |
 |---|---|
-| Ausgabe | `USB-Display`, `Netzwerkdisplay (Browser oder Tablet)`, `Nur Vorschaudatei` (schreibt `preview.png` in den Add-on-Datenordner) oder `Deaktiviert` |
-| USB-Geräte-IDs | Standard `1908:0102`, mehrere durch Komma getrennt (nur AX206) |
-| Displaynummer | wenn mehrere Panels angeschlossen sind |
-| USB-Gerät zurücksetzen | hilft, wenn ein anderes Programm das Display hängen ließ (nur AX206) |
-| Wiederverbindungsintervall | Wartezeit, bis nach einem abgezogenen Display erneut gesucht wird |
-| Wartezeit beim Start | Wie lange nach dem Start des Dienstes alle paar Sekunden nach dem Display gesucht wird, Standard 180 s. Gedacht für Displays, die länger hochfahren als Kodi – ein Samsung-Rahmen braucht rund eine halbe Minute. In dieser Zeit erscheint auch keine Warnung über ein fehlendes Display |
+| Display type | `AX206 USB LCD (AIDA64 type)` or `Samsung SPF photo frame`. The dialog shows the matching options for whichever is selected |
+| Output | `USB display`, `Network display (browser or tablet)`, `Preview file only` (writes `preview.png` into the add-on data folder) or `Disabled` |
+| USB device IDs | `1908:0102` by default, several separated by commas (AX206 only) |
+| Display number | when several panels are connected |
+| Reset USB device when connecting | helps when another program left the display in a bad state (AX206 only) |
+| Reconnect interval | how long to wait before looking for the display again after it disappeared |
+| Start-up grace period | how long after the service starts the display is looked for every few seconds, 180 s by default. Meant for displays that boot slower than Kodi — a Samsung frame needs about half a minute. No warning about a missing display appears during this time |
 
-**Anzeige → Verbindung → Displaytyp**
+**Display → Samsung photo frame**
 
-Wählt zwischen `AX206-USB-LCD (AIDA64-Typ)` und `Samsung-SPF-Bilderrahmen`.
-Je nach Auswahl blendet der Dialog die passenden Optionen ein.
-
-**Anzeige → Samsung-Bilderrahmen**
-
-| Einstellung | Bedeutung |
+| Setting | Meaning |
 |---|---|
-| Samsung-Modell | Auswahlliste: `Automatisch` nimmt den gefundenen Rahmen, sonst ein Modell wie `SPF-72H` wählen (nur nötig, wenn mehrere Rahmen angeschlossen sind) |
-| JPEG-Qualität | 40–100, Standard 85. Niedriger = schneller und weniger Daten |
-| Reduzierte Farbauflösung (4:2:0) | an: schneller und kleiner; aus: schärfere farbige Schrift, etwa doppelte Kodierzeit |
+| Samsung model | `Automatic` takes the frame it finds; otherwise pick a model such as `SPF-72H` (only needed when several frames are connected) |
+| JPEG quality | 40–100, 85 by default. Lower = faster and less data |
+| Reduced colour resolution (4:2:0) | on: faster and smaller; off: sharper coloured text, about twice the encoding time |
 
-**Anzeige → Bild**
+**Display → Picture**
 
-| Einstellung | Bedeutung |
+| Setting | Meaning |
 |---|---|
-| Drehung | 0/90/180/270 Grad, für Hochkant-Montage |
-| Horizontal spiegeln | für Spiegelmontage |
-| Byte-Reihenfolge | falls die Farben falsch sind – siehe *Fehlersuche* (nur AX206) |
-| Displaygröße überschreiben | nur nötig, wenn das Panel eine falsche Auflösung meldet. Im Netzwerkmodus sind Breite und Höhe immer einstellbar – dort meldet niemand eine Größe |
+| Rotation | 0/90/180/270 degrees, for portrait mounting |
+| Mirror horizontally | for mirrored mounting |
+| Pixel byte order | if the colours are wrong — see *Troubleshooting* (AX206 only) |
+| Override display size | only needed when the panel reports a wrong resolution. In network mode width and height are always adjustable — nothing reports a size there |
 
-**Anzeige → Hintergrundbeleuchtung**
+**Display → Backlight**
 
-| Einstellung | Bedeutung |
+| Setting | Meaning |
 |---|---|
-| Helligkeit | AX206: Stufe 0–7 der Hintergrundbeleuchtung |
-| Helligkeit (Software) | Samsung und Netzwerkdisplay: 10–100 %, das Bild wird vor dem Senden abgedunkelt |
-| Während des Leerlaufs dimmen | dimmt, sobald nichts abgespielt wird; eine Pause zählt weiterhin als Wiedergabe |
-| Helligkeit im Leerlauf | AX206: Stufe 0–7, solange nichts läuft |
-| Helligkeit im Leerlauf (Software) | Samsung und Netzwerkdisplay: 0–100 %, 0 % zeigt ein schwarzes Bild |
-| Display beim Beenden von Kodi löschen | schwarzes Bild beim Herunterfahren |
+| Brightness | AX206: backlight level 0–7 |
+| Brightness (software) | Samsung and network display: 10–100%, the picture is darkened before it is sent |
+| Dim while idle | dims as soon as nothing is playing; paused playback still counts as playing |
+| Idle brightness | AX206: level 0–7 while nothing is playing |
+| Idle brightness (software) | Samsung and network display: 0–100%, 0% shows a black picture |
+| Clear the display when Kodi stops | black picture on shutdown |
 
-Je nach *Displaytyp* ist immer nur das passende Paar sichtbar. Samsung-Rahmen
-haben keine Helligkeitssteuerung über USB – dort wird nicht die Beleuchtung
-geregelt, sondern das gesendete Bild abgedunkelt. Das kostet keine zusätzliche
-Rechenzeit, weil die Abdunklung in der Farbtabelle des JPEG-Encoders steckt.
+Only the pair that matches the selected *Display type* is ever visible.
+Samsung frames have no brightness control over USB — there the picture, not
+the backlight, is darkened. That costs no extra CPU time, because the
+darkening lives in the JPEG encoder's colour tables.
 
 **Layout**
 
-Aktives Layout, Layout-Auswahl, eigener Layout-Ordner, Seitenwechselintervall
-sowie die Aktionsknöpfe *Vorschau*, *Testbild*, *Anzeigestatus* und
-*Dienst neu laden*.
+Active layout, layout chooser, user layout folder, page interval, and the
+action buttons *Preview current layout*, *Show test pattern*, *Display status*
+and *Reload service*.
 
-*Layout auswählen …* öffnet eine Liste mit einem Vorschaubild pro Design; die
-Einstellungen bleiben dabei geöffnet, das gewählte Layout steht danach in der
-Zeile darüber. Die Bilder liegen als `resources/thumbs/<design>.png` bei.
-Layouts aus dem eigenen Ordner haben kein mitgeliefertes Bild – sie werden
-beim ersten Öffnen der Liste einmal gerendert und in
-`<Add-on-Daten>/thumbs/` zwischengespeichert. Mehrere Größen desselben
-Designs (`default.json`, `default-800x480.json` und
-`default-1024x600.json`) erscheinen als ein Eintrag, weil beim Laden ohnehin
-die zum Panel passende Fassung genommen wird.
+*Choose layout…* opens a list with a preview image per design; the settings
+stay open and the chosen layout appears in the line above afterwards. The
+images ship as `resources/thumbs/<design>.png`. Layouts from the user folder
+have no bundled image — they are rendered once when the list is first opened
+and cached in `<addon data>/thumbs/`. Several sizes of the same design
+(`default.json`, `default-800x480.json` and `default-1024x600.json`) appear as
+a single entry, because loading picks the variant that fits the panel anyway.
 
-**Layout → Web-Editor**
+**Layout → Web editor**
 
-| Einstellung | Bedeutung |
+| Setting | Meaning |
 |---|---|
-| Layout-Editor im Browser | schaltet den Webserver ein und aus (Standard: an) |
-| Web-Editor öffnen | zeigt die Adresse, unter der der Editor erreichbar ist |
-| Port | Standard 8050 |
-| Erreichbar von | `dem ganzen Netzwerk` oder `nur dieser Box` (dann nur über einen Browser auf der Box selbst) |
-| Passwort | leer = keine Abfrage; sonst fragt der Browser danach, der Benutzername ist beliebig |
+| Layout editor in the browser | switches the web server on and off (default: on) |
+| Open the web editor | shows the address the editor is reachable at |
+| Port | 8050 by default |
+| Reachable from | `the whole network` or `this box only` (then only from a browser on the box itself) |
+| Password | empty = no prompt; otherwise the browser asks for it, any user name is accepted |
 
-**Sprache**
+**Language**
 
-Es gibt nichts einzustellen: Das Add-on folgt der Sprache von Kodi. Die
-Einstellungen, die Meldungen auf dem Display, die mitgelieferten Layouts und
-die Namen von Wochentagen und Monaten liegen auf Deutsch und Englisch vor.
-Wie eigene Layouts mitziehen, steht in
-[docs/LAYOUT.de.md](docs/LAYOUT.de.md) unter *Feste Wörter übersetzen*.
+There is nothing to set: the add-on follows Kodi's language. The settings, the
+messages on the display, the bundled layouts and the names of weekdays and
+months are available in English and German. How custom layouts can follow
+along is described in [docs/LAYOUT.en.md](docs/LAYOUT.en.md) under
+*Translating fixed words*.
 
-**Verhalten**
+**Behaviour**
 
-Bildwiederholrate bei Wiedergabe und im Leerlauf, weiche Bildskalierung,
-Kodi-Benachrichtigungen auf dem Display, Debug-Protokollierung sowie die
-**Schaltbefehle**, mit denen beim Start und beim Beenden ein beliebiger
-Shell-Befehl ausgeführt wird (siehe *Ein- und Ausschalten mit CoreELEC*).
+Frame rate while playing and while idle, smooth image scaling, Kodi
+notifications on the display, debug logging, and the **power hooks** that run
+an arbitrary shell command when the service starts and stops (see *Switching
+it on and off with CoreELEC*).
 
 ---
 
-## Alle Layouts auf einen Blick
+## All layouts at a glance
 
-Jede Vorlage in drei Zuständen – so wie das Add-on sie selbst auswählt:
+Every template in three states — exactly as the add-on picks them itself:
 
-**Video läuft**
+**Video playing**
 
-![Übersicht Video](resources/screenshots/overview-video.png)
+![Overview, video](resources/screenshots/overview-video.png)
 
-**Musik läuft**
+**Music playing**
 
-![Übersicht Musik](resources/screenshots/overview-normal.png)
+![Overview, music](resources/screenshots/overview-normal.png)
 
-**Nichts läuft**
+**Nothing playing**
 
-![Übersicht Leerlauf](resources/screenshots/overview-idle.png)
+![Overview, idle](resources/screenshots/overview-idle.png)
 
-Neu erzeugen lassen sich die Übersichten mit
+The overviews can be regenerated with
 
 ```sh
-python3 tools/contact_sheet.py --state video --out uebersicht.png
+python3 tools/contact_sheet.py --state video --out overview.png
 # --state: video | series | normal | music | idle
-# --all-sizes nimmt auch die 800x480- und 1024x600-Fassungen mit auf
+# --all-sizes also includes the 800x480 and 1024x600 variants
 ```
 
-## Mitgelieferte Layouts
+## Bundled layouts
 
-Ausgewählt wird nur der Name (z. B. `default.json`) – passt die Größe nicht,
-nimmt das Add-on automatisch die passende Variante, also
-`default-800x480.json` auf einem SPF-87H oder `default-1024x600.json` auf
-einem SPF-107H.
+Only the name is selected (for example `default.json`) — if the size does not
+match, the add-on automatically takes the matching variant, so
+`default-800x480.json` on an SPF-87H or `default-1024x600.json` on an
+SPF-107H.
 
-**Viele Details – zum Davorsitzen**
+**Plenty of detail — for sitting right in front of it**
 
-| Datei | Beschreibung |
+| File | Description |
 |---|---|
-| `default.json` | Vier Seiten: Musik (mit Cover), Video (mit Poster), Uhr, Systemwerte |
-| `bigcover.json` | Bildschirmfüllendes Cover mit Infoleiste unten |
-| `minimal.json` | Große Schrift, Segment-Fortschrittsbalken, keine Bilder – sehr sparsam |
-| `dashboard.json` | Analoguhr, CPU, Temperatur, RAM und Verlaufsdiagramm |
+| `default.json` | Four pages: music (with cover), video (with poster), clock, system values |
+| `bigcover.json` | Full-screen cover with an info bar at the bottom |
+| `minimal.json` | Large type, segmented progress bar, no images — very light on CPU |
+| `dashboard.json` | Analogue clock, CPU, temperature, RAM and a history graph |
 
-**XL – aus mehreren Metern lesbar**
+**XL — readable from across the room**
 
-Wenig Inhalt, sehr große Schrift, reines Schwarz als Hintergrund und kräftige
-Farben. Auf einem 3,5"-Display ist das der Unterschied zwischen „ich müsste
-aufstehen" und „sehe ich vom Sofa".
+Little content, very large type, pure black background and strong colours. On
+a 3.5" display that is the difference between "I would have to get up" and "I
+can read it from the sofa".
 
-| Datei | Beschreibung |
+| File | Description |
 |---|---|
-| `xl-player.json` | Titel in 40 px über zwei Zeilen, Interpret/Serie groß darunter, dicker Balken, Zeiten in 38 px |
-| `xl-remaining.json` | Die **Restzeit riesig** (96 px) in der Bildmitte – die eine Zahl, die man beim Film wirklich wissen will – plus Endzeit und Balken |
-| `xl-clock.json` | Uhrzeit in 128 px, im Leerlauf mit Datum und CPU/Temperatur, bei Wiedergabe mit Titel und Balken darunter |
-| `xl-system.json` | Uhr groß, darunter CPU, Temperatur und RAM als drei große Zahlen mit Balken und Verlaufsdiagramm |
-| `cover-full.json` | Nur das Cover, formatfüllend, mit schmaler Infoleiste und Fortschrittsbalken am unteren Rand |
+| `xl-player.json` | Title in 40 px across two lines, artist/show large below it, a thick bar, times in 38 px |
+| `xl-remaining.json` | The **remaining time, huge** (96 px) in the middle of the screen — the one number you actually want during a film — plus end time and bar |
+| `xl-clock.json` | Time in 128 px, with date and CPU/temperature while idle, with title and bar below it while playing |
+| `xl-system.json` | Large clock, below it CPU, temperature and RAM as three big numbers with bars and a history graph |
+| `cover-full.json` | Just the cover, filling the frame, with a slim info bar and progress bar along the bottom |
 
-![XL Restzeit](resources/screenshots/xl-remaining.png)
-![XL Wiedergabe](resources/screenshots/xl-player.png)
-![XL System](resources/screenshots/xl-system.png)
-![Cover formatfüllend](resources/screenshots/cover-full.png)
+![XL remaining](resources/screenshots/xl-remaining.png)
+![XL player](resources/screenshots/xl-player.png)
+![XL system](resources/screenshots/xl-system.png)
+![Cover, full frame](resources/screenshots/cover-full.png)
 
-**Stile**
+**Styles**
 
-Gleiche Informationen, anderes Aussehen – such dir aus, was zum Wohnzimmer
-passt.
+Same information, different look — pick whatever suits the living room.
 
-| Datei | Beschreibung |
+| File | Description |
 |---|---|
-| `light.json` | Helles Thema, dunkle Schrift auf Weiß – für helle Räume und tagsüber deutlich angenehmer |
-| `terminal.json` | Grün auf Schwarz, durchgehend Monospace, Segmentbalken – Konsolen-Optik und sehr gut lesbar |
-| `neon.json` | Magenta/Cyan mit leuchtender Kontur um die Schrift, Verlaufsbalken |
-| `vinyl.json` | Das Cover als runde Schallplatte samt Mittelloch, Text rechts daneben |
+| `light.json` | Light theme, dark text on white — considerably nicer in bright rooms and during the day |
+| `terminal.json` | Green on black, monospace throughout, segmented bars — console look and very legible |
+| `neon.json` | Magenta/cyan with a glowing outline around the text, gradient bars |
+| `vinyl.json` | The cover as a round record complete with centre hole, text beside it |
 
 ![Terminal](resources/screenshots/terminal.png)
 ![Neon](resources/screenshots/neon.png)
 ![Vinyl](resources/screenshots/vinyl.png)
-![Hell](resources/screenshots/light.png)
+![Light](resources/screenshots/light.png)
 
-**Andere Inhalte**
+**Different content**
 
-| Datei | Beschreibung |
+| File | Description |
 |---|---|
-| `nextup.json` | Oben der laufende Titel, unten **was als Nächstes kommt** – für Musik-Wiedergabelisten |
-| `weather.json` | Uhr und Wetter nebeneinander, darunter CPU, Temperatur und RAM. Die Wetterseite erscheint nur, wenn in Kodi ein Wetter-Add-on eingerichtet ist |
-| `library.json` | Filme, Serien und Alben als große Zähler, darunter Episoden, Songs und Interpreten |
-| `portrait.json` | **Hochformat 320×480** für ein um 90° gedreht montiertes Display – Cover oben, Text darunter |
+| `nextup.json` | The current track on top, **what comes next** below — for music playlists |
+| `weather.json` | Clock and weather side by side, CPU, temperature and RAM below. The weather page only appears when a weather add-on is configured in Kodi |
+| `library.json` | Movies, TV shows and albums as large counters, with episodes, songs and artists below |
+| `portrait.json` | **Portrait 320×480** for a display mounted rotated by 90° — cover on top, text below |
 
-![Jetzt & Danach](resources/screenshots/nextup.png)
-![Wetter](resources/screenshots/weather.png)
-![Bibliothek](resources/screenshots/library.png)
+![Now and next](resources/screenshots/nextup.png)
+![Weather](resources/screenshots/weather.png)
+![Library](resources/screenshots/library.png)
 
-Von jedem Layout gibt es neben dem 480×320-Original eine 800×480- und eine
-1024×600-Fassung mit dem Zusatz `-800x480` bzw. `-1024x600` (beim Hochformat
-`portrait-480x800.json` und `portrait-600x1024.json`); das Add-on wählt die
-passende automatisch, wenn ein entsprechendes Panel angeschlossen ist.
+Besides the 480×320 original, every layout comes in an 800×480 and a 1024×600
+version with the suffix `-800x480` or `-1024x600` (for portrait,
+`portrait-480x800.json` and `portrait-600x1024.json`); the add-on picks the
+right one automatically when a matching panel is connected.
 
-Für das Hochformat zusätzlich *Einstellungen → Anzeige → Bild → Drehung* auf
-90 oder 270 Grad stellen.
+For portrait, also set *Settings → Display → Picture → Rotation* to 90 or 270
+degrees.
 
 ---
 
-## Layout-Baukasten im Browser
+## Layout editor in the browser
 
-Layouts lassen sich mit der Maus zusammenstellen, statt JSON zu tippen: Der
-Dienst bringt einen kleinen Webserver mit, der einen Editor ausliefert.
+Layouts can be assembled with the mouse instead of typed as JSON: the service
+brings along a small web server that serves an editor.
 
-![Layout-Baukasten](resources/screenshots/webeditor.png)
+![Layout editor](resources/screenshots/webeditor.png)
 
-**Öffnen**
+**Opening it**
 
-*Add-ons → LCD4Linux → Web-Editor* zeigt die Adresse an, meist
+*Add-ons → LCD4Linux → Web editor* shows the address, usually
 
 ```
-http://<IP-der-Box>:8050/
+http://<box-ip>:8050/
 ```
 
-Die Adresse steht auch in den Einstellungen unter *Layout → Web-Editor*. Der
-Editor läuft in jedem aktuellen Browser, auch auf Handy und Tablet – es wird
-nichts nachgeladen, alles gehört zum Add-on.
+The address is also in the settings under *Layout → Web editor*. The editor
+runs in any current browser, including on a phone or tablet — nothing is
+loaded from the internet, it is all part of the add-on.
 
-**Was er kann**
+**What it can do**
 
-* **Seiten** anlegen, kopieren, umsortieren und löschen – die Reiter oben
-  links entsprechen den Seiten des Layouts.
-* **Elemente** aus der Palette auf die Fläche ziehen oder anklicken: Text,
-  Bild, Fortschrittsbalken, Diagramm, Rechteck, Linie, Kreis, Symbol und
-  Analoguhr.
-* **Verschieben und Größe ändern** mit der Maus, am Raster einrastend
-  (`Alt` gedrückt halten schaltet das Einrasten aus, `Umschalt` hält beim
-  Ziehen die Richtung). Pfeiltasten verschieben pixelweise, mit `Umschalt`
-  in Zehnerschritten.
-* **Eigenschaften** rechts: jedes Feld, das der Renderer kennt – Farben mit
-  Farbwähler, Schriften, Ausrichtung, Lauftext, Bedingungen mit Vorlagen.
-* **Datenfelder** über den Knopf `${}`: alle Tokens mit Erklärung, dazu die
-  Filter (`|upper`, `|trunc:20`, `|hms` …), eingefügt an der Cursorstelle.
-* **Vorschau**: Nach jeder Änderung rendert das Add-on das Bild selbst und
-  zeigt es an – kein Nachbau im Browser, sondern genau das, was das Panel
-  zeigen wird. Umschaltbar zwischen *Musik läuft*, *Video läuft*,
-  *Pausiert*, *Nichts läuft* und – auf der Box – *Echte Daten*.
-* **Speichern** in den eigenen Layout-Ordner und *Aufs Display* übernimmt das
-  Layout sofort auf dem Panel.
-* Rückgängig/Wiederholen (`Strg+Z` / `Strg+Y`), Duplizieren (`Strg+D`),
-  Speichern (`Strg+S`), Löschen (`Entf`), Ausrichtungsknöpfe und ein
-  JSON-Editor für den Feinschliff.
+* **Pages**: create, copy, reorder and delete — the tabs at the top left are
+  the pages of the layout.
+* **Elements**: drag them from the palette onto the canvas or click them into
+  place: text, image, progress bar, graph, rectangle, line, circle, icon and
+  analogue clock.
+* **Move and resize** with the mouse, snapping to the grid (hold `Alt` to
+  disable snapping, `Shift` to constrain the direction while dragging). Arrow
+  keys move by one pixel, with `Shift` in steps of ten.
+* **Properties** on the right: every field the renderer knows — colours with a
+  colour picker, fonts, alignment, marquee, conditions with templates.
+* **Data fields** through the `${}` button: every token with an explanation,
+  plus the filters (`|upper`, `|trunc:20`, `|hms` …), inserted at the cursor.
+* **Preview**: after every change the add-on renders the picture itself and
+  shows it — not a reconstruction in the browser, but exactly what the panel
+  will show. Switchable between *music playing*, *video playing*, *paused*,
+  *nothing playing* and — on the box — *live data*.
+* **Save** into the user layout folder, and *To the display* applies the
+  layout to the panel immediately.
+* Undo/redo (`Ctrl+Z` / `Ctrl+Y`), duplicate (`Ctrl+D`), save (`Ctrl+S`),
+  delete (`Del`), alignment buttons and a JSON editor for the finishing
+  touches.
 
-**Speicherort**
+**Where it saves**
 
-Gespeichert wird immer in den eigenen Ordner
-(`.../addon_data/script.lcd4linux/layouts/`). Ein mitgeliefertes Layout wird
-dabei nicht überschrieben: Die eigene Fassung hat Vorrang, das Original
-kommt zurück, sobald die Kopie gelöscht wird.
+It always saves into the user folder
+(`.../addon_data/script.lcd4linux/layouts/`). A bundled layout is never
+overwritten: your own version takes precedence, and the original comes back as
+soon as the copy is deleted.
 
-**Ohne Box, nur am PC**
+**Without a box, just on a PC**
 
 ```sh
 python3 tools/webeditor.py            # http://127.0.0.1:8050/
-python3 tools/webeditor.py --bind all --port 8050 --password geheim
+python3 tools/webeditor.py --bind all --port 8050 --password secret
 ```
 
-**Sicherheit**
+**Security**
 
-Der Editor darf Layoutdateien schreiben und den Dienst neu laden. Im
-Heimnetz ist das gewollt; in einem gemeinsam genutzten Netz sollte
-*Erreichbar von* auf **nur dieser Box** stehen oder ein Passwort gesetzt
-sein. Ausgeliefert werden ausschließlich die Dateien aus `resources/web/`,
-gespeichert wird ausschließlich in den Layout-Ordner, und Dateinamen mit
-Pfadangaben weist der Server ab.
+The editor may write layout files and reload the service. On a home network
+that is the point; on a shared network, *Reachable from* should be set to
+**this box only** or a password should be set. Only the files in
+`resources/web/` are served, saving only ever goes into the layout folder, and
+the server rejects file names containing path components.
 
 ---
 
-## Eigene Layouts
+## Custom layouts
 
-Layouts liegen in
+Layouts live in
 
 ```
 /storage/.kodi/userdata/addon_data/script.lcd4linux/layouts/
 ```
 
-Dateien in diesem Ordner haben Vorrang vor den mitgelieferten – eine eigene
-`default.json` dort überschreibt also die Vorlage, ohne dass ein Update sie
-löscht. Beim ersten Start legt das Add-on dort `custom.json.example` als
-Startpunkt ab: umbenennen in `meins.json`, anpassen, im Menü auswählen.
+Files in this folder take precedence over the bundled ones — your own
+`default.json` there overrides the template, and an update will not delete it.
+On first start the add-on drops `custom.json.example` there as a starting
+point: rename it to `mine.json`, adjust it, select it from the menu.
 
-Kurzbeispiel:
+A short example:
 
 ```json
 {
-  "name": "Mein Layout",
+  "name": "My layout",
   "size": [480, 320],
   "background": "#101317",
   "defaults": {"font": "sans", "size": 18, "color": "#ffffff"},
   "pages": [
     {
-      "name": "Wiedergabe",
+      "name": "Playback",
       "condition": "active",
       "widgets": [
         {"type": "text", "x": 20, "y": 24, "w": 440, "h": 40,
@@ -617,116 +604,112 @@ Kurzbeispiel:
 }
 ```
 
-Die vollständige Referenz – alle Widgets, Eigenschaften, Datenfelder, Filter
-und Bedingungen – steht in **[docs/LAYOUT.de.md](docs/LAYOUT.de.md)**
-(English: [docs/LAYOUT.en.md](docs/LAYOUT.en.md)).
+The full reference — every widget, property, data field, filter and condition
+— is in **[docs/LAYOUT.en.md](docs/LAYOUT.en.md)**
+(German: [docs/LAYOUT.de.md](docs/LAYOUT.de.md)).
 
-### Layout auf eine andere Displaygröße umrechnen
+### Converting a layout to another display size
 
-Ein vorhandenes Layout lässt sich maßstäblich umrechnen, statt es von Hand
-neu zu setzen:
-
-```sh
-python3 tools/scale_layout.py meins.json 800 480
-# schreibt meins-800x480.json
-```
-
-Positionen und Boxen folgen dabei den beiden Achsen getrennt, Schriftgrößen,
-Radien und Linienstärken der Höhe – so bleiben die Proportionen der Schrift
-erhalten. Prozentangaben bleiben unverändert, weil sie schon relativ sind.
-
-Eine Einschränkung: Weil beide Achsen unterschiedlich skalieren, wird aus
-einem Kreis ein Oval. Layouts mit runden Elementen – etwa `vinyl.json` – muss
-man danach von Hand nachziehen (Box wieder quadratisch machen).
-
-### Layout ohne Hardware entwerfen
-
-Auf dem PC (Python 3 genügt, kein Kodi):
+An existing layout can be scaled instead of being laid out again by hand:
 
 ```sh
-python3 tools/preview.py --layout resources/layouts/default.json --page 0 --out vorschau.png
-python3 tools/preview.py --track 1 --page 1 --out video.png     # Video-Demodaten
-python3 tools/preview.py --rotate 90 --out hochkant.png
+python3 tools/scale_layout.py mine.json 800 480
+# writes mine-800x480.json
 ```
 
-Auf der Box ohne Display: Einstellung *Ausgabe* auf **Nur Vorschaudatei**
-stellen – jedes Bild landet dann als `preview.png` im Add-on-Datenordner. Im
-Menü zeigt *Layout-Vorschau* das aktuelle Layout direkt in Kodi an.
+Positions and boxes follow the two axes separately, while font sizes, radii
+and line widths follow the height — that keeps the proportions of the type.
+Percentages are left alone, because they are already relative.
+
+One limitation: because the two axes scale differently, a circle becomes an
+oval. Layouts with round elements — `vinyl.json`, for instance — need a manual
+touch-up afterwards (make the box square again).
+
+### Designing layouts without hardware
+
+On a PC (Python 3 is enough, no Kodi):
+
+```sh
+python3 tools/preview.py --layout resources/layouts/default.json --page 0 --out preview.png
+python3 tools/preview.py --track 1 --page 1 --out video.png     # video demo data
+python3 tools/preview.py --rotate 90 --out portrait.png
+```
+
+On the box without a display: set *Output* to **Preview file only** — every
+frame then lands as `preview.png` in the add-on data folder. In the menu,
+*Preview layout* shows the current layout directly in Kodi.
 
 ---
 
-## Steuerung aus Kodi heraus
+## Controlling it from Kodi
 
-Die Aktionen lassen sich auf Tasten, Favoriten oder Skin-Knöpfe legen:
+The actions can be bound to keys, favourites or skin buttons:
 
 ```
-RunScript(script.lcd4linux,next_page)        # nächste Seite
-RunScript(script.lcd4linux,layout)           # Layout auswählen
-RunScript(script.lcd4linux,preview)          # Vorschau anzeigen
-RunScript(script.lcd4linux,test_pattern)     # Testbild
-RunScript(script.lcd4linux,status)           # Anzeigestatus
-RunScript(script.lcd4linux,reload)           # Dienst neu laden
-RunScript(script.lcd4linux,brightness_up)    # heller
-RunScript(script.lcd4linux,brightness_down)  # dunkler
+RunScript(script.lcd4linux,next_page)        # next page
+RunScript(script.lcd4linux,layout)           # choose layout
+RunScript(script.lcd4linux,preview)          # show preview
+RunScript(script.lcd4linux,test_pattern)     # test pattern
+RunScript(script.lcd4linux,status)           # display status
+RunScript(script.lcd4linux,reload)           # reload service
+RunScript(script.lcd4linux,brightness_up)    # brighter
+RunScript(script.lcd4linux,brightness_down)  # darker
 ```
 
-Andere Add-ons können eine Meldung auf das Display schicken:
+Other add-ons can push a message onto the display:
 
 ```python
 xbmc.executeJSONRPC(json.dumps({
     "jsonrpc": "2.0", "id": 1, "method": "JSONRPC.NotifyAll",
     "params": {"sender": "script.lcd4linux", "message": "message",
-               "data": {"heading": "Türklingel", "message": "Besuch da"}}}))
+               "data": {"heading": "Doorbell", "message": "Someone is here"}}}))
 ```
 
 ---
 
-## Fehlersuche
+## Troubleshooting
 
-**Nichts passiert / „Kein AX206-Display gefunden"**
-`lsusb | grep 1908` prüfen. Erscheint das Gerät nicht, liegt es an Kabel,
-Stromversorgung oder daran, dass das Panel noch die Original-Firmware hat.
-Der Menüpunkt *Anzeigestatus* zeigt, was der Dienst sieht.
+**Nothing happens / "No AX206 display found"**
+Check `lsusb | grep 1908`. If the device does not appear, it is the cable, the
+power supply, or the panel still running its original firmware. The menu entry
+*Display status* shows what the service sees.
 
-**Farben falsch, Rot und Blau vertauscht, verrauschtes Bild**
-Einstellung *Byte-Reihenfolge* umschalten. Standard ist
-„Höherwertiges Byte zuerst"; einzelne Panel-Varianten erwarten die andere
-Reihenfolge.
+**Wrong colours, red and blue swapped, garbled picture**
+Change the *Pixel byte order* setting. The default is "High byte first"; some
+panel variants expect the other order.
 
-**Bild verschoben oder abgeschnitten**
-*Testbild* anzeigen lassen: Der rote Rahmen muss alle vier Kanten berühren.
-Passt das nicht, *Displaygröße überschreiben* aktivieren und die tatsächliche
-Auflösung eintragen.
+**Picture shifted or cut off**
+Show the *test pattern*: the red frame has to touch all four edges. If it does
+not, enable *Override display size* and enter the real resolution.
 
-**Ruckelnde Anzeige, hohe CPU-Last**
-*Aktualisierungen pro Sekunde bei Wiedergabe* verringern (2 reicht meist),
-*Bilder weich skalieren* abschalten oder `minimal.json` verwenden, das ohne
-Bilder auskommt. Beim Samsung zusätzlich die *JPEG-Qualität* senken; Layouts
-mit großen einfarbigen Flächen kodieren deutlich schneller als solche mit
-bildschirmfüllendem Hintergrundbild (siehe Tabelle unten).
+**Stuttering display, high CPU load**
+Lower *Updates per second while playing* (2 is usually enough), switch off
+*Smooth image scaling*, or use `minimal.json`, which does without images. On
+the Samsung, additionally lower the *JPEG quality*; layouts with large flat
+areas encode considerably faster than ones with a full-screen background image
+(see the table below).
 
-**Samsung: Rahmen bleibt im Massenspeicher-Modus**
-Im Protokoll steht dann „the frame stayed in USB mass storage mode". Das
-Add-on wiederholt die Umschaltung von sich aus und versucht es beim nächsten
-Durchlauf erneut; hilft das nicht, den Rahmen einmal aus- und wieder
-einstecken. Manche Modelle schalten nur um, wenn sie eingeschaltet sind und
-nicht gerade eine Diashow abspielen.
+**Samsung: the frame stays in mass storage mode**
+The log then says "the frame stayed in USB mass storage mode". The add-on
+repeats the switch by itself and tries again on the next pass; if that does
+not help, unplug the frame and plug it back in. Some models only switch when
+they are powered on and not currently running a slideshow.
 
-**Samsung: Bild bleibt stehen**
-Der Rahmen fällt ohne den Keep-Alive nach einiger Zeit aus dem Monitor-Modus.
-Das Add-on schickt ihn nach jedem Bild; steht die Bildrate auf 1/s und das
-Layout ändert sich nie (z. B. eine Uhr ohne Sekunden), wird trotzdem jedes
-Bild gesendet, damit der Rahmen wach bleibt.
+**Samsung: the picture freezes**
+Without the keep-alive the frame drops out of monitor mode after a while. The
+add-on sends it after every frame; with the frame rate at 1/s and a layout
+that never changes (a clock without seconds, say), every frame is still sent
+so the frame stays awake.
 
-**Display bleibt nach dem Beenden von Kodi an**
-*Display beim Beenden von Kodi löschen* aktivieren.
+**The display stays on after Kodi exits**
+Enable *Clear the display when Kodi stops*.
 
-**Protokoll**
-*Debug-Protokollierung* einschalten; die Meldungen stehen mit dem Präfix
-`[script.lcd4linux]` in `kodi.log`.
+**Log**
+Turn on *Debug logging*; the messages appear in `kodi.log` with the prefix
+`[script.lcd4linux]`.
 
-**Selbsttest** – prüft Schriften, Bilddekoder, Protokoll und alle Layouts,
-auch direkt auf der Box:
+**Self-test** — checks fonts, image decoders, the protocol and every layout,
+and runs on the box as well:
 
 ```sh
 python3 /storage/.kodi/addons/script.lcd4linux/tools/selftest.py
@@ -734,127 +717,74 @@ python3 /storage/.kodi/addons/script.lcd4linux/tools/selftest.py
 
 ---
 
-## Rechenaufwand beim Samsung
+## Encoding cost on the Samsung
 
-Der Rahmen nimmt nur vollständige JPEG-Bilder an. Das Add-on kodiert deshalb
-nur die Blockzeilen neu, die sich geändert haben – gemessen auf einem
-Arbeitsplatzrechner bei 800×480 und Qualität 85 (auf einer Amlogic-Box etwa
-Faktor 4–6 langsamer):
+The frame only accepts complete JPEG images. The add-on therefore re-encodes
+only the block rows that changed — measured on a desktop machine at 800×480
+and quality 85 (on an Amlogic box, roughly 4–6 times slower):
 
-| Layout | erstes Bild | laufende Aktualisierung | JPEG-Größe |
+| Layout | First frame | Ongoing update | JPEG size |
 |---|---|---|---|
 | `minimal-800x480` | 113 ms | 9 ms | 23 kB |
 | `dashboard-800x480` | 137 ms | 30 ms | 27 kB |
 | `default-800x480` | 166 ms | 22 ms | 38 kB |
 | `bigcover-800x480` | 168 ms | 12 ms | 28 kB |
 
-Ein voll­flächiges Bild kostet vor allem beim ersten Bild; danach bleiben nur
-die Zeilen mit Uhr und Fortschrittsbalken übrig. Für langsame Boxen ist
-`minimal` die sparsamste Wahl.
+A full-frame image costs most on the first frame; after that only the rows
+with the clock and the progress bar remain. For slow boxes, `minimal` is the
+lightest choice.
 
-## Aufbau
+## Project structure
 
 ```
-addon.xml                     Add-on-Manifest
-service.py                    Dienst (läuft im Hintergrund)
-default.py                    Menü / Aktionen
-resources/settings.xml        Einstellungsdialog
-resources/layouts/*.json      mitgelieferte Layouts
-resources/fonts/*.l4f         vorgerenderte Bitmap-Schriften
+addon.xml                     add-on manifest
+service.py                    the service (runs in the background)
+default.py                    menu / actions
+resources/settings.xml        settings dialog
+resources/layouts/*.json      bundled layouts
+resources/fonts/*.l4f         pre-rendered bitmap fonts
 resources/lib/lcd4linux/
-    usbdev.py                 libusb-1.0 über ctypes
-    ax206.py                  AX206-Protokoll (SCSI über USB)
-    spf.py                    Samsung-SPF-Protokoll (Mode-Switch, JPEG-Frames)
-    jpegenc.py                JPEG-Encoder mit Blockzeilen-Cache
-    display.py                Ausgabeziele (USB, Netzwerk, Vorschau), Drehung
-    canvas.py                 RGB565-Framebuffer und Zeichenprimitive
-    bmfont.py                 Bitmap-Schriften
-    pngio.py / jpegio.py      Bilddekoder in reinem Python
-    images.py                 Laden, Skalieren, Sprites
-    layout.py                 Layoutdateien, Seiten, Renderer
-    widgets.py                Widgets
-    tokens.py                 ${...}-Ersetzung, Filter, Bedingungen
-    kodidata.py               Datenquellen (Kodi, System, Demo)
-    mediainfo.py              Codec-, HDR- und Auflösungsnamen
-    settings.py               Einstellungen
-    service.py                Hauptschleife
-    ui.py                     Menü
-    thumbs.py                 Vorschaubilder für die Layout-Auswahl
-    webui.py                  Webserver und API des Layout-Baukastens
-    webschema.py              Widget-Felder und Tokens für den Editor
-resources/web/                der Editor selbst (HTML, CSS, JavaScript)
-tools/preview.py              Layout-Vorschau als PNG
-tools/webeditor.py            Layout-Baukasten am PC starten
-tools/scale_layout.py         Layout auf eine andere Displaygröße umrechnen
-tools/contact_sheet.py        Übersichtsbild aller Layouts erzeugen
-tools/make_thumbs.py          Vorschaubilder für die Layout-Auswahl erzeugen
-tools/selftest.py             Selbsttest ohne Hardware
-tools/mkfont.py               Schriften neu erzeugen (benötigt Pillow)
+    usbdev.py                 libusb-1.0 through ctypes
+    ax206.py                  AX206 protocol (SCSI over USB)
+    spf.py                    Samsung SPF protocol (mode switch, JPEG frames)
+    jpegenc.py                JPEG encoder with a block-row cache
+    display.py                output targets (USB, network, preview), rotation
+    canvas.py                 RGB565 framebuffer and drawing primitives
+    bmfont.py                 bitmap fonts
+    pngio.py / jpegio.py      image decoders in pure Python
+    images.py                 loading, scaling, sprites
+    layout.py                 layout files, pages, renderer
+    widgets.py                widgets
+    tokens.py                 ${...} substitution, filters, conditions
+    kodidata.py               data sources (Kodi, system, demo)
+    mediainfo.py              codec, HDR and resolution names
+    settings.py               settings
+    service.py                main loop
+    ui.py                     menu
+    thumbs.py                 preview images for the layout chooser
+    webui.py                  web server and API of the layout editor
+    webschema.py              widget fields and tokens for the editor
+resources/web/                the editor itself (HTML, CSS, JavaScript)
+tools/preview.py              render a layout preview as PNG
+tools/webeditor.py            run the layout editor on a PC
+tools/scale_layout.py         convert a layout to another display size
+tools/contact_sheet.py        generate the overview image of all layouts
+tools/make_thumbs.py          generate the preview images for the chooser
+tools/selftest.py             self-test without hardware
+tools/mkfont.py               regenerate the fonts (needs Pillow)
 ```
 
 ---
 
-## English summary
+## Licence
 
-Kodi/CoreELEC add-on for two families of USB display: the 3.5" 480×320 panels
-based on the **AX206** controller (sold as AIDA64 screens, known from `dpf-ax`
-and `lcd4linux`), and the **Samsung SPF** photo frames (SPF-72H, SPF-87H,
-SPF-107H and relatives) in their mini monitor mode. Without a USB panel it
-also drives a **network display**: any browser in full screen, typically an
-old tablet on the wall.
+MIT — see [LICENSE](LICENSE).
 
-It shows what Kodi is playing (title, artist, album, cover art, a progress bar
-with elapsed and remaining time) plus clock, CPU load, temperature and any Kodi
-InfoLabel. Everything on screen is defined by JSON layout files, so pages,
-widgets, colours, fonts, positions and data sources are fully customisable.
-
-USB access uses `libusb` through `ctypes`; the PNG/JPEG decoders, the JPEG
-*encoder* the Samsung frames need, and the font renderer are all part of the
-add-on, so **no extra Python modules are required**. On the AX206 only the
-changed rectangle is transferred; on the Samsung, which accepts complete JPEG
-images only, only the MCU rows that changed are re-encoded.
-
-* Layout reference: [docs/LAYOUT.en.md](docs/LAYOUT.en.md)
-* **Every layout in three sizes**: 480x320, 800x480 and 1024x600, plus a
-  portrait design. The setting stores the name only; loading picks the
-  variant that fits the attached panel, so a 10 inch frame (SPF-105P,
-  SPF-107H, SPF-1000P) gets a layout drawn for it rather than a smaller one
-  stretched over it.
-* **Media details in plain words**: Kodi reports `hevc`, `truehd_atmos` and
-  `8`; the panel shows H.265, Dolby TrueHD Atmos and 7.1, alongside the
-  dynamic range (`${player.hdr}`: Dolby Vision, HDR10+, HDR10, HLG, SDR) and
-  a resolution that really reads `2160p` rather than Kodi's `4K`. The tables
-  follow [TinyPPI](https://github.com/CE-Repo/script.tinyppi), so a box
-  running both names a stream the same way on the television and on the panel.
-* **Layout editor in the browser**: the service serves a drag and drop editor
-  at `http://<box>:8050/` (*Add-ons → LCD4Linux → Web editor* shows the
-  address). Pages, widgets, colours and data fields are edited with the
-  mouse, and the preview next to them is drawn by the add-on's own renderer,
-  so it is exactly what the panel will show. On a PC without Kodi:
-  `python3 tools/webeditor.py`
-* **Network display**: set *Output* to `Network display` and point a browser
-  at `http://<box>:8050/display`. The page is a plain `<img>` fed by a
-  `multipart/x-mixed-replace` MJPEG stream - no WebSocket, no canvas, so it
-  renders on the ancient WebKit of an Android 4.x tablet. A web interface
-  password is passed as `?key=...` because a kiosk browser cannot answer a
-  Basic auth challenge for a sub resource.
-* Design layouts without hardware: `python3 tools/preview.py --out preview.png`
-* Verify an installation: `python3 tools/selftest.py`
-* Settings, bundled layouts, remote-control actions and troubleshooting are
-  described in the German sections above; the add-on's own user interface is
-  available in English and German.
-
----
-
-## Lizenz
-
-MIT – siehe [LICENSE](LICENSE).
-
-Die mitgelieferten Schriften stammen aus den
-[DejaVu-Fonts](https://dejavu-fonts.github.io/) (Bitstream-Vera-Lizenz), siehe
+The bundled fonts come from the
+[DejaVu fonts](https://dejavu-fonts.github.io/) (Bitstream Vera licence), see
 [resources/fonts/LICENSE-DejaVu.txt](resources/fonts/LICENSE-DejaVu.txt).
 
-Das AX206-Protokoll folgt den Projekten `dpf-ax` und dem AX206-Treiber von
-`lcd4linux` (`drv_dpf.c`). Das Samsung-SPF-Protokoll folgt dem Treiber
-`drv_SamsungSPF.c` von lcd4linux, der auf `playusb` von Andre Puschmann und
-den Arbeiten von Grace Woo aufbaut.
+The AX206 protocol follows the `dpf-ax` project and the AX206 driver of
+`lcd4linux` (`drv_dpf.c`). The Samsung SPF protocol follows lcd4linux's
+`drv_SamsungSPF.c` driver, which in turn builds on `playusb` by Andre Puschmann
+and the work of Grace Woo.
