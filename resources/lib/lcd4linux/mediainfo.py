@@ -333,3 +333,95 @@ def frame_rate(value):
     if rate == int(rate):
         return str(int(rate))
     return ("%.3f" % rate).rstrip("0").rstrip(".")
+
+
+# ---------------------------------------------------------------------------
+# bitrate
+# ---------------------------------------------------------------------------
+
+#: What one bitrate unit is worth in bits per second, by its SI prefix.
+BITRATE_UNITS = {"b": 1.0, "k": 1e3, "m": 1e6, "g": 1e9}
+
+_BITRATE_NUMBER_RE = re.compile(r"[0-9][0-9.,]*")
+_BITRATE_UNIT_RE = re.compile(r"([kmg])?b", re.IGNORECASE)
+
+
+def bitrate_number(text):
+    """The bare number of a bitrate label, whatever separators it carries.
+
+    Kodi's live bitrate labels are localised: the same stream reads
+    ``24.50 Mb/s`` on an English box and ``24,50 Mb/s`` on a German one, and
+    a four digit audio rate brings a thousands separator along with it.  The
+    last separator is the decimal point when fewer than three digits follow
+    it and a thousands separator otherwise, which is what tells ``1,536``
+    (a rate) from ``1,53`` (a rate and a half).
+
+    ``None`` when the text holds no number at all.
+    """
+    match = _BITRATE_NUMBER_RE.search(_clean(text))
+    if not match:
+        return None
+    digits = match.group(0)
+    last = max(digits.rfind(","), digits.rfind("."))
+    if last < 0:
+        whole, fraction = digits, ""
+    else:
+        whole, fraction = digits[:last], digits[last + 1:]
+        if len(fraction) >= 3 or not fraction:
+            whole, fraction = whole + fraction, ""
+    whole = whole.replace(",", "").replace(".", "")
+    try:
+        return float(whole + ("." + fraction if fraction else ""))
+    except ValueError:
+        return None
+
+
+def _bitrate_bits(text, default_scale=1e3):
+    """Bits per second from one label, or ``None``.
+
+    The unit is read off the label when it carries one - Kodi's live values
+    do, ``Mb/s`` for a picture and ``Kb/s`` for a sound track - and assumed
+    to be ``default_scale`` otherwise, which is what the plain numbers of
+    ``VideoPlayer.VideoBitrate`` and friends are counted in.
+    """
+    number = bitrate_number(text)
+    if number is None:
+        return None
+    match = _BITRATE_NUMBER_RE.search(_clean(text))
+    unit = _BITRATE_UNIT_RE.search(_clean(text)[match.end():]) if match else None
+    scale = BITRATE_UNITS.get((unit.group(1) or "b").lower()) if unit else None
+    return number * (scale if scale else default_scale)
+
+
+def _trim_bitrate(value):
+    """``24.5``, ``1536`` - two decimals below 100, whole numbers above."""
+    if value >= 100:
+        return "%d" % round(value)
+    return ("%.2f" % value).rstrip("0").rstrip(".")
+
+
+def bitrate_amount(live, average="", unit="Mb/s"):
+    """The bare number of :func:`bitrate`, for a bar or a graph.
+
+    ``live`` is Kodi's own ``Player.Process(videolivebitrate)`` label, which
+    measures what is being decoded right now; ``average`` is the whole
+    file's rate as the library recorded it, used while nothing live is
+    published (a stream just started, a build that does not measure it).
+    """
+    bits = _bitrate_bits(live)
+    if bits is None:
+        bits = _bitrate_bits(average)
+    if not bits or bits <= 0:
+        return ""
+    scale = BITRATE_UNITS.get(_clean(unit)[:1].lower()) or 1.0
+    return _trim_bitrate(bits / scale)
+
+
+def bitrate(live, average="", unit="Mb/s"):
+    """The whole bitrate line: ``24.5 Mb/s``, ``1536 Kb/s``.
+
+    Both sources are converted into ``unit``, so a layout shows one scale
+    instead of whatever the box happened to pick for the label.
+    """
+    amount = bitrate_amount(live, average, unit)
+    return "%s %s" % (amount, _clean(unit)) if amount else ""

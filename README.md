@@ -59,7 +59,10 @@ An AX206 panel should light up immediately. For a Samsung frame, set
 * **Media details in plain words.** Kodi reports `hevc`, `truehd_atmos` and
   `8`; the display shows H.265, Dolby TrueHD Atmos and 7.1, along with the
   dynamic range (Dolby Vision, HDR10+, HDR10, HLG, SDR) and a resolution that
-  really reads `2160p` rather than `4K`. The tables follow
+  really reads `2160p` rather than `4K`, the live video and audio bitrate, and
+  the clearlogo of the film, the series or the artist. On CoreELEC, with the
+  optional `script.module.sidedata` installed, also the Dolby Vision profile
+  and its enhancement layer: `Dolby Vision Profile 7.6 FEL`. The tables follow
   [TinyPPI](https://github.com/CE-Repo/script.tinyppi), so a box running both
   add-ons names the same film the same way.
 * **Multiple pages** with conditions and automatic rotation — music, video,

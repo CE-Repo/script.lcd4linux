@@ -24,6 +24,7 @@ the attached panel, so `default-800x480.json` on an SPF-87H and
 | File | What it shows |
 |---|---|
 | `default.json` | Four pages: music with cover, video with poster, clock, system |
+| | The video page shows the clearlogo in place of the title where there is one (for a film — a series keeps the episode title above its show name), and names the stream below it: resolution, codec, dynamic range, the Dolby Vision profile with its enhancement layer, and the live video and audio bitrate |
 | `bigcover.json` | Full-screen cover with an info bar along the bottom |
 | `minimal.json` | Large type, segmented bar, no images — the cheapest layout |
 | `dashboard.json` | Analogue clock, CPU, temperature, RAM and a history graph |
@@ -436,16 +437,22 @@ in colours and in conditions.
 | `title`, `artist`, `albumartist`, `album`, `genre`, `year` | Metadata |
 | `track`, `discnumber`, `rating` | Music details |
 | `showtitle`, `season`, `episode`, `episodelabel`, `plot` | TV details — `episodelabel` gives `S02E05` |
-| `thumb` / `cover` / `art`, `poster`, `fanart` | Artwork |
+| `thumb` / `cover` / `art`, `poster`, `fanart`, `clearlogo` | Artwork — `clearlogo` is the transparent logo of the film, the series or the artist |
 | `codec` | Codec of the running stream, spelled out: `H.265`, `FLAC` |
 | `videocodec`, `audiocodec` | Picture and sound separately |
 | `spatial` | Object audio: `Atmos`, `DTS:X`, `IMAX Enhanced`, else empty |
 | `audio` | The whole audio line: `Dolby TrueHD Atmos 7.1` |
 | `channels` | Speaker layout: `2.0`, `5.1`, `7.1` |
 | `channels_count` | Bare count: `6` |
-| `bitrate`, `samplerate` | Bitrate and sample rate |
+| `bitrate`, `samplerate` | Bitrate and sample rate of a music track, as Kodi reports them |
+| `videobitrate`, `audiobitrate` | What is being decoded right now: `24.5 Mb/s`, `1536 Kb/s` — the file's average while nothing live is published |
+| `videobitrate_mbps`, `audiobitrate_kbps` | The same without the unit, for a `progress` bar or a `graph` |
 | `hdr` | `Dolby Vision`, `HDR10+`, `HDR10`, `HLG`, `SDR` |
 | `hdr_short` | The same, abbreviated for a narrow field: `DV` |
+| `dv` | The whole Dolby Vision line: `Dolby Vision Profile 7.6 FEL` |
+| `dvprofile` | The profile alone: `7.6` |
+| `dvprofile_long` | The profile spelled out, without the format name: `Profile 7.6` |
+| `dvel` | The enhancement layer: `FEL`, `MEL`, or empty for a single layer stream |
 | `resolution` | `2160p`, `1080p`, `576i` — scan type included |
 | `resolution_long` | `3840x2160p` |
 | `resolutionname` | `4K UHD`, `Full HD`, `HD`, `SD` |
@@ -460,6 +467,13 @@ in colours and in conditions.
 | `speed`, `seeking` | Play speed, seeking |
 
 Anything not in the list is read as the Kodi InfoLabel `Player.<name>`.
+
+`dvprofile` and `dvel` read the Dolby Vision metadata out of the bitstream
+itself, which needs CoreELEC 22 on Amlogic (it publishes the raw side data of
+the stream being decoded) and the optional add-on `script.module.sidedata` to
+parse it. Without the module the profile still comes from Kodi's own
+`VideoPlayer.HdrDetail` where the demuxer knew one, and `dvel` stays empty;
+nothing else is affected, and `hdr` names Dolby Vision either way.
 
 **System — `system.*`**
 

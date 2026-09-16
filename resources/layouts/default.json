@@ -98,16 +98,21 @@
          "src": "${player.poster}", "fallback": "${player.thumb}",
          "fit": "cover", "radius": 8},
 
+        {"type": "image", "x": 164, "y": 18, "w": 298, "h": 62,
+         "src": "${player.clearlogo}", "fit": "contain", "align": "left",
+         "condition": "${player.clearlogo} + !${player.showtitle}"},
+
         {"type": "text", "x": 164, "y": 20, "w": 298, "h": 60,
          "text": "${player.title}", "size": 24, "bold": true,
-         "wrap": true, "lines": 2, "color": "#ffffff"},
+         "wrap": true, "lines": 2, "color": "#ffffff",
+         "condition": "!${player.clearlogo} | ${player.showtitle}"},
 
         {"type": "text", "x": 164, "y": 84, "w": 298, "h": 24,
          "text": "${player.showtitle}", "size": 17, "color": "accent",
          "scroll": "bounce", "condition": "${player.showtitle}"},
 
         {"type": "text", "x": 164, "y": 110, "w": 298, "h": 22,
-         "text": "${player.episodelabel|prefix:  |strip}${player.year|prefix: · }${player.genre|prefix: · |trunc:18}",
+         "text": "${player.episodelabel|suffix: · }${player.year}${player.genre|prefix: · |trunc:18}",
          "size": 15, "color": "#8b93a8"},
 
         {"type": "rect", "x": 164, "y": 140, "w": 60, "h": 22, "radius": 4,
@@ -129,9 +134,20 @@
          "text": "${player.hdr_short}", "size": 13,
          "align": "center", "valign": "middle", "color": "#9aa3b5"},
 
-        {"type": "text", "x": 164, "y": 176, "w": 298, "h": 40,
+        {"type": "rect", "x": 378, "y": 140, "w": 84, "h": 22, "radius": 4,
+         "color": "#1e2330", "border": 1, "bordercolor": "#2c3344",
+         "condition": "${player.dvprofile}"},
+        {"type": "text", "x": 378, "y": 141, "w": 84, "h": 20,
+         "text": "${player.dvprofile}${player.dvel|prefix: }", "size": 13,
+         "align": "center", "valign": "middle", "color": "#9aa3b5"},
+
+        {"type": "text", "x": 164, "y": 168, "w": 298, "h": 18,
+         "text": "${player.videobitrate}${player.audiobitrate|prefix:  ·  }",
+         "size": 12, "color": "#6f7891"},
+
+        {"type": "text", "x": 164, "y": 190, "w": 298, "h": 20,
          "text": "${player.plot}", "size": 13, "color": "#5f6880",
-         "wrap": true, "lines": 2},
+         "wrap": true, "lines": 1},
 
         {"type": "icon", "x": 18, "y": 230, "w": 20, "h": 20,
          "icon": "play", "color": "accent", "condition": "playing"},

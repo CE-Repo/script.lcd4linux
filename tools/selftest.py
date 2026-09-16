@@ -1165,6 +1165,26 @@ def test_media_info():
     check(mediainfo.frame_rate("25.000") == "25", "a whole rate loses its zeros")
     check(mediainfo.frame_rate("") == "", "an unknown rate is empty")
 
+    # Kodi's live bitrate labels are localised and carry their own unit, so
+    # the same stream reads "24.50 Mb/s" or "24,50 Mb/s" depending on the
+    # box; both have to end up as one number on one scale.
+    check(mediainfo.bitrate("24,50 Mb/s") == "24.5 Mb/s",
+          "a decimal comma is still a decimal point")
+    check(mediainfo.bitrate("24.50 Mb/s") == "24.5 Mb/s",
+          "and a decimal point stays one")
+    check(mediainfo.bitrate("1,536 Kb/s", "", "Kb/s") == "1536 Kb/s",
+          "a thousands separator is not a decimal point")
+    check(mediainfo.bitrate("1.536 Kb/s", "", "Kb/s") == "1536 Kb/s",
+          "whichever character the box spells it with")
+    check(mediainfo.bitrate("4448 Kb/s") == "4.45 Mb/s",
+          "a label in another unit is converted, not repeated")
+    check(mediainfo.bitrate("", "36400") == "36.4 Mb/s",
+          "the average is read as kb/s, the way Kodi reports it")
+    check(mediainfo.bitrate("", "") == "" and mediainfo.bitrate("0 Mb/s") == "",
+          "nothing measured, nothing shown")
+    check(mediainfo.bitrate_amount("24,50 Mb/s") == "24.5",
+          "the bare number carries no unit, for a bar or a graph")
+
     # And the whole way through the provider the layouts actually read.
     film = DemoProvider(1, 97.0, "playing")
     film.begin_frame()
@@ -1179,7 +1199,15 @@ def test_media_info():
                           ("player.resolution_long", "3840x2160p"),
                           ("player.resolutionname", "4K UHD"),
                           ("player.fps", "23.976"),
-                          ("player.video", "H.265 2160p Dolby Vision")):
+                          ("player.video", "H.265 2160p Dolby Vision"),
+                          ("player.dv", "Dolby Vision Profile 7.6 FEL"),
+                          ("player.dvprofile", "7.6"),
+                          ("player.dvprofile_long", "Profile 7.6"),
+                          ("player.dvel", "FEL"),
+                          ("player.videobitrate", "36.4 Mb/s"),
+                          ("player.videobitrate_mbps", "36.4"),
+                          ("player.audiobitrate", "4448 Kb/s"),
+                          ("player.audiobitrate_kbps", "4448")):
         actual = film.value(key)
         check(actual == expected, "%s is %r" % (key, actual))
     check(film.value("player.codec_raw") == "hevc",
@@ -1191,6 +1219,17 @@ def test_media_info():
     check(music.value("player.channels") == "2.0", "and stereo is 2.0")
     check(music.value("player.hdr") == "" and music.value("player.resolution") == "",
           "a music track claims no picture")
+    check(music.value("player.dv") == "" and music.value("player.dvel") == "",
+          "and no Dolby Vision either")
+    check(music.value("player.audiobitrate") == "1006 Kb/s",
+          "but it does have a rate, read off the music player")
+
+    series = DemoProvider(2, 97.0, "playing")
+    series.begin_frame()
+    check(series.value("player.dv") == "",
+          "a stream that is not Dolby Vision names no profile")
+    check(series.value("player.videobitrate") == "9.8 Mb/s",
+          "and still names its picture rate")
 
     # The browser editor has to offer the new fields, or nobody finds them.
     from lcd4linux import webschema
@@ -1221,6 +1260,110 @@ def test_media_info():
     surprises = [key for key in unknown if key not in allowed]
     check(not surprises, "every offered player field resolves%s"
           % ("" if not surprises else ": empty " + ", ".join(surprises)))
+
+
+def test_dolby_vision():
+    """The profile has to come off the bitstream, and cost one parse a title.
+
+    The panel is redrawn four times a second; a profile cannot change while
+    a film runs, so the reading is taken once and held, and the parser is
+    only asked again while something is still missing.
+    """
+    print("dolby vision")
+    from lcd4linux import dvinfo
+
+    labels = {}
+    playing = {"video": True}
+    now = {"t": 0.0}
+
+    def info(name):
+        return labels.get(name, "")
+
+    def condition(name):
+        return playing["video"] if name == "Player.HasVideo" else False
+
+    def watcher(result):
+        """A stand-in parser that counts how often it was asked."""
+        calls = []
+
+        def parse(raw):
+            calls.append(raw)
+            return result
+        return calls, parse
+
+    original = dvinfo._parse_sidedata
+    try:
+        # Nothing playing: nothing to say, whatever the labels still hold.
+        labels["VideoPlayer.HDRType"] = "dolbyvision"
+        playing["video"] = False
+        dv = dvinfo.DolbyVision(info, condition, lambda: now["t"])
+        check(dv.fields() == dvinfo.EMPTY, "a stopped player names no profile")
+
+        # Without the parser module Kodi's own detail is all there is, and
+        # there is nothing left to wait for once it has been read.
+        dvinfo._parse_sidedata = None
+        playing["video"] = True
+        labels["Player.FilenameAndPath"] = "/movies/one.mkv"
+        labels["VideoPlayer.HdrDetail"] = "8.1"
+        dv = dvinfo.DolbyVision(info, condition, lambda: now["t"])
+        fields = dv.fields()
+        check(fields["profile"] == "8.1" and fields["el"] == "",
+              "the profile falls back to VideoPlayer.HdrDetail")
+        check(fields["line"] == "Dolby Vision Profile 8.1",
+              "and reads as a whole line")
+        check(dv._settled, "with no enhancement layer to wait for")
+
+        # An unrelated detail must not be mistaken for a profile.
+        labels["VideoPlayer.HdrDetail"] = "Dolby Vision"
+        dv = dvinfo.DolbyVision(info, condition, lambda: now["t"])
+        check(dv.fields()["line"] == "Dolby Vision",
+              "and a detail that is not a profile number is not shown as one")
+
+        # With the parser, the configuration record and the RPU header name
+        # the profile and the enhancement layer exactly.
+        parsed = {"config": {"profile": 7, "compat_id": 6, "el_present": True},
+                  "rpu": {"header": {"el_type": "FEL"}}}
+        calls, dvinfo._parse_sidedata = watcher(parsed)
+        labels["Player.FilenameAndPath"] = "/movies/two.mkv"
+        labels["Player.Process(video.sidedata)"] = "{}"
+        labels["VideoPlayer.HdrDetail"] = ""
+        dv = dvinfo.DolbyVision(info, condition, lambda: now["t"])
+        fields = dv.fields()
+        check(fields["line"] == "Dolby Vision Profile 7.6 FEL",
+              "the side data names profile and layer: %r" % fields["line"])
+        check(fields["profile"] == "7.6" and fields["el"] == "FEL",
+              "each of them reachable on its own")
+        check(fields["label"] == "Profile 7.6",
+              "and the profile spelled out without the format name")
+        check(dvinfo.profile_label("") == "",
+              "an unknown profile is not spelled out as 'Profile '")
+
+        # And that is the only parse the whole title costs.
+        now["t"] += 10.0
+        for _ in range(5):
+            dv.fields()
+        check(len(calls) == 1, "one parse a title, not one a frame (%d)"
+              % len(calls))
+
+        # A new title starts over.
+        labels["Player.FilenameAndPath"] = "/movies/three.mkv"
+        dv.fields()
+        check(len(calls) == 2, "but the next title is read again")
+
+        # A stream nothing calls Dolby Vision is left alone after a few
+        # looks - the first frames arrive before the labels are filled in.
+        calls, dvinfo._parse_sidedata = watcher({})
+        labels["VideoPlayer.HDRType"] = "hdr10"
+        labels["Player.FilenameAndPath"] = "/movies/four.mkv"
+        dv = dvinfo.DolbyVision(info, condition, lambda: now["t"])
+        for _ in range(dvinfo.MAX_ATTEMPTS + 3):
+            now["t"] += dvinfo.PARSE_INTERVAL
+            check_quiet = dv.fields()
+        check(check_quiet == dvinfo.EMPTY, "an HDR10 stream names no profile")
+        check(len(calls) == dvinfo.MAX_ATTEMPTS,
+              "and is not parsed for the rest of the film (%d)" % len(calls))
+    finally:
+        dvinfo._parse_sidedata = original
 
 
 def test_pixel_conversion():
@@ -1698,7 +1841,7 @@ def _png_size(data):
 def main():
     print("script.lcd4linux self test\n")
     for test in (test_encoding, test_fonts, test_images, test_tokens,
-                 test_media_info,
+                 test_media_info, test_dolby_vision,
                  test_pixel_conversion, test_frame_cache, test_image_cache,
                  test_jpeg_encoder, test_protocol, test_target_from_settings,
                  test_samsung_spf, test_late_display, test_brightness,

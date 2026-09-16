@@ -13,6 +13,8 @@ import time
 
 from . import localize
 from . import mediainfo
+from . import dvinfo
+from .dvinfo import DolbyVision
 from .logger import debug
 
 try:
@@ -318,6 +320,7 @@ class KodiProvider(BaseProvider):
         self.addon_version = addon_version
         self.player = xbmc.Player() if xbmc is not None else None
         self.cpu = CpuSampler()
+        self.dolby_vision = DolbyVision(self._info, self._kodi_condition)
         self._library_cache = {}
         self._library_time = 0.0
 
@@ -402,6 +405,11 @@ class KodiProvider(BaseProvider):
     def _raw_channels(self):
         return (self._info("MusicPlayer.Channels")
                 or self._info("VideoPlayer.AudioChannels"))
+
+    def _raw_audio_bitrate(self):
+        """The sound track's average rate in kb/s, from either player."""
+        return (self._info("VideoPlayer.AudioBitrate")
+                or self._info("MusicPlayer.BitRate"))
 
     def _media_type(self):
         """``video``/``audio``/``picture``/``none``, resolved once per frame."""
@@ -539,6 +547,15 @@ class KodiProvider(BaseProvider):
             return self._info("Player.Art(fanart)")
         if name == "poster":
             return self._info("Player.Art(poster)")
+        if name == "clearlogo":
+            # The logo of the film, the series or the artist, whichever of
+            # them is playing; Kodi keeps each under its own art key and
+            # fills only the one that applies.
+            return (self._info("Player.Art(clearlogo)")
+                    or self._info("Player.Art(tvshow.clearlogo)")
+                    or self._info("Player.Art(artist.clearlogo)")
+                    or self._info("VideoPlayer.Art(clearlogo)")
+                    or self._info("MusicPlayer.Art(clearlogo)"))
         if name == "filename":
             return self._info("Player.Filename")
         if name == "path":
@@ -575,8 +592,37 @@ class KodiProvider(BaseProvider):
                 if media == "video" else ""
         if name == "hdr_raw":
             return self._info("VideoPlayer.HDRType")
+        # -- Dolby Vision -------------------------------------------------
+        # Which profile carries the Dolby Vision, and whether its
+        # enhancement layer is a full or a minimal one; see dvinfo.
+        if name == "dv":
+            return self.dolby_vision.value("line")
+        if name == "dvprofile":
+            return self.dolby_vision.value("profile")
+        if name == "dvprofile_long":
+            return self.dolby_vision.value("label")
+        if name in ("dvel", "dvlayer"):
+            return self.dolby_vision.value("el")
         if name == "bitrate":
             return self._info("MusicPlayer.BitRate")
+        # -- bitrates -----------------------------------------------------
+        # What is being decoded right now, falling back to the file's
+        # average while the player publishes nothing live.
+        if name == "videobitrate":
+            return mediainfo.bitrate(self._process("videolivebitrate"),
+                                     self._info("VideoPlayer.VideoBitrate"),
+                                     "Mb/s")
+        if name == "videobitrate_mbps":
+            return mediainfo.bitrate_amount(
+                self._process("videolivebitrate"),
+                self._info("VideoPlayer.VideoBitrate"), "Mb/s")
+        if name == "audiobitrate":
+            return mediainfo.bitrate(self._process("audiolivebitrate"),
+                                     self._raw_audio_bitrate(), "Kb/s")
+        if name == "audiobitrate_kbps":
+            return mediainfo.bitrate_amount(
+                self._process("audiolivebitrate"),
+                self._raw_audio_bitrate(), "Kb/s")
         if name == "samplerate":
             return self._info("MusicPlayer.SampleRate")
         if name == "channels":
@@ -750,6 +796,20 @@ class KodiProvider(BaseProvider):
         return self._info("Window." + name)
 
 
+def _demo_clearlogo(name):
+    """The bundled wordmark that stands in for a clearlogo in a preview.
+
+    One per demo track: the artist's for the album, the film's and the
+    series' for the two video tracks, so a preview never shows a logo
+    belonging to something else.
+    """
+    if not name:
+        return ""
+    from .settings import addon_path
+    path = addon_path("resources", "media", name)
+    return path if os.path.isfile(path) else ""
+
+
 class DemoProvider(BaseProvider):
     """Fake data so layouts can be designed without Kodi or hardware."""
 
@@ -761,6 +821,7 @@ class DemoProvider(BaseProvider):
             "title": "Enjoy the Silence", "artist": "Depeche Mode",
             "album": "Violator", "year": "1990", "genre": "Synth-Pop",
             "albumartist": "Depeche Mode",
+            "clearlogo": "demo-clearlogo-music.png",
             "duration": 372, "mediatype": "audio", "track": "4",
             "codec": "flac", "samplerate": "44100", "bitrate": "1006",
             "channels": "2", "audiocodec": "flac",
@@ -773,6 +834,11 @@ class DemoProvider(BaseProvider):
             "width": "3840", "height": "2160", "fps": "23.976023",
             "hdr": "dolbyvision", "channels": "8", "aspect": "2.39",
             "showtitle": "", "season": "", "episode": "",
+            # A dual layer disc transfer, the case the panel has the most
+            # to say about: profile 7 with a full enhancement layer.
+            "dvprofile": "7.6", "dvel": "FEL",
+            "videobitrate": "36400", "audiobitrate": "4448",
+            "clearlogo": "demo-clearlogo-movie.png",
         },
         {
             "title": "Winter Is Coming", "artist": "",
@@ -782,16 +848,23 @@ class DemoProvider(BaseProvider):
             "width": "1920", "height": "1080", "fps": "25",
             "hdr": "", "channels": "6", "aspect": "1.78",
             "showtitle": "Game of Thrones", "season": "1", "episode": "1",
+            "videobitrate": "9800", "audiobitrate": "1536",
+            "clearlogo": "demo-clearlogo-series.png",
         },
     )
 
     def __init__(self, track=0, elapsed=None, state="playing", art="",
-                 fanart=""):
+                 fanart="", clearlogo=None):
         BaseProvider.__init__(self)
         self.track = self.TRACKS[track % len(self.TRACKS)]
         self.state = state
         self.art = art
         self.fanart = fanart
+        # Every caller wants the bundled wordmark of the track it asked
+        # for, so it is found here instead of being passed in from four
+        # places; a caller with a logo of its own still wins.
+        self.clearlogo = (_demo_clearlogo(self.track.get("clearlogo", ""))
+                          if clearlogo is None else clearlogo)
         self._start = time.time()
         self._fixed_elapsed = elapsed
         self.cpu = CpuSampler()
@@ -816,6 +889,11 @@ class DemoProvider(BaseProvider):
         height = track.get("height", "")
         hdr = track.get("hdr", "")
         resolution = mediainfo.resolution(height) if video else ""
+        video_rate = track.get("videobitrate", "") if video else ""
+        audio_rate = track.get("audiobitrate", "") or track.get("bitrate", "")
+        dv_profile = track.get("dvprofile", "") if video else ""
+        dv_el = track.get("dvel", "") if video else ""
+        dolby_vision = mediainfo.hdr_type(hdr) == "Dolby Vision" if video else False
         return {
             "codec": (mediainfo.video_codec(codec) if video
                       else mediainfo.audio_codec(codec)),
@@ -832,6 +910,16 @@ class DemoProvider(BaseProvider):
             "hdr_short": mediainfo.hdr_short(hdr) if video else "",
             "hdrshort": mediainfo.hdr_short(hdr) if video else "",
             "hdr_raw": hdr,
+            "dv": dvinfo.describe(dv_profile, dv_el) if dolby_vision else "",
+            "dvprofile": dv_profile, "dvel": dv_el, "dvlayer": dv_el,
+            "dvprofile_long": (dvinfo.profile_label(dv_profile)
+                               if dolby_vision else ""),
+            "videobitrate": mediainfo.bitrate("", video_rate, "Mb/s"),
+            "videobitrate_mbps": mediainfo.bitrate_amount("", video_rate,
+                                                          "Mb/s"),
+            "audiobitrate": mediainfo.bitrate("", audio_rate, "Kb/s"),
+            "audiobitrate_kbps": mediainfo.bitrate_amount("", audio_rate,
+                                                          "Kb/s"),
             "resolution": resolution,
             "resolutionname": mediainfo.resolution_name(height) if video else "",
             "resolution_long": ("%sx%s" % (track.get("width", ""), height)
@@ -876,6 +964,7 @@ class DemoProvider(BaseProvider):
                 "percent": "%.2f" % (100.0 * elapsed / total),
                 "thumb": self.art, "cover": self.art, "art": self.art,
                 "poster": self.art, "fanart": self.fanart or self.art,
+                "clearlogo": self.clearlogo,
                 "next": "Personal Jesus", "nextartist": "Depeche Mode",
                 "playlistposition": "4", "playlistlength": "12",
                 "speed": "1", "rating": "8.4",

@@ -87,9 +87,14 @@
          "src": "${player.poster}", "fallback": "${player.thumb}",
          "fit": "cover", "radius": 10},
 
+        {"type": "image", "x": 256, "y": 28, "w": 516, "h": 94,
+         "src": "${player.clearlogo}", "fit": "contain", "align": "left",
+         "condition": "${player.clearlogo} + !${player.showtitle}"},
+
         {"type": "text", "x": 256, "y": 30, "w": 516, "h": 90,
          "text": "${player.title}", "size": 36, "bold": true,
-         "wrap": true, "lines": 2, "color": "#ffffff"},
+         "wrap": true, "lines": 2, "color": "#ffffff",
+         "condition": "!${player.clearlogo} | ${player.showtitle}"},
 
         {"type": "text", "x": 256, "y": 128, "w": 516, "h": 32,
          "text": "${player.showtitle}", "size": 24, "color": "accent",
@@ -117,7 +122,18 @@
          "text": "${player.hdr_short}", "size": 16,
          "align": "center", "valign": "middle", "color": "#9aa3b5"},
 
-        {"type": "text", "x": 256, "y": 248, "w": 516, "h": 76,
+        {"type": "rect", "x": 544, "y": 204, "w": 140, "h": 28, "radius": 5,
+         "color": "#1e2330", "border": 1, "bordercolor": "#2c3344",
+         "condition": "${player.dvprofile}"},
+        {"type": "text", "x": 544, "y": 205, "w": 140, "h": 26,
+         "text": "${player.dvprofile}${player.dvel|prefix: }", "size": 16,
+         "align": "center", "valign": "middle", "color": "#9aa3b5"},
+
+        {"type": "text", "x": 256, "y": 240, "w": 516, "h": 24,
+         "text": "${player.videobitrate}${player.audiobitrate|prefix:  ·  }",
+         "size": 16, "color": "#6f7891"},
+
+        {"type": "text", "x": 256, "y": 270, "w": 516, "h": 66,
          "text": "${player.plot}", "size": 16, "color": "#5f6880",
          "wrap": true, "lines": 3},
 
