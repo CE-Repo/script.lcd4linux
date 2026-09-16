@@ -16,118 +16,13 @@
   <extension point="xbmc.addon.metadata">
     <summary lang="en_GB">Show what Kodi is playing on an AX206 or Samsung SPF USB display, or on a tablet</summary>
     <summary lang="de_DE">Zeigt die Kodi-Wiedergabe auf einem AX206-/Samsung-SPF-USB-Display oder einem Tablet an</summary>
-    <description lang="en_GB">Drives two families of USB display: the 3.5" 480x320 panels built around the AX206 controller - sold as AIDA64 / SmartDisplay screens and known from the dpf-ax and lcd4linux projects - and the Samsung SPF photo frames (SPF-72H, SPF-87H, SPF-107H and relatives) in their "mini monitor" mode. Without a USB panel it also drives a network display: any browser in full screen, typically an old tablet on the wall.
-
-The service shows what Kodi is playing: title, artist, album, cover art, a progress bar with elapsed and remaining time, plus clock, system load, temperature and anything else Kodi knows. Everything on screen is described by a JSON layout file, so pages, fonts, colours, positions and the data behind them can be changed freely. Any Kodi InfoLabel can be placed on the display.
-
-No extra Python modules are needed: USB access uses libusb through ctypes, and the PNG/JPEG decoders and font renderer are part of the add-on.</description>
-    <description lang="de_DE">Steuert zwei Familien von USB-Displays an: die 3,5" 480x320 LCDs mit AX206-Controller - als AIDA64-/SmartDisplay-Bildschirme verkauft und aus den Projekten dpf-ax und lcd4linux bekannt - sowie die Samsung-SPF-Bilderrahmen (SPF-72H, SPF-87H, SPF-107H und Verwandte) in deren "Mini-Monitor"-Modus. Auch ohne USB-Panel: als Netzwerkdisplay liefert das Add-on das Bild an jeden Browser im Vollbild, etwa ein altes Tablet an der Wand.
-
-Der Dienst zeigt die laufende Wiedergabe: Titel, Interpret, Album, Cover, einen Fortschrittsbalken mit gespielter und verbleibender Zeit, dazu Uhr, Systemauslastung, Temperatur und alles weitere, was Kodi kennt. Der gesamte Bildschirminhalt wird über JSON-Layoutdateien beschrieben, sodass Seiten, Schriften, Farben, Positionen und Datenquellen frei angepasst werden können. Jedes Kodi-InfoLabel lässt sich anzeigen.
-
-Zusätzliche Python-Module werden nicht benötigt: Der USB-Zugriff läuft über libusb via ctypes, PNG-/JPEG-Dekoder und Schriftrenderer sind Teil des Add-ons.</description>
+    <description lang="en_GB">Drives two families of USB display: the 3.5" 480x320 panels built around the AX206 controller - sold as AIDA64 / SmartDisplay screens and known from the dpf-ax and lcd4linux projects - and the Samsung SPF photo frames (SPF-72H, SPF-87H, SPF-107H and relatives) in their "mini monitor" mode. Without a USB panel it also drives a network display: any browser in full screen, typically an old tablet on the wall. The service shows what Kodi is playing: title, artist, album, cover art, a progress bar with elapsed and remaining time, plus clock, system load, temperature and anything else Kodi knows. Everything on screen is described by a JSON layout file, so pages, fonts, colours, positions and the data behind them can be changed freely. Any Kodi InfoLabel can be placed on the display. No extra Python modules are needed: USB access uses libusb through ctypes, and the PNG/JPEG decoders and font renderer are part of the add-on.</description>
+    <description lang="de_DE">Steuert zwei Familien von USB-Displays an: die 3,5" 480x320 LCDs mit AX206-Controller - als AIDA64-/SmartDisplay-Bildschirme verkauft und aus den Projekten dpf-ax und lcd4linux bekannt - sowie die Samsung-SPF-Bilderrahmen (SPF-72H, SPF-87H, SPF-107H und Verwandte) in deren "Mini-Monitor"-Modus. Auch ohne USB-Panel: als Netzwerkdisplay liefert das Add-on das Bild an jeden Browser im Vollbild, etwa ein altes Tablet an der Wand. Der Dienst zeigt die laufende Wiedergabe: Titel, Interpret, Album, Cover, einen Fortschrittsbalken mit gespielter und verbleibender Zeit, dazu Uhr, Systemauslastung, Temperatur und alles weitere, was Kodi kennt. Der gesamte Bildschirminhalt wird über JSON-Layoutdateien beschrieben, sodass Seiten, Schriften, Farben, Positionen und Datenquellen frei angepasst werden können. Jedes Kodi-InfoLabel lässt sich anzeigen. Zusätzliche Python-Module werden nicht benötigt: Der USB-Zugriff läuft über libusb via ctypes, PNG-/JPEG-Dekoder und Schriftrenderer sind Teil des Add-ons.</description>
     <disclaimer lang="en_GB">Requires an AX206 based USB display with the dpf-ax firmware (USB ID 1908:0102) or a Samsung SPF photo frame.</disclaimer>
     <disclaimer lang="de_DE">Benötigt ein AX206-basiertes USB-Display mit dpf-ax-Firmware (USB-ID 1908:0102) oder einen Samsung-SPF-Bilderrahmen.</disclaimer>
     <platform>linux</platform>
     <license>MIT</license>
     <source>https://github.com/CE-Repo/script.lcd4linux</source>
-    <news>v1.10.2
-- The first picture after a cold start arrives seconds earlier.  A layout
-  that asks for a font size which is not bundled had every character of that
-  font resampled before the first frame could be drawn - some 360 glyphs per
-  font in pure Python, which on a slow box was long enough to look like the
-  add-on had not started at all.  Characters are now resampled the first time
-  they are actually drawn
-- The resampler itself is about four times faster, so the few characters that
-  do get scaled cost far less than they used to
-- The log records how long the first picture took, so a slow start can be
-  told apart from a display that is not answering
-
-v1.10.1
-- A display that needs longer to boot than Kodi does - a Samsung frame takes
-  about half a minute - is now picked up by itself.  It used to stay on its
-  USB screen until the service was restarted by hand
-- While the box is still starting up the display is looked for every few
-  seconds instead of once per reconnect interval, and the warning about a
-  missing display only appears once that grace period is over
-- A frame that answers the first switch request but comes back as a USB
-  drive anyway, because it was not done booting, is simply asked again
-
-v1.10.0
-- Layouts for 1024x600: every bundled design ships a third size, so the 10
-  inch Samsung frames (SPF-105P, SPF-107H, SPF-1000P) get a layout drawn for
-  their panel instead of an 800x480 one stretched over it
-- The layout setting still stores the name without a size, so an existing
-  setup keeps working and a 10 inch frame simply gets the larger file
-- Width and height can be set in steps of 8 pixels, which is what makes 600
-  selectable for the network display
-
-v1.8.0
-- New output mode "Network display": the frames are served over HTTP, so any
-  browser in full screen can be the display - a wall mounted tablet, a phone
-- The page at /display is a plain &lt;img&gt; fed by an MJPEG stream, so it
-  works even on the old browser of an Android 4.x tablet
-- The web interface password is accepted as ?key=... there, because a kiosk
-  browser cannot answer a Basic auth challenge for a picture
-
-v1.7.0
-- A layout editor in the browser: place pages and widgets with the mouse at
-  http://&lt;box&gt;:8050/, with a preview drawn by the add-on's own renderer
-- Layouts can be saved and sent to the panel straight from the editor
-- New settings for the editor: on/off, port, reach and an optional password
-
-v1.6.0
-- Layouts are picked from a list of preview pictures, and the settings stay
-  open while choosing
-
-v1.5.1
-- Samsung model picked from a list of the known frames, AX206-only settings
-  hidden while a Samsung frame is selected
-
-v1.5.0
-- The display now follows Kodi's language, layouts can use $LOCALIZE[id]
-
-v1.4.0
-- Dims while nothing is playing, brightness for Samsung frames, AX206
-  brightness fix
-
-v1.3.1
-- Overview images of every bundled layout, and the tool that generates them
-
-v1.3.0
-- Eight more layouts: light, terminal, neon, vinyl, nextup, weather, library
-  and a portrait layout for a rotated display, each in both display sizes
-- A wide flat line widget now draws a horizontal rule of that height
-
-v1.2.0
-- Five layouts built for reading from a distance (xl-player, xl-remaining,
-  xl-clock, xl-system, cover-full), in both display sizes
-- Larger bundled fonts, a layout rescaling tool, and fixes for the reported
-  IP address and free disk space
-
-v1.1.1
-- Start/stop shell commands, so a smart plug can power a Samsung frame with
-  the box
-
-v1.1.0
-- Support for Samsung SPF photo frames (SPF-72H and relatives, 800x480 and
-  larger) including the switch out of mass storage mode
-- Built-in JPEG encoder that re-encodes only the MCU rows that changed
-- Layouts for 800x480 panels, picked automatically by display size
-
-v1.0.1
-- Fixed the service failing to start on CoreELEC: text files are now read as
-  UTF-8 instead of the C locale's ASCII
-- Fixed the configured USB device IDs not reaching the driver, which made the
-  add-on report "no AX206 display found" even with a panel attached
-- Fixed the "User layout folder" setting being rejected by Kodi when left empty
-
-v1.0.0
-- First release
-- AX206 USB LCD support with partial screen updates
-- JSON layout engine with pages, conditions and Kodi InfoLabel access
-- Bundled layouts: Default, Big Cover, Minimal, Dashboard
-- Built-in PNG/JPEG decoding and anti-aliased bitmap fonts</news>
     <assets>
       <icon>icon.png</icon>
       <fanart>fanart.jpg</fanart>
