@@ -756,6 +756,34 @@ msgctxt "#32440"
 msgid "remain   "
 msgstr ""
 
+msgctxt "#32441"
+msgid "Now"
+msgstr ""
+
+msgctxt "#32442"
+msgid "Ends"
+msgstr ""
+
+msgctxt "#32443"
+msgid "Elapsed"
+msgstr ""
+
+msgctxt "#32444"
+msgid "Length"
+msgstr ""
+
+msgctxt "#32445"
+msgid "Picture"
+msgstr ""
+
+msgctxt "#32446"
+msgid "Sound"
+msgstr ""
+
+msgctxt "#32447"
+msgid "Layer"
+msgstr ""
+
 msgctxt "#32450"
 msgid "Monday"
 msgstr ""
@@ -950,6 +978,18 @@ msgstr ""
 
 msgctxt "#32510"
 msgid "XL remaining"
+msgstr ""
+
+msgctxt "#32511"
+msgid "XL times"
+msgstr ""
+
+msgctxt "#32512"
+msgid "XL badges"
+msgstr ""
+
+msgctxt "#32513"
+msgid "XL HDR & sound"
 msgstr ""
 
 msgctxt "#32520"

@@ -756,6 +756,34 @@ msgctxt "#32440"
 msgid "remain   "
 msgstr "restzeit "
 
+msgctxt "#32441"
+msgid "Now"
+msgstr "Jetzt"
+
+msgctxt "#32442"
+msgid "Ends"
+msgstr "Endet"
+
+msgctxt "#32443"
+msgid "Elapsed"
+msgstr "Gespielt"
+
+msgctxt "#32444"
+msgid "Length"
+msgstr "Länge"
+
+msgctxt "#32445"
+msgid "Picture"
+msgstr "Bild"
+
+msgctxt "#32446"
+msgid "Sound"
+msgstr "Ton"
+
+msgctxt "#32447"
+msgid "Layer"
+msgstr "Ebene"
+
 msgctxt "#32450"
 msgid "Monday"
 msgstr "Montag"
@@ -951,6 +979,18 @@ msgstr "XL Wiedergabe"
 msgctxt "#32510"
 msgid "XL remaining"
 msgstr "XL Restzeit"
+
+msgctxt "#32511"
+msgid "XL times"
+msgstr "XL Zeiten"
+
+msgctxt "#32512"
+msgid "XL badges"
+msgstr "XL Stream-Badges"
+
+msgctxt "#32513"
+msgid "XL HDR & sound"
+msgstr "XL HDR & Ton"
 
 msgctxt "#32520"
 msgid "Network display (browser or tablet)"

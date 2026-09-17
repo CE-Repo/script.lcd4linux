@@ -50,7 +50,7 @@ An AX206 panel should light up immediately. For a Samsung frame, set
 * **Sends only what changed.** On the AX206 a ticking seconds hand costs a few
   hundred bytes instead of 300 kB per frame; on the Samsung, which accepts
   complete JPEGs only, just the changed block rows are re-encoded.
-* **17 bundled layouts**, each in 480×320, 800×480 and 1024×600 plus portrait.
+* **20 bundled layouts**, each in 480×320, 800×480 and 1024×600 plus portrait.
   You pick the name, the add-on picks the size that fits the attached panel.
 * **A layout editor in the browser** at `http://<box>:8050/` — drag elements
   around, with a preview drawn by the same renderer that feeds the display.
