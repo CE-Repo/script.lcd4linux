@@ -780,10 +780,6 @@ msgctxt "#32446"
 msgid "Sound"
 msgstr ""
 
-msgctxt "#32447"
-msgid "Layer"
-msgstr ""
-
 msgctxt "#32450"
 msgid "Monday"
 msgstr ""

@@ -43,7 +43,7 @@ that from the sofa".
 | `xl-system.json` | Big clock over CPU, temperature and RAM as three large numbers with bars |
 | `xl-times.json` | **The four clocks** at 44 px: the time now, the time it ends, elapsed and total length, over a thick bar |
 | `xl-badges.json` | The running stream as badges: resolution, codec and dynamic range, the Dolby Vision profile with its enhancement layer, then audio codec, channel layout and object audio — with the four times along the foot |
-| `xl-hdr.json` | The dynamic range spelled out huge and coloured by format, profile and enhancement layer below it, then the audio codec with channels and object audio — the four times along the foot |
+| `xl-hdr.json` | The dynamic range spelled out huge, profile and enhancement layer below it, then the audio codec with channels and object audio — the four times along the foot. Without Dolby Vision the row names the picture instead: `Full HD`, `1.78:1` |
 | `cover-full.json` | Just the cover, filling the frame, slim info bar at the bottom |
 
 ![XL remaining](../resources/screenshots/xl-remaining.png)

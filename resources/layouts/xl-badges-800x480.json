@@ -5,7 +5,6 @@
     480
   ],
   "background": "#000000",
-  "accent": "auto:${player.thumb}",
   "defaults": {
     "font": "sans",
     "size": 33,
@@ -38,7 +37,7 @@
           "h": 36,
           "text": "${player.showtitle}${player.episodelabel|prefix:  ·  }",
           "size": 27,
-          "color": "accent",
+          "color": "#8b93a8",
           "condition": "${player.showtitle}"
         },
         {
@@ -49,7 +48,7 @@
           "h": 36,
           "text": "${player.year}${player.genre|prefix:  ·  |trunc:20}",
           "size": 27,
-          "color": "accent",
+          "color": "#8b93a8",
           "condition": "!${player.showtitle}"
         },
         {
@@ -60,7 +59,7 @@
           "h": 27,
           "text": "$LOCALIZE[32445]",
           "size": 22,
-          "color": "#5f6880"
+          "color": "#4a5266"
         },
         {
           "type": "text",
@@ -75,7 +74,7 @@
           "valign": "middle",
           "radius": 15,
           "background": "#161d29",
-          "color": "#cdd4e2"
+          "color": "#c8d0de"
         },
         {
           "type": "text",
@@ -90,7 +89,7 @@
           "valign": "middle",
           "radius": 15,
           "background": "#161d29",
-          "color": "#cdd4e2"
+          "color": "#c8d0de"
         },
         {
           "type": "text",
@@ -104,8 +103,8 @@
           "align": "center",
           "valign": "middle",
           "radius": 15,
-          "background": "#ffc107",
-          "color": "#101213",
+          "background": "#e6ebf5",
+          "color": "#0b0d12",
           "condition": "${player.hdr_short} == DV"
         },
         {
@@ -120,8 +119,8 @@
           "align": "center",
           "valign": "middle",
           "radius": 15,
-          "background": "#ff7043",
-          "color": "#101213",
+          "background": "#2a3140",
+          "color": "#ffffff",
           "condition": "${player.hdr_short} startswith HDR | ${player.hdr_short} == HLG"
         },
         {
@@ -136,7 +135,7 @@
           "align": "center",
           "valign": "middle",
           "radius": 15,
-          "background": "#161d29",
+          "background": "#131922",
           "color": "#6f7891",
           "condition": "${player.hdr_short} == SDR"
         },
@@ -152,8 +151,24 @@
           "align": "center",
           "valign": "middle",
           "radius": 15,
-          "background": "#2a2110",
-          "color": "#ffd54f"
+          "background": "#161d29",
+          "color": "#c8d0de"
+        },
+        {
+          "type": "text",
+          "x": 30,
+          "y": 198,
+          "w": 360,
+          "h": 60,
+          "text": "${player.resolutionname}",
+          "size": 33,
+          "bold": true,
+          "align": "center",
+          "valign": "middle",
+          "radius": 15,
+          "background": "#161d29",
+          "color": "#c8d0de",
+          "condition": "!${player.dvprofile}"
         },
         {
           "type": "text",
@@ -161,14 +176,30 @@
           "y": 198,
           "w": 360,
           "h": 60,
-          "text": "${player.dvel|prefix:$LOCALIZE[32447] }",
+          "text": "${player.dvel}",
           "size": 33,
           "bold": true,
           "align": "center",
           "valign": "middle",
           "radius": 15,
-          "background": "#2a2110",
-          "color": "#ffd54f"
+          "background": "#161d29",
+          "color": "#c8d0de"
+        },
+        {
+          "type": "text",
+          "x": 410,
+          "y": 198,
+          "w": 360,
+          "h": 60,
+          "text": "${player.aspect|suffix::1}",
+          "size": 33,
+          "bold": true,
+          "align": "center",
+          "valign": "middle",
+          "radius": 15,
+          "background": "#161d29",
+          "color": "#c8d0de",
+          "condition": "!${player.dvel}"
         },
         {
           "type": "text",
@@ -178,7 +209,7 @@
           "h": 27,
           "text": "$LOCALIZE[32446]",
           "size": 22,
-          "color": "#5f6880"
+          "color": "#4a5266"
         },
         {
           "type": "text",
@@ -193,7 +224,7 @@
           "valign": "middle",
           "radius": 15,
           "background": "#161d29",
-          "color": "#cdd4e2"
+          "color": "#c8d0de"
         },
         {
           "type": "text",
@@ -208,7 +239,7 @@
           "valign": "middle",
           "radius": 15,
           "background": "#161d29",
-          "color": "#cdd4e2"
+          "color": "#c8d0de"
         },
         {
           "type": "text",
@@ -222,8 +253,8 @@
           "align": "center",
           "valign": "middle",
           "radius": 15,
-          "background": "#26c6a2",
-          "color": "#08201c"
+          "background": "#2a3140",
+          "color": "#ffffff"
         },
         {
           "type": "text",
@@ -233,7 +264,7 @@
           "h": 30,
           "text": "${player.videobitrate}${player.audiobitrate|prefix:  ·  }",
           "size": 22,
-          "color": "#5f6880"
+          "color": "#4a5266"
         },
         {
           "type": "text",
@@ -244,7 +275,7 @@
           "text": "${player.fps|suffix: fps}",
           "size": 22,
           "align": "right",
-          "color": "#5f6880"
+          "color": "#4a5266"
         },
         {
           "type": "progress",
@@ -254,8 +285,8 @@
           "h": 18,
           "value": "${player.percent}",
           "radius": 9,
-          "color": "accent",
-          "background": "#1e2330"
+          "color": "#9aa3b5",
+          "background": "#1b2130"
         },
         {
           "type": "text",
@@ -266,7 +297,7 @@
           "text": "${player.time} / ${player.duration}",
           "font": "mono",
           "size": 28,
-          "color": "#a8b0c0"
+          "color": "#8b93a8"
         },
         {
           "type": "text",
@@ -277,7 +308,7 @@
           "text": "${system.time}  ·  $LOCALIZE[32426] ${player.finishtime}",
           "size": 26,
           "align": "right",
-          "color": "#6f7891"
+          "color": "#5f6880"
         }
       ]
     },
@@ -307,7 +338,7 @@
           "h": 48,
           "text": "${player.artist}",
           "size": 34,
-          "color": "accent",
+          "color": "#8b93a8",
           "scroll": "bounce"
         },
         {
@@ -318,7 +349,7 @@
           "h": 39,
           "text": "${player.album}",
           "size": 27,
-          "color": "#8b93a8"
+          "color": "#5f6880"
         },
         {
           "type": "text",
@@ -328,7 +359,7 @@
           "h": 27,
           "text": "$LOCALIZE[32446]",
           "size": 22,
-          "color": "#5f6880"
+          "color": "#4a5266"
         },
         {
           "type": "text",
@@ -343,7 +374,7 @@
           "valign": "middle",
           "radius": 16,
           "background": "#161d29",
-          "color": "#cdd4e2"
+          "color": "#c8d0de"
         },
         {
           "type": "text",
@@ -358,7 +389,7 @@
           "valign": "middle",
           "radius": 16,
           "background": "#161d29",
-          "color": "#cdd4e2"
+          "color": "#c8d0de"
         },
         {
           "type": "text",
@@ -372,8 +403,8 @@
           "align": "center",
           "valign": "middle",
           "radius": 16,
-          "background": "#26c6a2",
-          "color": "#08201c"
+          "background": "#2a3140",
+          "color": "#ffffff"
         },
         {
           "type": "text",
@@ -383,7 +414,7 @@
           "h": 33,
           "text": "${player.audiobitrate}${player.samplerate|prefix:  ·  }",
           "size": 24,
-          "color": "#5f6880"
+          "color": "#4a5266"
         },
         {
           "type": "text",
@@ -394,7 +425,7 @@
           "text": "${player.year}${player.genre|prefix:  ·  |trunc:16}",
           "size": 24,
           "align": "right",
-          "color": "#5f6880"
+          "color": "#4a5266"
         },
         {
           "type": "progress",
@@ -404,8 +435,8 @@
           "h": 24,
           "value": "${player.percent}",
           "radius": 12,
-          "color": "accent",
-          "background": "#1e2330"
+          "color": "#9aa3b5",
+          "background": "#1b2130"
         },
         {
           "type": "text",
@@ -416,7 +447,7 @@
           "text": "${player.time}",
           "font": "mono",
           "size": 33,
-          "color": "#a8b0c0"
+          "color": "#8b93a8"
         },
         {
           "type": "text",
@@ -428,7 +459,7 @@
           "font": "mono",
           "size": 33,
           "align": "right",
-          "color": "#a8b0c0"
+          "color": "#8b93a8"
         },
         {
           "type": "text",
@@ -468,7 +499,7 @@
           "text": "${system.weekday}, ${system.date}",
           "size": 36,
           "align": "center",
-          "color": "#a8b0c0"
+          "color": "#8b93a8"
         }
       ]
     }
