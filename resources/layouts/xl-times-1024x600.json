@@ -1,0 +1,219 @@
+{
+  "name": "$LOCALIZE[32511] (1024x600)",
+  "size": [
+    1024,
+    600
+  ],
+  "background": "#000000",
+  "defaults": {
+    "font": "sans",
+    "size": 45,
+    "color": "#ffffff"
+  },
+  "pages": [
+    {
+      "name": "$LOCALIZE[32400]",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {
+          "type": "text",
+          "x": 38,
+          "y": 15,
+          "w": 947,
+          "h": 64,
+          "text": "${player.title}",
+          "size": 51,
+          "bold": true,
+          "scroll": "marquee",
+          "scrollspeed": 45,
+          "color": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 38,
+          "y": 79,
+          "w": 947,
+          "h": 49,
+          "text": "${player.showtitle}${player.episodelabel|prefix:  ·  }${player.artist}",
+          "size": 38,
+          "color": "#8b93a8",
+          "scroll": "bounce"
+        },
+        {
+          "type": "line",
+          "x": 38,
+          "y": 139,
+          "w": 947,
+          "h": 4,
+          "color": "#1b2130"
+        },
+        {
+          "type": "text",
+          "x": 38,
+          "y": 158,
+          "w": 454,
+          "h": 38,
+          "text": "$LOCALIZE[32441]",
+          "size": 32,
+          "color": "#6f7891"
+        },
+        {
+          "type": "text",
+          "x": 38,
+          "y": 195,
+          "w": 454,
+          "h": 98,
+          "text": "${system.time}",
+          "font": "mono-bold",
+          "size": 82,
+          "color": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 531,
+          "y": 158,
+          "w": 454,
+          "h": 38,
+          "text": "$LOCALIZE[32442]",
+          "size": 32,
+          "align": "right",
+          "color": "#6f7891"
+        },
+        {
+          "type": "text",
+          "x": 531,
+          "y": 195,
+          "w": 454,
+          "h": 98,
+          "text": "${player.finishtime}",
+          "font": "mono-bold",
+          "size": 82,
+          "align": "right",
+          "color": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 38,
+          "y": 304,
+          "w": 454,
+          "h": 38,
+          "text": "$LOCALIZE[32443]",
+          "size": 32,
+          "color": "#6f7891"
+        },
+        {
+          "type": "text",
+          "x": 38,
+          "y": 341,
+          "w": 454,
+          "h": 98,
+          "text": "${player.time}",
+          "font": "mono-bold",
+          "size": 82,
+          "color": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 531,
+          "y": 304,
+          "w": 454,
+          "h": 38,
+          "text": "$LOCALIZE[32444]",
+          "size": 32,
+          "align": "right",
+          "color": "#6f7891"
+        },
+        {
+          "type": "text",
+          "x": 531,
+          "y": 341,
+          "w": 454,
+          "h": 98,
+          "text": "${player.duration}",
+          "font": "mono-bold",
+          "size": 82,
+          "align": "right",
+          "color": "#8b93a8"
+        },
+        {
+          "type": "progress",
+          "x": 38,
+          "y": 458,
+          "w": 947,
+          "h": 41,
+          "value": "${player.percent}",
+          "radius": 21,
+          "color": "#9aa3b5",
+          "background": "#1b2130",
+          "knob": true,
+          "knobsize": 15,
+          "knobcolor": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 38,
+          "y": 518,
+          "w": 469,
+          "h": 60,
+          "text": "-${player.remaining}",
+          "font": "mono",
+          "size": 45,
+          "color": "#8b93a8"
+        },
+        {
+          "type": "text",
+          "x": 516,
+          "y": 518,
+          "w": 469,
+          "h": 60,
+          "text": "${player.percent|int}%",
+          "font": "mono",
+          "size": 45,
+          "align": "right",
+          "color": "#5f6880"
+        }
+      ]
+    },
+    {
+      "name": "$LOCALIZE[32401]",
+      "condition": "!active",
+      "widgets": [
+        {
+          "type": "text",
+          "x": 0,
+          "y": 112,
+          "w": 1024,
+          "h": 248,
+          "text": "${system.time}",
+          "size": 240,
+          "bold": true,
+          "align": "center",
+          "color": "#ffffff"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 386,
+          "w": 1024,
+          "h": 68,
+          "text": "${system.date_long}",
+          "size": 49,
+          "align": "center",
+          "color": "#8b93a8"
+        },
+        {
+          "type": "text",
+          "x": 0,
+          "y": 476,
+          "w": 1024,
+          "h": 56,
+          "text": "${system.cpu}%   ·   ${system.cputemp}°C",
+          "size": 41,
+          "align": "center",
+          "color": "#5f6880"
+        }
+      ]
+    }
+  ]
+}

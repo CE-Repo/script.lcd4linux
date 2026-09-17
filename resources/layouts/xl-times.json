@@ -1,0 +1,81 @@
+{
+  "name": "$LOCALIZE[32511]",
+  "size": [480, 320],
+  "background": "#000000",
+  "defaults": {"font": "sans", "size": 24, "color": "#ffffff"},
+
+  "pages": [
+    {
+      "name": "$LOCALIZE[32400]",
+      "condition": "active",
+      "priority": 10,
+      "widgets": [
+        {"type": "text", "x": 18, "y": 8, "w": 444, "h": 34,
+         "text": "${player.title}", "size": 27, "bold": true,
+         "scroll": "marquee", "scrollspeed": 24, "color": "#ffffff"},
+
+        {"type": "text", "x": 18, "y": 42, "w": 444, "h": 26,
+         "text": "${player.showtitle}${player.episodelabel|prefix:  ·  }${player.artist}",
+         "size": 20,
+         "color": "#8b93a8", "scroll": "bounce"},
+
+        {"type": "line", "x": 18, "y": 74, "w": 444, "h": 2,
+         "color": "#1b2130"},
+
+        {"type": "text", "x": 18, "y": 84, "w": 213, "h": 20,
+         "text": "$LOCALIZE[32441]", "size": 17, "color": "#6f7891"},
+        {"type": "text", "x": 18, "y": 104, "w": 213, "h": 52,
+         "text": "${system.time}", "font": "mono-bold", "size": 44,
+         "color": "#ffffff"},
+
+        {"type": "text", "x": 249, "y": 84, "w": 213, "h": 20,
+         "text": "$LOCALIZE[32442]", "size": 17, "align": "right",
+         "color": "#6f7891"},
+        {"type": "text", "x": 249, "y": 104, "w": 213, "h": 52,
+         "text": "${player.finishtime}", "font": "mono-bold", "size": 44,
+         "align": "right", "color": "#ffffff"},
+
+        {"type": "text", "x": 18, "y": 162, "w": 213, "h": 20,
+         "text": "$LOCALIZE[32443]", "size": 17, "color": "#6f7891"},
+        {"type": "text", "x": 18, "y": 182, "w": 213, "h": 52,
+         "text": "${player.time}", "font": "mono-bold", "size": 44,
+         "color": "#ffffff"},
+
+        {"type": "text", "x": 249, "y": 162, "w": 213, "h": 20,
+         "text": "$LOCALIZE[32444]", "size": 17, "align": "right",
+         "color": "#6f7891"},
+        {"type": "text", "x": 249, "y": 182, "w": 213, "h": 52,
+         "text": "${player.duration}", "font": "mono-bold", "size": 44,
+         "align": "right", "color": "#8b93a8"},
+
+        {"type": "progress", "x": 18, "y": 244, "w": 444, "h": 22,
+         "value": "${player.percent}", "radius": 11, "color": "#9aa3b5",
+         "background": "#1b2130", "knob": true, "knobsize": 8,
+         "knobcolor": "#ffffff"},
+
+        {"type": "text", "x": 18, "y": 276, "w": 220, "h": 32,
+         "text": "-${player.remaining}", "font": "mono", "size": 24,
+         "color": "#8b93a8"},
+        {"type": "text", "x": 242, "y": 276, "w": 220, "h": 32,
+         "text": "${player.percent|int}%", "font": "mono", "size": 24,
+         "align": "right", "color": "#5f6880"}
+      ]
+    },
+
+    {
+      "name": "$LOCALIZE[32401]",
+      "condition": "!active",
+      "widgets": [
+        {"type": "text", "x": 0, "y": 60, "w": 480, "h": 132,
+         "text": "${system.time}", "size": 128, "bold": true,
+         "align": "center", "color": "#ffffff"},
+        {"type": "text", "x": 0, "y": 206, "w": 480, "h": 36,
+         "text": "${system.date_long}", "size": 26, "align": "center",
+         "color": "#8b93a8"},
+        {"type": "text", "x": 0, "y": 254, "w": 480, "h": 30,
+         "text": "${system.cpu}%   ·   ${system.cputemp}°C", "size": 22,
+         "align": "center", "color": "#5f6880"}
+      ]
+    }
+  ]
+}

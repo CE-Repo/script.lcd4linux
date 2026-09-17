@@ -1,0 +1,195 @@
+{
+  "name": "$LOCALIZE[32513]",
+  "size": [480, 320],
+  "background": "#000000",
+  "defaults": {"font": "sans", "size": 22, "color": "#ffffff"},
+
+  "pages": [
+    {
+      "name": "Video",
+      "condition": "video",
+      "priority": 10,
+      "widgets": [
+        {"type": "text", "x": 18, "y": 2, "w": 444, "h": 26,
+         "text": "${player.showtitle|suffix:  ·  }${player.title}",
+         "size": 20, "bold": true,
+         "align": "center", "scroll": "marquee", "scrollspeed": 24,
+         "color": "#8b93a8"},
+
+        {"type": "text", "x": 18, "y": 28, "w": 444, "h": 18,
+         "text": "${player.episodelabel|suffix:  ·  }${player.resolution}${player.codec|prefix:  ·  }${player.videobitrate|prefix:  ·  }",
+         "size": 14, "align": "center", "color": "#4a5266"},
+
+        {"type": "text", "x": 18, "y": 48, "w": 444, "h": 54,
+         "text": "${player.hdr}", "size": 48, "bold": true,
+         "align": "center", "valign": "middle", "color": "#ffffff",
+         "condition": "${player.hdr_short} == DV"},
+        {"type": "text", "x": 18, "y": 48, "w": 444, "h": 54,
+         "text": "${player.hdr}", "size": 48, "bold": true,
+         "align": "center", "valign": "middle", "color": "#b9c1d1",
+         "condition": "${player.hdr_short} startswith HDR | ${player.hdr_short} == HLG"},
+        {"type": "text", "x": 18, "y": 48, "w": 444, "h": 54,
+         "text": "${player.hdr}", "size": 48, "bold": true,
+         "align": "center", "valign": "middle", "color": "#5f6880",
+         "condition": "${player.hdr_short} == SDR"},
+
+        {"type": "text", "x": 84, "y": 106, "w": 150, "h": 34,
+         "text": "${player.dvprofile_long}", "size": 20, "bold": true,
+         "align": "center", "valign": "middle", "radius": 9,
+         "background": "#161d29", "color": "#c8d0de",
+         "condition": "${player.dvel}"},
+        {"type": "text", "x": 246, "y": 106, "w": 150, "h": 34,
+         "text": "${player.dvel}", "size": 20,
+         "bold": true, "align": "center", "valign": "middle", "radius": 9,
+         "background": "#161d29", "color": "#c8d0de"},
+        {"type": "text", "x": 165, "y": 106, "w": 150, "h": 34,
+         "text": "${player.dvprofile_long}", "size": 20, "bold": true,
+         "align": "center", "valign": "middle", "radius": 9,
+         "background": "#161d29", "color": "#c8d0de",
+         "condition": "!${player.dvel}"},
+
+        {"type": "text", "x": 84, "y": 106, "w": 150, "h": 34,
+         "text": "${player.resolutionname}", "size": 20, "bold": true,
+         "align": "center", "valign": "middle", "radius": 9,
+         "background": "#161d29", "color": "#c8d0de",
+         "condition": "!${player.dvprofile}"},
+        {"type": "text", "x": 246, "y": 106, "w": 150, "h": 34,
+         "text": "${player.aspect|suffix::1}", "size": 20, "bold": true,
+         "align": "center", "valign": "middle", "radius": 9,
+         "background": "#161d29", "color": "#c8d0de",
+         "condition": "!${player.dvprofile}"},
+
+        {"type": "line", "x": 90, "y": 148, "w": 300, "h": 2,
+         "color": "#1b2130"},
+
+        {"type": "text", "x": 18, "y": 154, "w": 444, "h": 44,
+         "text": "${player.audiocodec}", "size": 38, "bold": true,
+         "align": "center", "valign": "middle", "color": "#e6ebf5"},
+
+        {"type": "text", "x": 104, "y": 202, "w": 110, "h": 38,
+         "text": "${player.channels}", "size": 22, "bold": true,
+         "align": "center", "valign": "middle", "radius": 9,
+         "background": "#161d29", "color": "#c8d0de",
+         "condition": "${player.spatial}"},
+        {"type": "text", "x": 226, "y": 202, "w": 150, "h": 38,
+         "text": "${player.spatial|replace:IMAX Enhanced:IMAX}", "size": 22,
+         "bold": true, "align": "center", "valign": "middle", "radius": 9,
+         "background": "#2a3140", "color": "#ffffff"},
+        {"type": "text", "x": 185, "y": 202, "w": 110, "h": 38,
+         "text": "${player.channels}", "size": 22, "bold": true,
+         "align": "center", "valign": "middle", "radius": 9,
+         "background": "#161d29", "color": "#c8d0de",
+         "condition": "!${player.spatial}"},
+
+        {"type": "progress", "x": 18, "y": 246, "w": 444, "h": 10,
+         "value": "${player.percent}", "radius": 5, "color": "#9aa3b5",
+         "background": "#1b2130"},
+
+        {"type": "text", "x": 18, "y": 262, "w": 106, "h": 16,
+         "text": "$LOCALIZE[32441]", "size": 12, "color": "#4a5266"},
+        {"type": "text", "x": 18, "y": 278, "w": 106, "h": 26,
+         "text": "${system.time}", "font": "mono-bold", "size": 20,
+         "color": "#ffffff"},
+
+        {"type": "text", "x": 130, "y": 262, "w": 106, "h": 16,
+         "text": "$LOCALIZE[32442]", "size": 12, "color": "#4a5266"},
+        {"type": "text", "x": 130, "y": 278, "w": 106, "h": 26,
+         "text": "${player.finishtime}", "font": "mono-bold", "size": 20,
+         "color": "#ffffff"},
+
+        {"type": "text", "x": 242, "y": 262, "w": 106, "h": 16,
+         "text": "$LOCALIZE[32443]", "size": 12, "color": "#4a5266"},
+        {"type": "text", "x": 242, "y": 278, "w": 106, "h": 26,
+         "text": "${player.time}", "font": "mono-bold", "size": 20,
+         "color": "#ffffff"},
+
+        {"type": "text", "x": 354, "y": 262, "w": 106, "h": 16,
+         "text": "$LOCALIZE[32444]", "size": 12, "align": "right",
+         "color": "#4a5266"},
+        {"type": "text", "x": 354, "y": 278, "w": 106, "h": 26,
+         "text": "${player.duration}", "font": "mono-bold", "size": 20,
+         "align": "right", "color": "#8b93a8"}
+      ]
+    },
+
+    {
+      "name": "$LOCALIZE[32403]",
+      "condition": "audio",
+      "priority": 10,
+      "widgets": [
+        {"type": "text", "x": 18, "y": 8, "w": 444, "h": 38,
+         "text": "${player.title}", "size": 28, "bold": true,
+         "align": "center", "scroll": "marquee", "scrollspeed": 24,
+         "color": "#ffffff"},
+        {"type": "text", "x": 18, "y": 48, "w": 444, "h": 28,
+         "text": "${player.artist}", "size": 21, "align": "center",
+         "color": "#8b93a8", "scroll": "bounce"},
+
+        {"type": "text", "x": 18, "y": 86, "w": 444, "h": 58,
+         "text": "${player.audiocodec}", "size": 50, "bold": true,
+         "align": "center", "valign": "middle", "color": "#e6ebf5"},
+
+        {"type": "text", "x": 104, "y": 152, "w": 110, "h": 38,
+         "text": "${player.channels}", "size": 22, "bold": true,
+         "align": "center", "valign": "middle", "radius": 9,
+         "background": "#161d29", "color": "#c8d0de",
+         "condition": "${player.spatial}"},
+        {"type": "text", "x": 226, "y": 152, "w": 150, "h": 38,
+         "text": "${player.spatial|replace:IMAX Enhanced:IMAX}", "size": 22,
+         "bold": true, "align": "center", "valign": "middle", "radius": 9,
+         "background": "#2a3140", "color": "#ffffff"},
+        {"type": "text", "x": 185, "y": 152, "w": 110, "h": 38,
+         "text": "${player.channels}", "size": 22, "bold": true,
+         "align": "center", "valign": "middle", "radius": 9,
+         "background": "#161d29", "color": "#c8d0de",
+         "condition": "!${player.spatial}"},
+
+        {"type": "text", "x": 18, "y": 202, "w": 444, "h": 24,
+         "text": "${player.audiobitrate}${player.samplerate|prefix:  ·  }",
+         "size": 17, "align": "center", "color": "#4a5266"},
+
+        {"type": "progress", "x": 18, "y": 246, "w": 444, "h": 10,
+         "value": "${player.percent}", "radius": 5, "color": "#9aa3b5",
+         "background": "#1b2130"},
+
+        {"type": "text", "x": 18, "y": 262, "w": 106, "h": 16,
+         "text": "$LOCALIZE[32441]", "size": 12, "color": "#4a5266"},
+        {"type": "text", "x": 18, "y": 278, "w": 106, "h": 26,
+         "text": "${system.time}", "font": "mono-bold", "size": 20,
+         "color": "#ffffff"},
+
+        {"type": "text", "x": 130, "y": 262, "w": 106, "h": 16,
+         "text": "$LOCALIZE[32442]", "size": 12, "color": "#4a5266"},
+        {"type": "text", "x": 130, "y": 278, "w": 106, "h": 26,
+         "text": "${player.finishtime}", "font": "mono-bold", "size": 20,
+         "color": "#ffffff"},
+
+        {"type": "text", "x": 242, "y": 262, "w": 106, "h": 16,
+         "text": "$LOCALIZE[32443]", "size": 12, "color": "#4a5266"},
+        {"type": "text", "x": 242, "y": 278, "w": 106, "h": 26,
+         "text": "${player.time}", "font": "mono-bold", "size": 20,
+         "color": "#ffffff"},
+
+        {"type": "text", "x": 354, "y": 262, "w": 106, "h": 16,
+         "text": "$LOCALIZE[32444]", "size": 12, "align": "right",
+         "color": "#4a5266"},
+        {"type": "text", "x": 354, "y": 278, "w": 106, "h": 26,
+         "text": "${player.duration}", "font": "mono-bold", "size": 20,
+         "align": "right", "color": "#8b93a8"}
+      ]
+    },
+
+    {
+      "name": "$LOCALIZE[32401]",
+      "condition": "!active",
+      "widgets": [
+        {"type": "text", "x": 0, "y": 64, "w": 480, "h": 132,
+         "text": "${system.time}", "size": 128, "bold": true,
+         "align": "center", "color": "#ffffff"},
+        {"type": "text", "x": 0, "y": 208, "w": 480, "h": 36,
+         "text": "${system.date_long}", "size": 26, "align": "center",
+         "color": "#8b93a8"}
+      ]
+    }
+  ]
+}
