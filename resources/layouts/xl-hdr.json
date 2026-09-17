@@ -17,7 +17,7 @@
          "color": "#8b93a8"},
 
         {"type": "text", "x": 18, "y": 28, "w": 444, "h": 18,
-         "text": "${player.resolution}${player.codec|prefix:  ·  }${player.videobitrate|prefix:  ·  }",
+         "text": "${player.episodelabel|suffix:  ·  }${player.resolution}${player.codec|prefix:  ·  }${player.videobitrate|prefix:  ·  }",
          "size": 14, "align": "center", "color": "#4a5266"},
 
         {"type": "text", "x": 18, "y": 48, "w": 444, "h": 54,

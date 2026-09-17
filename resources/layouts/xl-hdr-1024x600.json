@@ -36,7 +36,7 @@
           "y": 52,
           "w": 947,
           "h": 34,
-          "text": "${player.resolution}${player.codec|prefix:  ·  }${player.videobitrate|prefix:  ·  }",
+          "text": "${player.episodelabel|suffix:  ·  }${player.resolution}${player.codec|prefix:  ·  }${player.videobitrate|prefix:  ·  }",
           "size": 26,
           "align": "center",
           "color": "#4a5266"

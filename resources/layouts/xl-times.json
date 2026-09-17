@@ -15,7 +15,8 @@
          "scroll": "marquee", "scrollspeed": 24, "color": "#ffffff"},
 
         {"type": "text", "x": 18, "y": 42, "w": 444, "h": 26,
-         "text": "${player.showtitle}${player.artist}", "size": 20,
+         "text": "${player.showtitle}${player.episodelabel|prefix:  ·  }${player.artist}",
+         "size": 20,
          "color": "#8b93a8", "scroll": "bounce"},
 
         {"type": "line", "x": 18, "y": 74, "w": 444, "h": 2,

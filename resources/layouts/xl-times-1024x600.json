@@ -35,7 +35,7 @@
           "y": 79,
           "w": 947,
           "h": 49,
-          "text": "${player.showtitle}${player.artist}",
+          "text": "${player.showtitle}${player.episodelabel|prefix:  ·  }${player.artist}",
           "size": 38,
           "color": "#8b93a8",
           "scroll": "bounce"
