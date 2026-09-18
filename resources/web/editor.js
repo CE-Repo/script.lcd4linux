@@ -16,7 +16,13 @@ const TEXTS = {
     delete: 'Layout löschen', reloadservice: 'Dienst neu laden',
     testpattern: 'Testbild', nextpage: 'Nächste Seite',
     jsonview: 'JSON bearbeiten', pages: 'Seiten', pageadd: '+ Seite',
-    pagecopy: 'Kopieren', pagedel: 'Löschen', elements: 'Elemente',
+    pagecopy: 'Duplizieren', pagedel: 'Löschen', elements: 'Elemente',
+    pageclip: 'Seite kopieren', pagepaste: 'Seite einfügen',
+    pagecopied: 'Seite kopiert: %s',
+    pagepasted: 'Seite eingefügt · %d Element(e)',
+    pagepastedsize: 'Seite eingefügt · %d Element(e) aus %d × %d',
+    pagepastetitle: 'In der Ablage: %s',
+    pageclipempty: 'Keine Seite in der Ablage',
     palettehint: 'Auf die Fläche ziehen oder anklicken', layers: 'Ebenen',
     zoom: 'Zoom', fit: 'passend', grid: 'Raster', gridoff: 'aus',
     showgrid: 'Gitter', showboxes: 'Rahmen', scenario: 'Vorschau',
@@ -69,6 +75,12 @@ const TEXTS = {
     testpattern: 'Test pattern', nextpage: 'Next page',
     jsonview: 'Edit JSON', pages: 'Pages', pageadd: '+ Page',
     pagecopy: 'Duplicate', pagedel: 'Delete', elements: 'Elements',
+    pageclip: 'Copy page', pagepaste: 'Paste page',
+    pagecopied: 'Page copied: %s',
+    pagepasted: 'Page pasted · %d element(s)',
+    pagepastedsize: 'Page pasted · %d element(s) from %d × %d',
+    pagepastetitle: 'On the clipboard: %s',
+    pageclipempty: 'No page on the clipboard',
     palettehint: 'Drag onto the canvas or click', layers: 'Layers',
     zoom: 'Zoom', fit: 'fit', grid: 'Grid', gridoff: 'off',
     showgrid: 'Grid lines', showboxes: 'Outlines', scenario: 'Preview',
@@ -239,7 +251,7 @@ function markDirty(dirty) {
   $('dirty').hidden = !dirty;
   $('btn-undo').disabled = !S.undo.length;
   $('btn-redo').disabled = !S.redo.length;
-  refreshClipboardButton();
+  refreshClipboardButtons();
 }
 
 function restore(entry) {
@@ -530,26 +542,53 @@ function currentZoom() {
  * being edited and the page itself: it lives in this browser's storage,
  * which a second tab and a reload both still see. */
 const CLIP_KEY = 'lcd4linux.clipboard';
+const PAGE_CLIP_KEY = 'lcd4linux.pageclip';
 
+// Elements and pages keep their own: copying a page must not throw away the
+// elements copied a minute earlier.
 let clipboard = null;   // for a browser that refuses to store anything
+let pageClipboard = null;
 
-function readClipboard() {
+function readStore(key, memory) {
   try {
-    const raw = localStorage.getItem(CLIP_KEY);
+    const raw = localStorage.getItem(key);
     if (raw) return JSON.parse(raw);
   } catch (err) {
     // private mode, or someone else wrote nonsense into the key
   }
-  return clipboard;
+  return memory;
 }
 
-function writeClipboard(payload) {
-  clipboard = payload;
+function writeStore(key, payload) {
   try {
-    localStorage.setItem(CLIP_KEY, JSON.stringify(payload));
+    localStorage.setItem(key, JSON.stringify(payload));
   } catch (err) {
     // the in-memory copy still carries it through this session
   }
+}
+
+const readClipboard = () => readStore(CLIP_KEY, clipboard);
+const readPageClipboard = () => readStore(PAGE_CLIP_KEY, pageClipboard);
+
+function writeClipboard(payload) {
+  clipboard = payload;
+  writeStore(CLIP_KEY, payload);
+}
+
+function writePageClipboard(payload) {
+  pageClipboard = payload;
+  writeStore(PAGE_CLIP_KEY, payload);
+}
+
+/* Keeps a pasted element reachable: only a canvas too small to hold where it
+ * used to sit moves it, and ``step`` keeps a copy from hiding under the
+ * original it was made from. */
+function placePasted(copy, width, height, step) {
+  const box = geometry(copy);
+  if (!step && box.x <= width - 8 && box.y <= height - 8) return copy;
+  copy.x = Math.max(0, Math.min(width - 8, box.x + step));
+  copy.y = Math.max(0, Math.min(height - 8, box.y + step));
+  return copy;
 }
 
 function copySelection(cut) {
@@ -564,7 +603,7 @@ function copySelection(cut) {
   });
   if (cut) removeWidget();
   toast(t(cut ? 'cutdone' : 'copydone', chosen.length));
-  refreshClipboardButton();
+  refreshClipboardButtons();
 }
 
 function pasteClipboard() {
@@ -579,15 +618,7 @@ function pasteClipboard() {
   const same = data.file === S.file && data.page === S.page;
   const step = same ? Math.max(4, S.grid) : 0;
   const made = incoming.map((spec) => {
-    const copy = clone(spec);
-    const box = geometry(copy);
-    // A layout that is smaller than the one it came from would take the
-    // element off the canvas, so only then are the coordinates rewritten.
-    if (step || box.x > width - 8 || box.y > height - 8) {
-      copy.x = Math.max(0, Math.min(width - 8, box.x + step));
-      copy.y = Math.max(0, Math.min(height - 8, box.y + step));
-    }
-    items.push(copy);
+    items.push(placePasted(clone(spec), width, height, step));
     return items.length - 1;
   });
   setSelection(made, made[made.length - 1]);
@@ -601,12 +632,56 @@ function pasteClipboard() {
     : t('pastedsize', made.length, from[0] || '?', from[1] || '?'));
 }
 
-function refreshClipboardButton() {
+const pageTitle = (entry, index) =>
+  display(entry && entry.name) || t('pagename', index + 1);
+
+/* Whole pages travel the way elements do: into another layout as readily as
+ * into this one.  ``duplicatePage`` is the one that stays put. */
+function copyPage() {
+  const current = page();
+  if (!current) return;
+  writePageClipboard({
+    size: canvasSize(), file: S.file, page: clone(current),
+  });
+  toast(t('pagecopied', pageTitle(current, S.page)));
+  refreshClipboardButtons();
+}
+
+function pastePage() {
+  const data = readPageClipboard();
+  if (!data || !data.page) { toast(t('pageclipempty'), true); return; }
+  snapshot();
+  const [width, height] = canvasSize();
+  const copy = clone(data.page);
+  if (!Array.isArray(copy.widgets)) copy.widgets = [];
+  copy.widgets.forEach((spec) => placePasted(spec, width, height, 0));
+  // Pasted back into the layout it came from, the name would read twice.
+  if (copy.name && S.doc.pages.some((entry) => entry.name === copy.name)) {
+    copy.name = `${copy.name} (2)`;
+  }
+  S.doc.pages.splice(S.page + 1, 0, copy);
+  S.page += 1;
+  clearSelection();
+  drawAll();
+  const from = data.size || [];
+  toast(from[0] === width && from[1] === height
+    ? t('pagepasted', copy.widgets.length)
+    : t('pagepastedsize', copy.widgets.length, from[0] || '?', from[1] || '?'));
+}
+
+function refreshClipboardButtons() {
   const data = readClipboard();
   const count = data && Array.isArray(data.widgets) ? data.widgets.length : 0;
-  const button = $('btn-paste');
-  button.disabled = !count;
-  button.title = count ? t('pastetitle', count) : t('clipempty');
+  const paste = $('btn-paste');
+  paste.disabled = !count;
+  paste.title = count ? t('pastetitle', count) : t('clipempty');
+
+  const stored = readPageClipboard();
+  const button = $('btn-page-paste');
+  button.disabled = !(stored && stored.page);
+  button.title = stored && stored.page
+    ? t('pagepastetitle', pageTitle(stored.page, 0))
+    : t('pageclipempty');
 }
 
 /* ----------------------------------------------------------- selection */
@@ -1055,8 +1130,12 @@ function drawPageInspector(panel) {
   panel.appendChild(el('div', { class: 'group' },
     el('div', { class: 'row' },
       el('button', { text: t('pageadd'), onclick: addPage }),
-      el('button', { text: t('pagecopy'), onclick: copyPage }),
+      el('button', { text: t('pagecopy'), onclick: duplicatePage }),
       el('button', { class: 'danger', text: t('pagedel'), onclick: deletePage }),
+    ),
+    el('div', { class: 'row' },
+      el('button', { text: t('pageclip'), onclick: copyPage }),
+      el('button', { text: t('pagepaste'), onclick: pastePage }),
     ),
     el('div', { class: 'row' },
       el('button', { text: '◀', onclick: () => movePage(-1) }),
@@ -1285,12 +1364,13 @@ function addPage() {
   drawAll();
 }
 
-function copyPage() {
+function duplicatePage() {
   snapshot();
   const copy = clone(page());
   copy.name = `${copy.name || t('pagename', S.page + 1)} (2)`;
   S.doc.pages.splice(S.page + 1, 0, copy);
   S.page += 1;
+  clearSelection();
   drawAll();
 }
 
@@ -1600,7 +1680,9 @@ function bindEvents() {
   $('btn-paste').addEventListener('click', pasteClipboard);
   bindLayerList();
   $('btn-page-add').addEventListener('click', addPage);
-  $('btn-page-copy').addEventListener('click', copyPage);
+  $('btn-page-copy').addEventListener('click', duplicatePage);
+  $('btn-page-clip').addEventListener('click', copyPage);
+  $('btn-page-paste').addEventListener('click', pastePage);
   $('btn-page-del').addEventListener('click', deletePage);
 
   $('zoom').addEventListener('change', (event) => {
@@ -1659,7 +1741,9 @@ function bindEvents() {
   // A copy made in a second tab is the same clipboard, so the button there
   // has to notice it.
   window.addEventListener('storage', (event) => {
-    if (event.key === CLIP_KEY) refreshClipboardButton();
+    if (event.key === CLIP_KEY || event.key === PAGE_CLIP_KEY) {
+      refreshClipboardButtons();
+    }
   });
   window.addEventListener('keydown', keyboard);
   window.addEventListener('resize', () => { if (S.zoom === 'fit') drawCanvas(); });

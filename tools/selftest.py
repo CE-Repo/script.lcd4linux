@@ -2003,8 +2003,9 @@ def test_web_editor():
           and "t('mixed')" in editor_source,
           "elements of different types offer the fields they share")
     # The clipboard has to outlive the layout, so it cannot be a variable.
-    check("localStorage.getItem(CLIP_KEY)" in editor_source
-          and "localStorage.setItem(CLIP_KEY" in editor_source,
+    check("localStorage.getItem(key)" in editor_source
+          and "localStorage.setItem(key" in editor_source
+          and "readStore(CLIP_KEY" in editor_source,
           "the clipboard survives a layout change and a reload")
     # Rebuilding the list inside dragstart would cancel the drag.
     dragstart = editor_source.split("row.addEventListener('dragstart'", 1)[-1]
@@ -2012,10 +2013,25 @@ def test_web_editor():
     check("drawLayers" not in dragstart and "select(" not in dragstart,
           "starting a layer drag does not rebuild the list under the cursor")
 
+    # A page travels between layouts too, and its clipboard is its own: a
+    # copied page must not throw away copied elements.
+    check("function duplicatePage" in editor_source
+          and "function pastePage" in editor_source,
+          "a page can be duplicated in place and pasted into another layout")
+    check("PAGE_CLIP_KEY" in editor_source
+          and "readStore(PAGE_CLIP_KEY" in editor_source,
+          "pages and elements keep separate clipboards")
+
     page_source = _read_text(os.path.join(ROOT, "resources", "web",
                                           "index.html"))
-    for button in ("btn-copy", "btn-cut", "btn-paste"):
+    for button in ("btn-copy", "btn-cut", "btn-paste",
+                   "btn-page-copy", "btn-page-clip", "btn-page-paste"):
         check('id="%s"' % button in page_source, "the page has #%s" % button)
+    # Every button the page carries has to be wired up, or it does nothing.
+    for match in re.finditer(r'<button id="([^"]+)"', page_source):
+        name = match.group(1)
+        check("$('%s')" % name in editor_source,
+              "#%s is wired to something" % name)
 
     # -- a layout the editor offers must be one the renderer accepts ------
     for kind, preset in sorted(webschema.NEW_WIDGET.items()):

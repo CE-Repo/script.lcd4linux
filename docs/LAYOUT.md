@@ -110,7 +110,11 @@ small web server that serves an editor.
 `http://<box-ip>:8050/`. It runs in any current browser, phone and tablet
 included, and loads nothing from the internet.
 
-* **Pages**: create, copy, reorder, delete — the tabs top left.
+* **Pages**: create, duplicate, reorder, delete — the tabs top left.
+  *Copy page* and *Paste page* carry a whole page, elements and all, into
+  another layout; a page pasted into a canvas too small for it keeps every
+  element in reach. Pages and elements have separate clipboards, so copying
+  one does not throw away the other.
 * **Elements**: drag from the palette or click to place — text, image,
   progress bar, graph, rectangle, line, circle, icon, analogue clock.
 * **Move and resize** with the mouse, snapping to the grid. `Alt` disables
