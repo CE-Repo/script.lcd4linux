@@ -1971,6 +1971,37 @@ def test_web_editor():
     check("apply();\n    schedulePreview(" in drag,
           "dragging a box moves the preview before the button comes up")
 
+    # -- the selection is a set, and only one place may write it ----------
+    # A stray "S.sel = ..." would leave S.picks pointing at the old element,
+    # and every multi-element action reads S.picks.
+    writers = re.findall(r"^\s*S\.sel = ", editor_source, re.M)
+    check(len(writers) == 1,
+          "only setSelection() assigns the current element (%d writers)"
+          % len(writers))
+    for name in ("function setSelection", "function selectAll",
+                 "function copySelection", "function pasteClipboard",
+                 "function reorderWidgets", "function bindLayerDrag"):
+        check(name in editor_source, "the editor has %s()" % name[9:])
+    # Every element the selection covers has to be moved, not just the first.
+    for name in ("removeWidget", "duplicateWidget", "nudge", "align"):
+        body = editor_source.split("function %s(" % name, 1)[-1]
+        body = body.split("\nfunction ", 1)[0]
+        check("picked()" in body, "%s() works on the whole selection" % name)
+    # The clipboard has to outlive the layout, so it cannot be a variable.
+    check("localStorage.getItem(CLIP_KEY)" in editor_source
+          and "localStorage.setItem(CLIP_KEY" in editor_source,
+          "the clipboard survives a layout change and a reload")
+    # Rebuilding the list inside dragstart would cancel the drag.
+    dragstart = editor_source.split("row.addEventListener('dragstart'", 1)[-1]
+    dragstart = dragstart.split("});", 1)[0]
+    check("drawLayers" not in dragstart and "select(" not in dragstart,
+          "starting a layer drag does not rebuild the list under the cursor")
+
+    page_source = _read_text(os.path.join(ROOT, "resources", "web",
+                                          "index.html"))
+    for button in ("btn-copy", "btn-cut", "btn-paste"):
+        check('id="%s"' % button in page_source, "the page has #%s" % button)
+
     # -- a layout the editor offers must be one the renderer accepts ------
     for kind, preset in sorted(webschema.NEW_WIDGET.items()):
         spec = webschema.blank_layout()

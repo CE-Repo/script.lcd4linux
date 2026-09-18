@@ -111,6 +111,17 @@ aside.right { border-right: none; border-left: 1px solid var(--line); }
 aside section { padding: 10px; border-bottom: 1px solid var(--line); }
 aside section.grow { flex: 1; min-height: 120px; }
 
+/* The layer list is the one that may run long, so it does the scrolling:
+   the buttons under it have to stay in reach however many layers there are. */
+aside.left { overflow: hidden; }
+aside.left section { flex: 0 0 auto; }
+aside.left section.grow {
+  flex: 1 1 0; min-height: 140px;
+  display: flex; flex-direction: column;
+}
+aside.left #layer-list { flex: 1 1 auto; overflow-y: auto; min-height: 44px; }
+aside.left #page-list { max-height: 150px; overflow-y: auto; }
+
 h2 {
   margin: 0 0 8px;
   font-size: 11px;
@@ -138,6 +149,7 @@ h2 {
   border: 1px solid transparent; cursor: pointer;
 }
 .list .item:hover { background: var(--panel-2); }
+.list .item.picked { background: #14222f; border-color: #17b2e255; }
 .list .item.active { background: #16283a; border-color: var(--accent-dim); }
 .list .item .label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .list .item .sub { color: var(--muted); font-size: 11px; }
@@ -145,7 +157,10 @@ h2 {
   font-size: 10px; color: var(--muted); text-transform: uppercase;
   letter-spacing: .05em;
 }
-.layers .item .handle { cursor: grab; color: var(--muted); }
+.layers .item .handle { cursor: grab; color: var(--muted); font-size: 11px; }
+.layers .item.dragging { opacity: .4; }
+.layers .item.drop-above { box-shadow: inset 0 2px 0 0 var(--accent); }
+.layers .item.drop-below { box-shadow: inset 0 -2px 0 0 var(--accent); }
 
 /* palette */
 
@@ -209,12 +224,14 @@ h2 {
   white-space: nowrap; display: none;
 }
 .box.selected .tag { display: block; }
+.box.selected:not(.primary) { border-style: dashed; }
+.box.selected:not(.primary) .tag { background: var(--accent-dim); }
 .box .handle {
   position: absolute; width: 9px; height: 9px;
   background: var(--accent); border: 1px solid #06222c; border-radius: 2px;
   display: none;
 }
-.box.selected .handle { display: block; }
+.box.primary .handle { display: block; }
 .handle.nw { left: -5px; top: -5px; cursor: nwse-resize; }
 .handle.n  { left: calc(50% - 5px); top: -5px; cursor: ns-resize; }
 .handle.ne { right: -5px; top: -5px; cursor: nesw-resize; }

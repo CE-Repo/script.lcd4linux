@@ -116,6 +116,19 @@ included, and loads nothing from the internet.
 * **Move and resize** with the mouse, snapping to the grid. `Alt` disables
   snapping, `Shift` constrains direction, arrow keys nudge by a pixel and with
   `Shift` by ten.
+* **Several at once**: `Ctrl`-click (`Cmd` on a Mac) adds an element to the
+  selection, `Shift`-click takes everything in between, `Ctrl+A` takes the
+  whole page. Moving, nudging, aligning, duplicating and deleting then apply
+  to all of them; the properties on the right stay with one element, because
+  writing one value into elements of different types would be a guess.
+* **Copy between layouts** with `Ctrl+C` / `Ctrl+X` / `Ctrl+V` or the buttons
+  under the layer list. The clipboard lives in the browser, so it survives
+  opening another layout, a reload and a second tab. Elements keep their
+  coordinates; only a layout too small to hold them moves them back onto the
+  canvas, and the message says which size they came from.
+* **Reorder layers** by dragging a row in the *Layers* list. The list reads
+  top layer first, so dragging a row upwards brings the element to the front.
+  A whole selection travels together.
 * **Properties** on the right: every field the renderer knows, with colour
   pickers, font lists and condition templates.
 * **Data fields** behind the `${}` button: every token explained, plus the
@@ -128,7 +141,9 @@ included, and loads nothing from the internet.
   word or a whole drag, not over single keystrokes.
 * **Save** writes to your layout folder; *To the display* applies it at once.
 * Undo/redo (`Ctrl+Z` / `Ctrl+Y`), duplicate (`Ctrl+D`), save (`Ctrl+S`),
-  delete (`Del`), alignment buttons, and a JSON view for the finishing touches.
+  select all (`Ctrl+A`), delete (`Del`), alignment buttons, and a JSON view
+  for the finishing touches. Every shortcut stays out of the way while a text
+  field has the cursor, so `Ctrl+C` there still copies text.
 
 It always saves into your own folder, never over a bundled layout: your copy
 wins, and deleting it brings the original back.

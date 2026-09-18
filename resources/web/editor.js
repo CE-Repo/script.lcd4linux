@@ -47,6 +47,17 @@ const TEXTS = {
     importdone: 'Eingelesen: %s', clear: 'leeren', pick: 'wählen',
     condition: 'Bedingung', preset: 'Vorlage', appliedjson: 'JSON übernommen',
     servicecmd: 'Befehl gesendet', overwritten: 'überschreibt das mitgelieferte Layout',
+    copy: 'Kopieren', cut: 'Ausschneiden', paste: 'Einfügen',
+    layerhint: 'Ziehen ordnet um · Strg wählt mehrere · Umschalt einen Bereich',
+    dragorder: 'Zum Umordnen ziehen',
+    copydone: '%d Element(e) kopiert', cutdone: '%d Element(e) ausgeschnitten',
+    pastedone: '%d Element(e) eingefügt',
+    pastedsize: '%d Element(e) eingefügt · kamen aus %d × %d',
+    pastetitle: '%d Element(e) in der Ablage',
+    clipempty: 'Die Ablage ist leer', nothingpicked: 'Kein Element gewählt',
+    manypicked: '%d Elemente gewählt',
+    manyhint: 'Verschieben, Ausrichten, Kopieren und Löschen gelten für alle.'
+      + ' Für die Eigenschaften eines einzelnen: eines davon anklicken.',
   },
   en: {
     kit: 'Layout kit', open: 'Open', new: 'New', save: 'Save',
@@ -86,6 +97,17 @@ const TEXTS = {
     importdone: 'Read: %s', clear: 'clear', pick: 'pick',
     condition: 'Condition', preset: 'Preset', appliedjson: 'JSON applied',
     servicecmd: 'Command sent', overwritten: 'shadows the bundled layout',
+    copy: 'Copy', cut: 'Cut', paste: 'Paste',
+    layerhint: 'Drag to reorder · Ctrl picks several · Shift picks a range',
+    dragorder: 'Drag to reorder',
+    copydone: '%d element(s) copied', cutdone: '%d element(s) cut',
+    pastedone: '%d element(s) pasted',
+    pastedsize: '%d element(s) pasted · they came from %d × %d',
+    pastetitle: '%d element(s) on the clipboard',
+    clipempty: 'The clipboard is empty', nothingpicked: 'Nothing selected',
+    manypicked: '%d elements selected',
+    manyhint: 'Moving, aligning, copying and deleting apply to all of them.'
+      + ' Click one to edit its own properties.',
   },
 };
 
@@ -117,7 +139,8 @@ const S = {
   doc: null,
   file: '',
   page: 0,
-  sel: -1,
+  sel: -1,      // the element the inspector edits, -1 for none
+  picks: [],    // everything selected; holds sel whenever sel is set
   dirty: false,
   undo: [],
   redo: [],
@@ -201,7 +224,7 @@ const canvasSize = () => {
 };
 
 function snapshot() {
-  S.undo.push({ doc: clone(S.doc), page: S.page, sel: S.sel });
+  S.undo.push({ doc: clone(S.doc), page: S.page, picks: S.picks.slice() });
   if (S.undo.length > 60) S.undo.shift();
   S.redo.length = 0;
   markDirty(true);
@@ -212,25 +235,26 @@ function markDirty(dirty) {
   $('dirty').hidden = !dirty;
   $('btn-undo').disabled = !S.undo.length;
   $('btn-redo').disabled = !S.redo.length;
+  refreshClipboardButton();
 }
 
 function restore(entry) {
   S.doc = entry.doc;
   S.page = Math.min(entry.page, S.doc.pages.length - 1);
-  S.sel = entry.sel;
+  setSelection(entry.picks, entry.picks[entry.picks.length - 1]);
   drawAll();
 }
 
 function undo() {
   if (!S.undo.length) return;
-  S.redo.push({ doc: clone(S.doc), page: S.page, sel: S.sel });
+  S.redo.push({ doc: clone(S.doc), page: S.page, picks: S.picks.slice() });
   restore(S.undo.pop());
   markDirty(true);
 }
 
 function redo() {
   if (!S.redo.length) return;
-  S.undo.push({ doc: clone(S.doc), page: S.page, sel: S.sel });
+  S.undo.push({ doc: clone(S.doc), page: S.page, picks: S.picks.slice() });
   restore(S.redo.pop());
   markDirty(true);
 }
@@ -363,15 +387,89 @@ function drawLayers() {
   // Later widgets are drawn on top, so the list reads top layer first.
   items.slice().reverse().forEach((spec, position) => {
     const index = items.length - 1 - position;
-    list.appendChild(el('div', {
-      class: 'item' + (index === S.sel ? ' active' : ''),
-      onclick: () => select(index),
+    const row = el('div', {
+      class: 'item'
+        + (index === S.sel ? ' active' : '')
+        + (S.picks.indexOf(index) >= 0 ? ' picked' : ''),
+      draggable: 'true',
+      'data-index': index,
+      onclick: (event) => select(index, event),
     },
+      el('span', { class: 'handle', text: '⠿', title: t('dragorder') }),
       el('span', { class: 'kind', text: spec.type || 'text' }),
       el('span', { class: 'label', text: widgetTitle(spec, index) }),
-    ));
+    );
+    bindLayerDrag(row, index);
+    list.appendChild(row);
   });
   if (!items.length) list.appendChild(el('p', { class: 'hint', text: t('empty') }));
+}
+
+/* ------------------------------------------------- reordering by dragging */
+
+/* What is being dragged in the layer list, and where it would land.  The
+ * list reads top layer first, so a slot counted from the top of the list
+ * is ``items.length - slot`` in the array. */
+let layerDrag = null;
+
+function layerSlot(event) {
+  const rows = Array.from($('layer-list').querySelectorAll('.item'));
+  let slot = rows.length;
+  rows.some((row, position) => {
+    const box = row.getBoundingClientRect();
+    if (event.clientY < box.top + box.height / 2) { slot = position; return true; }
+    return false;
+  });
+  return slot;
+}
+
+function markLayerSlot(slot) {
+  const rows = Array.from($('layer-list').querySelectorAll('.item'));
+  rows.forEach((row) => row.classList.remove('drop-above', 'drop-below'));
+  if (slot < 0 || !rows.length) return;                 // off the list again
+  if (slot < rows.length) rows[slot].classList.add('drop-above');
+  else rows[rows.length - 1].classList.add('drop-below');
+}
+
+function endLayerDrag() {
+  layerDrag = null;
+  $('layer-list').querySelectorAll('.item').forEach((row) => {
+    row.classList.remove('drop-above', 'drop-below', 'dragging');
+  });
+}
+
+function bindLayerDrag(row, index) {
+  row.addEventListener('dragstart', (event) => {
+    // Dragging one of several selected takes the whole selection along.
+    // The selection itself is left alone: redrawing the list here would
+    // pull the dragged row out of the document and kill the drag.
+    layerDrag = S.picks.indexOf(index) >= 0 ? picked() : [index];
+    event.dataTransfer.setData('text/lcd-layer', String(index));
+    event.dataTransfer.effectAllowed = 'move';
+    row.classList.add('dragging');
+  });
+  row.addEventListener('dragend', endLayerDrag);
+}
+
+function bindLayerList() {
+  const list = $('layer-list');
+  list.addEventListener('dragover', (event) => {
+    if (!layerDrag) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    markLayerSlot(layerSlot(event));
+  });
+  list.addEventListener('dragleave', (event) => {
+    if (!list.contains(event.relatedTarget)) markLayerSlot(-1);
+  });
+  list.addEventListener('drop', (event) => {
+    if (!layerDrag) return;
+    event.preventDefault();
+    const chosen = layerDrag;
+    const slot = layerSlot(event);
+    endLayerDrag();
+    reorderWidgets(chosen, widgets().length - slot);
+  });
 }
 
 function drawCanvas() {
@@ -396,7 +494,9 @@ function drawCanvas() {
   widgets().forEach((spec, index) => {
     const box = geometry(spec);
     const node = el('div', {
-      class: 'box' + (index === S.sel ? ' selected' : ''),
+      class: 'box'
+        + (S.picks.indexOf(index) >= 0 ? ' selected' : '')
+        + (index === S.sel ? ' primary' : ''),
       'data-index': index,
       title: widgetTitle(spec, index),
     }, el('span', { class: 'tag', text: `${spec.type || 'text'} · ${box.w}×${box.h}` }));
@@ -420,10 +520,138 @@ function currentZoom() {
   return Math.max(0.25, Math.min(4, Math.round(scale * 20) / 20));
 }
 
+/* ----------------------------------------------------------- clipboard */
+
+/* Elements travel between layouts, so the clipboard outlives the layout
+ * being edited and the page itself: it lives in this browser's storage,
+ * which a second tab and a reload both still see. */
+const CLIP_KEY = 'lcd4linux.clipboard';
+
+let clipboard = null;   // for a browser that refuses to store anything
+
+function readClipboard() {
+  try {
+    const raw = localStorage.getItem(CLIP_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (err) {
+    // private mode, or someone else wrote nonsense into the key
+  }
+  return clipboard;
+}
+
+function writeClipboard(payload) {
+  clipboard = payload;
+  try {
+    localStorage.setItem(CLIP_KEY, JSON.stringify(payload));
+  } catch (err) {
+    // the in-memory copy still carries it through this session
+  }
+}
+
+function copySelection(cut) {
+  const chosen = picked();
+  if (!chosen.length) { toast(t('nothingpicked'), true); return; }
+  const items = widgets();
+  writeClipboard({
+    size: canvasSize(),
+    file: S.file,
+    page: S.page,
+    widgets: chosen.map((index) => clone(items[index])),
+  });
+  if (cut) removeWidget();
+  toast(t(cut ? 'cutdone' : 'copydone', chosen.length));
+  refreshClipboardButton();
+}
+
+function pasteClipboard() {
+  const data = readClipboard();
+  const incoming = data && Array.isArray(data.widgets) ? data.widgets : [];
+  if (!incoming.length) { toast(t('clipempty'), true); return; }
+  snapshot();
+  const items = widgets();
+  const [width, height] = canvasSize();
+  // Pasting back where it was copied from would hide the copy underneath
+  // the original, so it lands one grid step off.
+  const same = data.file === S.file && data.page === S.page;
+  const step = same ? Math.max(4, S.grid) : 0;
+  const made = incoming.map((spec) => {
+    const copy = clone(spec);
+    const box = geometry(copy);
+    // A layout that is smaller than the one it came from would take the
+    // element off the canvas, so only then are the coordinates rewritten.
+    if (step || box.x > width - 8 || box.y > height - 8) {
+      copy.x = Math.max(0, Math.min(width - 8, box.x + step));
+      copy.y = Math.max(0, Math.min(height - 8, box.y + step));
+    }
+    items.push(copy);
+    return items.length - 1;
+  });
+  setSelection(made, made[made.length - 1]);
+  drawLayers();
+  drawCanvas();
+  drawInspector('widget');
+  schedulePreview(80);
+  const from = data.size || [];
+  toast(from[0] === width && from[1] === height
+    ? t('pastedone', made.length)
+    : t('pastedsize', made.length, from[0] || '?', from[1] || '?'));
+}
+
+function refreshClipboardButton() {
+  const data = readClipboard();
+  const count = data && Array.isArray(data.widgets) ? data.widgets.length : 0;
+  const button = $('btn-paste');
+  button.disabled = !count;
+  button.title = count ? t('pastetitle', count) : t('clipempty');
+}
+
+/* ----------------------------------------------------------- selection */
+
+/* One element is the one the inspector edits; the rest ride along for
+ * moving, aligning, copying and deleting. */
+const picked = () => S.picks.slice().sort((a, b) => a - b);
+
+function setSelection(list, primary) {
+  const count = widgets().length;
+  const kept = [];
+  (list || []).forEach((index) => {
+    if (index >= 0 && index < count && kept.indexOf(index) < 0) kept.push(index);
+  });
+  S.picks = kept;
+  S.sel = kept.indexOf(primary) >= 0
+    ? primary
+    : (kept.length ? kept[kept.length - 1] : -1);
+}
+
+const clearSelection = () => setSelection([], -1);
+
 /* --------------------------------------------------------- interaction */
 
-function select(index) {
-  S.sel = index;
+/* Ctrl or Cmd adds one, Shift takes everything in between, a plain click
+ * starts over. */
+function select(index, event) {
+  if (event && (event.ctrlKey || event.metaKey)) {
+    const list = S.picks.slice();
+    const at = list.indexOf(index);
+    if (at >= 0) list.splice(at, 1);
+    else list.push(index);
+    setSelection(list, index);
+  } else if (event && event.shiftKey && S.sel >= 0) {
+    const list = [];
+    for (let i = Math.min(S.sel, index); i <= Math.max(S.sel, index); i += 1) {
+      list.push(i);
+    }
+    setSelection(list, index);
+  } else {
+    setSelection([index], index);
+  }
+  drawLayers();
+  drawCanvas();
+  drawInspector('widget');
+}
+
+function selectAll() {
+  setSelection(widgets().map((_spec, index) => index), widgets().length - 1);
   drawLayers();
   drawCanvas();
   drawInspector('widget');
@@ -431,7 +659,7 @@ function select(index) {
 
 function selectPage(index) {
   S.page = index;
-  S.sel = -1;
+  clearSelection();
   drawAll();
 }
 
@@ -444,14 +672,27 @@ function beginDrag(event, index) {
   if (event.button !== 0) return;
   event.preventDefault();
   event.stopPropagation();
-  if (index !== S.sel) select(index);
+  const dir = event.target.dataset.dir || '';
+  // Ctrl or Shift on a box picks it, it does not drag it.
+  if (!dir && (event.ctrlKey || event.metaKey || event.shiftKey)) {
+    select(index, event);
+    return;
+  }
+  // A handle resizes the one box it sits on, so it takes the selection with
+  // it; grabbing a box that is already picked keeps the rest along for the
+  // ride.
+  if (dir || S.picks.indexOf(index) < 0) select(index);
 
   const spec = widgets()[index];
   const start = geometry(spec);
   const zoom = currentZoom();
   const [width, height] = canvasSize();
-  const dir = event.target.dataset.dir || '';
   const node = $('boxes').children[index];
+  // Everything else that rides along, with the box it started from.
+  const others = dir ? [] : picked().filter((other) => other !== index)
+    .map((other) => ({ spec: widgets()[other],
+                       node: $('boxes').children[other],
+                       start: geometry(widgets()[other]) }));
   const originX = event.clientX;
   const originY = event.clientY;
   let moved = false;
@@ -468,6 +709,12 @@ function beginDrag(event, index) {
       spec.w = box.w;
       spec.h = box.h;
     }
+    const dx = box.x - start.x;
+    const dy = box.y - start.y;
+    others.forEach((other) => {
+      other.spec.x = other.start.x + dx;
+      other.spec.y = other.start.y + dy;
+    });
   }
 
   function move(motion) {
@@ -504,6 +751,10 @@ function beginDrag(event, index) {
     node.style.height = `${box.h * zoom}px`;
     node.querySelector('.tag').textContent =
       `${spec.type || 'text'} · ${box.x},${box.y} ${box.w}×${box.h}`;
+    others.forEach((other) => {
+      other.node.style.left = `${(other.start.x + box.x - start.x) * zoom}px`;
+      other.node.style.top = `${(other.start.y + box.y - start.y) * zoom}px`;
+    });
     showGuides(box);
     $('hover-info').textContent = `x ${box.x}  y ${box.y}  ${box.w} × ${box.h}`;
     apply();
@@ -514,7 +765,13 @@ function beginDrag(event, index) {
     window.removeEventListener('pointermove', move);
     window.removeEventListener('pointerup', finish);
     $('guides').textContent = '';
-    if (!moved) return;
+    if (!moved) {
+      // A press that never became a drag is an ordinary click, so it keeps
+      // the one box under it.  Holding several and dragging moves them all;
+      // clicking one of them settles on it.
+      if (S.picks.length > 1) select(index);
+      return;
+    }
     apply();
     drawLayers();
     drawInspector('widget');
@@ -556,7 +813,7 @@ function addWidget(type, x, y) {
   spec.h = Math.min(spec.h, height - spec.y);
   snapshot();
   widgets().push(spec);
-  S.sel = widgets().length - 1;
+  setSelection([widgets().length - 1], widgets().length - 1);
   drawLayers();
   drawCanvas();
   drawInspector('widget');
@@ -564,10 +821,14 @@ function addWidget(type, x, y) {
 }
 
 function removeWidget() {
-  if (S.sel < 0) return;
+  const chosen = picked();
+  if (!chosen.length) return;
   snapshot();
-  widgets().splice(S.sel, 1);
-  S.sel = Math.min(S.sel, widgets().length - 1);
+  const items = widgets();
+  // From the back, so the indices in front of each one still hold.
+  chosen.slice().reverse().forEach((index) => items.splice(index, 1));
+  const next = Math.min(chosen[0], items.length - 1);
+  setSelection(next >= 0 ? [next] : [], next);
   drawLayers();
   drawCanvas();
   drawInspector('widget');
@@ -575,58 +836,91 @@ function removeWidget() {
 }
 
 function duplicateWidget() {
-  const spec = widget();
-  if (!spec) return;
+  const chosen = picked();
+  if (!chosen.length) return;
   snapshot();
-  const copy = clone(spec);
-  copy.x = resolveLength(copy.x, canvasSize()[0], 0) + 8;
-  copy.y = resolveLength(copy.y, canvasSize()[1], 0) + 8;
-  widgets().push(copy);
-  S.sel = widgets().length - 1;
+  const items = widgets();
+  const [width, height] = canvasSize();
+  const made = chosen.map((index) => {
+    const copy = clone(items[index]);
+    copy.x = resolveLength(copy.x, width, 0) + 8;
+    copy.y = resolveLength(copy.y, height, 0) + 8;
+    items.push(copy);
+    return items.length - 1;
+  });
+  setSelection(made, made[made.length - 1]);
   drawLayers();
   drawCanvas();
   drawInspector('widget');
   schedulePreview(80);
 }
 
-function moveLayer(step) {
+/* Puts ``chosen`` back in as one block, in front of what is at ``target``
+ * once they are out.  Both the front/back buttons and the dragged layer
+ * list come through here. */
+function reorderWidgets(chosen, target) {
   const items = widgets();
-  const target = S.sel + step;
-  if (S.sel < 0 || target < 0 || target >= items.length) return;
+  const order = chosen.slice().sort((a, b) => a - b);
+  if (!order.length) return false;
+  const moving = order.map((index) => items[index]);
+  const ahead = order.filter((index) => index < target).length;
+  const at = Math.max(0, Math.min(items.length - moving.length, target - ahead));
+  if (at === order[0] && order[order.length - 1] - order[0] === order.length - 1) {
+    return false;             // already sitting exactly there
+  }
   snapshot();
-  const [spec] = items.splice(S.sel, 1);
-  items.splice(target, 0, spec);
-  S.sel = target;
+  order.slice().reverse().forEach((index) => items.splice(index, 1));
+  moving.forEach((spec, step) => items.splice(at + step, 0, spec));
+  setSelection(moving.map((_spec, step) => at + step), at + moving.length - 1);
   drawLayers();
   drawCanvas();
+  drawInspector('widget');
   schedulePreview(80);
+  return true;
+}
+
+function moveLayer(step) {
+  const chosen = picked();
+  if (!chosen.length) return;
+  const items = widgets();
+  const target = step > 0 ? chosen[chosen.length - 1] + 1 : chosen[0] - 1;
+  if (target < 0 || target >= items.length) return;
+  reorderWidgets(chosen, step > 0 ? target + 1 : target);
 }
 
 function nudge(dx, dy) {
-  const spec = widget();
-  if (!spec) return;
-  const box = geometry(spec);
+  const chosen = picked();
+  if (!chosen.length) return;
+  const items = widgets();
   snapshot();
-  spec.x = box.x + dx;
-  spec.y = box.y + dy;
+  chosen.forEach((index) => {
+    const spec = items[index];
+    const box = geometry(spec);
+    spec.x = box.x + dx;
+    spec.y = box.y + dy;
+  });
   drawCanvas();
   drawInspector('widget');
   schedulePreview(150);
 }
 
 function align(mode) {
-  const spec = widget();
-  if (!spec) return;
+  const chosen = picked();
+  if (!chosen.length) return;
+  const items = widgets();
   const [width, height] = canvasSize();
-  const box = geometry(spec);
   snapshot();
-  if (mode === 'left') spec.x = 0;
-  if (mode === 'right') spec.x = width - box.w;
-  if (mode === 'hcenter') spec.x = Math.round((width - box.w) / 2);
-  if (mode === 'top') spec.y = 0;
-  if (mode === 'bottom') spec.y = height - box.h;
-  if (mode === 'vcenter') spec.y = Math.round((height - box.h) / 2);
-  if (mode === 'fitwidth') { spec.x = 16; spec.w = width - 32; }
+  chosen.forEach((index) => {
+    const spec = items[index];
+    const box = geometry(spec);
+    if (mode === 'left') spec.x = 0;
+    if (mode === 'right') spec.x = width - box.w;
+    if (mode === 'hcenter') spec.x = Math.round((width - box.w) / 2);
+    if (mode === 'top') spec.y = 0;
+    if (mode === 'bottom') spec.y = height - box.h;
+    if (mode === 'vcenter') spec.y = Math.round((height - box.h) / 2);
+    if (mode === 'fitwidth') { spec.x = 16; spec.w = width - 32; }
+  });
   drawCanvas();
   drawInspector('widget');
   schedulePreview(80);
@@ -685,10 +979,36 @@ function drawInspector(tab) {
   else drawLayoutInspector(panel);
 }
 
+/* The buttons that work on a whole selection, however big it is. */
+function selectionActions() {
+  return el('div', { class: 'row' },
+    el('button', { text: t('duplicate'), onclick: duplicateWidget }),
+    el('button', { text: t('front'), onclick: () => moveLayer(1) }),
+    el('button', { text: t('back'), onclick: () => moveLayer(-1) }),
+    el('button', { class: 'danger', text: t('remove'), onclick: removeWidget }));
+}
+
 function drawWidgetInspector(panel) {
+  const chosen = picked();
   const spec = widget();
   if (!spec) {
     panel.appendChild(el('p', { class: 'empty', text: t('noselection') }));
+    return;
+  }
+  // Several at once share the actions but not the fields: writing one value
+  // into elements of different types would be a guess.
+  if (chosen.length > 1) {
+    const items = widgets();
+    panel.appendChild(el('div', { class: 'group' },
+      el('h3', { text: t('manypicked', chosen.length) }),
+      el('div', { class: 'list' }, chosen.map((index) => el('div', {
+        class: 'item' + (index === S.sel ? ' active' : ''),
+        onclick: () => select(index),
+      },
+        el('span', { class: 'kind', text: items[index].type || 'text' }),
+        el('span', { class: 'label', text: widgetTitle(items[index], index) })))),
+      selectionActions(),
+      el('p', { class: 'hint', text: t('manyhint') })));
     return;
   }
   const types = S.schema.widgets.map((entry) => entry.type);
@@ -706,12 +1026,7 @@ function drawWidgetInspector(panel) {
           value: type, selected: type === (spec.type || 'text'), text: type,
         })))),
     ),
-    el('div', { class: 'row' },
-      el('button', { text: t('duplicate'), onclick: duplicateWidget }),
-      el('button', { text: t('front'), onclick: () => moveLayer(1) }),
-      el('button', { text: t('back'), onclick: () => moveLayer(-1) }),
-      el('button', { class: 'danger', text: t('remove'), onclick: removeWidget }),
-    ));
+    selectionActions());
   panel.appendChild(head);
 
   const common = S.schema.common;
@@ -924,7 +1239,7 @@ function addPage() {
   snapshot();
   S.doc.pages.push({ name: t('pagename', S.doc.pages.length + 1), widgets: [] });
   S.page = S.doc.pages.length - 1;
-  S.sel = -1;
+  clearSelection();
   drawAll();
 }
 
@@ -942,7 +1257,7 @@ function deletePage() {
   snapshot();
   S.doc.pages.splice(S.page, 1);
   S.page = Math.max(0, S.page - 1);
-  S.sel = -1;
+  clearSelection();
   drawAll();
 }
 
@@ -1042,7 +1357,7 @@ function openJsonEditor() {
           snapshot();
           S.doc = parsed;
           S.page = Math.min(S.page, (S.doc.pages || []).length - 1);
-          S.sel = -1;
+          clearSelection();
           closeModal();
           drawAll();
           toast(t('appliedjson'));
@@ -1074,7 +1389,7 @@ function openNewDialog() {
         S.doc = answer.spec;
         S.file = name.value.trim() || 'mein-layout.json';
         S.page = 0;
-        S.sel = -1;
+        clearSelection();
         S.undo.length = 0;
         S.redo.length = 0;
         closeModal();
@@ -1128,7 +1443,7 @@ async function openLayout(file) {
   S.file = answer.file;
   S.strings = answer.strings || {};
   S.page = 0;
-  S.sel = -1;
+  clearSelection();
   S.undo.length = 0;
   S.redo.length = 0;
   markDirty(false);
@@ -1185,7 +1500,7 @@ function importFile(file) {
       S.doc = JSON.parse(reader.result);
       S.file = file.name;
       S.page = 0;
-      S.sel = -1;
+      clearSelection();
       markDirty(true);
       drawAll();
       toast(t('importdone', file.name));
@@ -1238,6 +1553,10 @@ function bindEvents() {
     event.target.value = '';
   });
 
+  $('btn-copy').addEventListener('click', () => copySelection(false));
+  $('btn-cut').addEventListener('click', () => copySelection(true));
+  $('btn-paste').addEventListener('click', pasteClipboard);
+  bindLayerList();
   $('btn-page-add').addEventListener('click', addPage);
   $('btn-page-copy').addEventListener('click', copyPage);
   $('btn-page-del').addEventListener('click', deletePage);
@@ -1274,7 +1593,7 @@ function bindEvents() {
   const wrap = $('canvas-wrap');
   wrap.addEventListener('pointerdown', (event) => {
     if (event.target.closest('.box')) return;
-    S.sel = -1;
+    clearSelection();
     drawLayers();
     drawCanvas();
     drawInspector('widget');
@@ -1295,6 +1614,11 @@ function bindEvents() {
               (event.clientY - rect.top) / zoom);
   });
 
+  // A copy made in a second tab is the same clipboard, so the button there
+  // has to notice it.
+  window.addEventListener('storage', (event) => {
+    if (event.key === CLIP_KEY) refreshClipboardButton();
+  });
   window.addEventListener('keydown', keyboard);
   window.addEventListener('resize', () => { if (S.zoom === 'fit') drawCanvas(); });
   window.addEventListener('beforeunload', (event) => {
@@ -1324,6 +1648,14 @@ function keyboard(event) {
     return;
   }
   if (typing) return;
+  // Below the typing guard, so a field still copies and pastes its own text.
+  if (event.ctrlKey || event.metaKey) {
+    const key = event.key.toLowerCase();
+    if (key === 'c') { event.preventDefault(); copySelection(false); return; }
+    if (key === 'x') { event.preventDefault(); copySelection(true); return; }
+    if (key === 'v') { event.preventDefault(); pasteClipboard(); return; }
+    if (key === 'a') { event.preventDefault(); selectAll(); return; }
+  }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'd') {
     event.preventDefault();
     duplicateWidget();
