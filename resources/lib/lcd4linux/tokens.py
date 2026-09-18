@@ -6,6 +6,19 @@ Layout files address data through ``${...}`` placeholders::
     "${player.time} / ${player.duration}"
     "${info:MusicPlayer.Album|upper|trunc:24}"
 
+Words, digits and punctuation can be written around a token, and ``{...}``
+ties them to it::
+
+    "{${player.title} live}"          "Enjoy the Silence live", or nothing
+    "{Track ${player.track}}"         the word only while there is a number
+    "${player.artist}{ · ${player.album}}"
+
+Everything between the braces is dropped as a whole once every token inside
+came out empty, so a stray separator or a lone caption never survives the
+value it belongs to.  Groups may be nested.  A brace that does not enclose a
+token is an ordinary character, which is the whole rule: text that used
+braces before this existed still reads the way it always did.
+
 Anything the add-on does not know natively can still be reached with the
 ``info:`` prefix (any Kodi InfoLabel) or ``bool:`` (any Kodi boolean
 condition), so a layout is never limited to the built-in token list.
@@ -19,8 +32,15 @@ import re
 
 from . import localize
 
+#: What one ``${...}`` looks like.  The expander matches it at a position
+#: rather than substituting across the whole string, because it has to see
+#: the ``{...}`` groups in between.
 TOKEN_RE = re.compile(r"\$\{([^}]*)\}")
 LOCALIZE_RE = re.compile(r"\$LOCALIZE\[(\d+)\]")
+
+#: How deep ``{...}`` groups may nest before the parser stops treating a
+#: brace as a group.  Layouts never go near this; a mistyped string might.
+MAX_GROUP_DEPTH = 12
 
 _TRUE_WORDS = ("1", "true", "yes", "on")
 
@@ -136,8 +156,86 @@ def localize_text(template):
     return LOCALIZE_RE.sub(lambda match: localize.text(match.group(1)), template)
 
 
+def token_value(expression, provider):
+    """Expand the inside of one ``${...}``: the token and its filters."""
+    parts = expression.split("|")
+    value = provider.value(parts[0].strip())
+    if value is None:
+        value = u""
+    elif not isinstance(value, str):
+        value = str(value)
+    for spec in parts[1:]:
+        value = apply_filter(value, spec)
+    return value
+
+
+def _closing_brace(text, start):
+    """Index of the ``}`` closing the ``{`` at ``start``, or ``-1``.
+
+    ``${...}`` is stepped over whole: its own ``}`` closes the token, not
+    the group around it.
+    """
+    depth = 0
+    index = start
+    while index < len(text):
+        if text.startswith("${", index):
+            token = TOKEN_RE.match(text, index)
+            if token is None:
+                return -1
+            index = token.end()
+            continue
+        if text[index] == "{":
+            depth += 1
+        elif text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                return index
+        index += 1
+    return -1
+
+
+def _render(text, provider, depth=0):
+    """Expand ``text``; return it and whether a token in it had a value.
+
+    A ``{...}`` group is dropped as a whole once every token inside it came
+    out empty, so the words written around a token go with it instead of
+    being left behind.
+    """
+    out = []
+    filled = False
+    index = 0
+    length = len(text)
+    while index < length:
+        if text.startswith("${", index):
+            token = TOKEN_RE.match(text, index)
+            if token is None:            # nothing closes it: plain text
+                out.append(text[index:])
+                break
+            value = token_value(token.group(1), provider)
+            if value.strip():
+                filled = True
+            out.append(value)
+            index = token.end()
+            continue
+        if text[index] == "{" and depth < MAX_GROUP_DEPTH:
+            end = _closing_brace(text, index)
+            # Braces with no token between them are ordinary characters, so
+            # layouts that use one in their text keep reading as before.
+            if end >= 0 and "${" in text[index + 1:end]:
+                body, body_filled = _render(text[index + 1:end], provider,
+                                            depth + 1)
+                if body_filled:
+                    out.append(body)
+                    filled = True
+                index = end + 1
+                continue
+        out.append(text[index])
+        index += 1
+    return u"".join(out), filled
+
+
 def expand(template, provider):
-    """Replace every ``$LOCALIZE[...]`` and ``${...}`` in ``template``.
+    """Replace every ``$LOCALIZE[...]``, ``${...}`` and ``{...}`` group.
 
     The translations go in first so a fixed word can be used as a filter
     argument, as in ``${player.next|prefix:$LOCALIZE[32420]: |trunc:32}``,
@@ -148,20 +246,7 @@ def expand(template, provider):
     template = localize_text(template)
     if "${" not in template:
         return template
-
-    def replace(match):
-        expression = match.group(1)
-        parts = expression.split("|")
-        value = provider.value(parts[0].strip())
-        if value is None:
-            value = u""
-        elif not isinstance(value, str):
-            value = str(value)
-        for spec in parts[1:]:
-            value = apply_filter(value, spec)
-        return value
-
-    return TOKEN_RE.sub(replace, template)
+    return _render(template, provider)[0]
 
 
 def number(template, provider, default=0.0):
@@ -201,7 +286,8 @@ def evaluate(condition, provider):
       and the other states the data provider exposes
     * any Kodi boolean condition, e.g. ``Player.HasVideo``
     * a comparison such as ``${player.percent} > 50``
-    * a bare ``${token}``, true when it expands to something non-empty
+    * a bare ``${token}`` or ``{...}`` group, true when it expands to
+      something non-empty
     """
     if condition is None:
         return True
@@ -229,7 +315,10 @@ def evaluate(condition, provider):
             right = expand(text[index + len(operator):], provider)
             return bool(compare(left, right))
 
-    if text.startswith("${") and text.endswith("}"):
+    # A bare ``${token}``, or a ``{...}`` group written around one, is true
+    # once it fills with something.
+    if text.endswith("}") and (text.startswith("${")
+                               or (text.startswith("{") and "${" in text)):
         return bool(expand(text, provider).strip())
 
     return provider.condition(text)

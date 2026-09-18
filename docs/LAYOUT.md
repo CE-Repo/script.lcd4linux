@@ -8,7 +8,7 @@ full reference for writing your own.
 [The browser editor](#the-browser-editor) ·
 [Writing your own](#writing-your-own) · [Skeleton](#skeleton) ·
 [Pages](#pages) · [Widget basics](#widget-basics) · [Widgets](#widgets) ·
-[Data fields](#data-fields) · [Filters](#filters) ·
+[Data fields](#data-fields) · [Filters](#filters) · [Groups](#groups) ·
 [Conditions](#conditions) · [Practical notes](#practical-notes)
 
 ---
@@ -431,7 +431,8 @@ names, for instance.
 ### Data fields
 
 Tokens are written `${...}` and work in text, in numeric fields like `value`,
-in colours and in conditions.
+in colours and in conditions. Fixed words may stand next to them, and
+[`{...}`](#groups) ties those words to the value so both disappear together.
 
 **Playback — `player.*`**
 
@@ -537,6 +538,57 @@ ${player.year|prefix: · }
 
 `prefix` and `suffix` are how you write separators that vanish when there is
 nothing to separate: `${player.year}${player.genre|prefix: · }`.
+
+### Groups
+
+Words, digits and punctuation may be written straight next to a token:
+
+```
+${player.artist} - ${player.title}
+```
+
+That much always worked. What braces add is that the text belongs to the
+value. `{...}` is a group: once every token inside it comes out empty, the
+whole group goes, text and all.
+
+```
+{${player.title} live}        Enjoy the Silence live   ·   nothing while stopped
+{Track ${player.track}}       Track 4                  ·   the word goes with the number
+${player.artist}{ · ${player.album}}                   ·   the dot needs an album
+```
+
+Without the braces the last line would leave a lonely ` · ` on the panel
+whenever the album is unknown. Where the text goes is up to you, so a caption
+reads the same whether it stands in front of the value or behind it:
+
+| Written | While playing | Nothing playing |
+|---|---|---|
+| `{${player.title} Test}` | `Enjoy the Silence Test` | *(empty)* |
+| `{Test ${player.title}}` | `Test Enjoy the Silence` | *(empty)* |
+
+Three rules, and that is all of them:
+
+1. Braces are a group **only when a `${...}` stands between them**. `{Info}`
+   is the word `Info` in braces, exactly as it always was, so nothing you
+   wrote before this existed reads differently now.
+2. A group is kept as soon as **one** token in it has a value, and dropped
+   when none has. A token that expands to nothing but spaces counts as empty.
+3. Groups nest: `{${player.album}{ (${player.year})}}` gives
+   `Violator (1990)`, or just `Violator` when the year is unknown.
+
+Filters and `$LOCALIZE[...]` work inside a group like anywhere else:
+
+```
+{$LOCALIZE[32403]: ${player.album|trunc:20}}
+```
+
+Groups also work in a condition, where one is true while it fills with
+something, and in every other field that takes a token — numbers, colours and
+image paths included.
+
+Next to a single token, `{...}` and the `prefix:`/`suffix:` filters do the
+same job; pick whichever reads better. The group is the one that can hold
+several tokens and put text on both sides.
 
 ### Translating fixed words
 

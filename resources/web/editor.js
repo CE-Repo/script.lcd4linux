@@ -34,6 +34,9 @@ const TEXTS = {
     confirmdelete: '%s wirklich löschen?',
     unsaved: 'Ungespeicherte Änderungen gehen verloren. Fortfahren?',
     tokentitle: 'Datenfeld einfügen', filters: 'Filter',
+    groups: 'Gruppen', groupshint: '{...} bindet Wörter, Zahlen und Zeichen'
+      + ' an die Werte darin: ist alles darin leer, fällt die ganze Gruppe'
+      + ' weg. Geschweifte Klammern ohne Wert darin bleiben gewöhnlicher Text.',
     jsontitle: 'Layout als JSON', duplicate: 'Duplizieren',
     front: 'Nach vorn', back: 'Nach hinten', remove: 'Entfernen',
     saveastitle: 'Speichern unter', filename: 'Dateiname',
@@ -70,6 +73,9 @@ const TEXTS = {
     confirmdelete: 'Really delete %s?',
     unsaved: 'Unsaved changes will be lost. Continue?',
     tokentitle: 'Insert a data field', filters: 'Filters',
+    groups: 'Groups', groupshint: '{...} ties words, digits and punctuation'
+      + ' to the values inside it: once they are all empty the whole group'
+      + ' goes. Braces without a value in them stay ordinary text.',
     jsontitle: 'Layout as JSON', duplicate: 'Duplicate',
     front: 'Bring forward', back: 'Send backward', remove: 'Remove',
     saveastitle: 'Save as', filename: 'File name',
@@ -1007,10 +1013,19 @@ function openTokenPicker(input, onInsert) {
     }, el('code', { text: `|${entry.filter}` }), el('span', { text: label(entry) })));
   });
 
+  const snippets = el('div', { class: 'token-list' });
+  (S.schema.groups || []).forEach((entry) => {
+    snippets.appendChild(el('button', {
+      onclick: () => insert(entry.snippet),
+    }, el('code', { text: entry.snippet }), el('span', { text: label(entry) })));
+  });
+
   fill(S.schema.tokens[0]);
   openModal(t('tokentitle'),
     el('div', {}, groups, list,
-      el('h3', { class: 'muted', text: t('filters') }), filters),
+      el('h3', { class: 'muted', text: t('filters') }), filters,
+      el('h3', { class: 'muted', text: t('groups') }),
+      el('p', { class: 'hint', text: t('groupshint') }), snippets),
     [el('button', { text: t('cancel'), onclick: closeModal })]);
 }
 

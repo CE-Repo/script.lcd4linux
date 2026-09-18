@@ -56,6 +56,9 @@ An AX206 panel should light up immediately. For a Samsung frame, set
   around, with a preview drawn by the same renderer that feeds the display.
 * **Every Kodi InfoLabel** is available (`${info:MusicPlayer.Album}`), as is
   every Kodi condition (`Player.HasVideo`).
+* **Words that know when to leave.** `{Track ${player.track}}` writes the
+  caption only while there is a number, so nothing is left standing on the
+  panel once the value behind it is gone.
 * **Media details in plain words.** Kodi reports `hevc`, `truehd_atmos` and
   `8`; the display shows H.265, Dolby TrueHD Atmos and 7.1, along with the
   dynamic range (Dolby Vision, HDR10+, HDR10, HLG, SDR) and a resolution that

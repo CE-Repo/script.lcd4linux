@@ -1424,6 +1424,71 @@ def test_tokens():
     check(tokens.evaluate("${player.percent} > 10", provider), "comparison")
     check(tokens.evaluate("audio+playing", provider), "and combination")
 
+    # -- {...} groups: the words go with the value they belong to ---------
+    class _Some(object):
+        """A provider that knows exactly the tokens it was given."""
+
+        def __init__(self, **values):
+            self.values = values
+
+        def value(self, name):
+            return self.values.get(name, "")
+
+        def condition(self, name):
+            return False
+
+    everything = _Some(**{"player.title": "Enjoy the Silence",
+                          "player.album": "Violator",
+                          "player.year": "1990",
+                          "player.track": "4"})
+    silence = _Some()
+    album_only = _Some(**{"player.album": "Violator"})
+
+    for template, full, empty in (
+            # words in front of a value and behind it
+            ("{${player.title} Test}", "Enjoy the Silence Test", ""),
+            ("{Test ${player.title}}", "Test Enjoy the Silence", ""),
+            ("{${player.title}, Test}", "Enjoy the Silence, Test", ""),
+            ("{Track ${player.track}}", "Track 4", ""),
+            # a separator that must not outlive what it separates
+            ("${player.title}{ · ${player.album}}",
+             "Enjoy the Silence · Violator", ""),
+            # filters and translations keep working inside a group
+            ("{${player.title|upper} (${player.year})}",
+             "ENJOY THE SILENCE (1990)", ""),
+            # braces without a token in them are plain characters
+            ("a {literal} brace", "a {literal} brace", "a {literal} brace"),
+            ("{{doubled}}", "{{doubled}}", "{{doubled}}"),
+            ("unbalanced { brace", "unbalanced { brace", "unbalanced { brace"),
+            # and a template without braces reads as it always did
+            ("${player.title} Test", "Enjoy the Silence Test", " Test")):
+        got_full = tokens.expand(template, everything)
+        got_empty = tokens.expand(template, silence)
+        check(got_full == full and got_empty == empty,
+              "%s -> %r / %r" % (template, got_full, got_empty))
+
+    nested = "{${player.album}{ (${player.year})}}"
+    check(tokens.expand(nested, everything) == "Violator (1990)",
+          "a nested group fills")
+    check(tokens.expand(nested, album_only) == "Violator",
+          "and the inner one drops on its own")
+    check(tokens.expand(nested, silence) == "", "both drop together")
+    check(tokens.expand("{x ${a} y}", _Some(a="   ")) == "",
+          "a value of nothing but spaces counts as empty")
+
+    check(tokens.evaluate("{${player.album} x}", everything),
+          "a group is a condition while it fills")
+    check(not tokens.evaluate("{${player.album} x}", silence),
+          "and false once it is empty")
+    check(tokens.number("{${player.year}}", everything) == 1990.0,
+          "a group reaches numeric fields")
+
+    # Nothing may hang or blow the stack on a mistyped string.
+    for junk in ("{" * 400, "}" * 400, "${" * 400, "{${a}" * 200,
+                 "{" * 40 + "${a}" + "}" * 40):
+        tokens.expand(junk, everything)
+    check(True, "unbalanced and deeply nested braces are survivable")
+
 
 def test_media_info():
     """Codec, HDR and resolution must reach the panel as names, not raw ids.
@@ -1873,6 +1938,16 @@ def test_web_editor():
     check(sorted(webschema.PALETTE) == sorted(webschema.WIDGET_FIELDS),
           "the palette lists every described widget")
 
+    # The ready made {...} groups are taught to users, so they have to be
+    # true: one that renders nothing would teach the syntax wrongly.
+    from lcd4linux import tokens as token_module
+    demo = DemoProvider(0, 97.0, "playing", "")
+    demo.begin_frame()
+    wrong = [snippet for snippet, _label, _de in webschema.GROUPS
+             if not token_module.expand(snippet, demo).strip()]
+    check(not wrong, "every group the picker offers renders something (%s)"
+          % (wrong or "all of them",))
+
     # -- the picture has to follow the keyboard ---------------------------
     # A field that only commits on "change" keeps its change invisible until
     # the cursor is put somewhere else, which reads as a broken editor.
@@ -1974,6 +2049,10 @@ def test_web_editor():
               "the schema describes every widget")
         check("sans" in schema["fonts"] and "play" in schema["icons"],
               "fonts and icons come from the add-on itself")
+        check(schema["groups"] and all("${" in entry["snippet"]
+                                       for entry in schema["groups"]),
+              "the picker teaches {...} groups (%d examples)"
+              % len(schema["groups"]))
 
         code, _kind, body = request("/api/layouts")
         listed = json.loads(body)["layouts"]
