@@ -319,6 +319,55 @@ h2 {
 
 .sizes { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 14px; }
 
+/* ---------------------------------------------------------- icon picker */
+
+/* The button in front of the icon field: the symbol as it will be drawn,
+   or a hint at why there is no picture (empty, a token, not cached). */
+.icon-pick {
+  width: 28px; height: 26px; flex: none; display: grid; place-items: center;
+  padding: 0; color: var(--text);
+}
+.icon-pick svg { width: 17px; height: 17px; display: block; }
+.icon-pick.blank, .icon-pick.token { color: var(--muted); font-size: 11px; }
+.icon-pick.builtin { color: var(--accent); font-size: 10px; text-transform: uppercase; }
+
+.icon-picker { display: flex; flex-direction: column; gap: 10px; }
+.icon-bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.icon-search { flex: 1 1 200px; min-width: 140px; }
+.icon-tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.icon-tabs button.active { background: var(--accent-dim); border-color: var(--accent); }
+
+.icon-grid {
+  display: grid; gap: 4px; max-height: 52vh; overflow: auto;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  align-content: start;
+}
+.icon-tile {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  background: var(--panel-2); padding: 8px 4px 6px; overflow: hidden;
+}
+.icon-tile.active { border-color: var(--accent); background: var(--accent-dim); }
+.icon-tile .glyph {
+  height: 26px; display: grid; place-items: center; color: var(--text);
+}
+.icon-tile .glyph svg { width: 24px; height: 24px; display: block; }
+.icon-tile .glyph.builtin { color: var(--accent); font-size: 11px;
+                            text-transform: uppercase; }
+.icon-tile .name {
+  font-size: 10.5px; color: var(--muted); max-width: 100%;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.icon-tile:hover .name { color: var(--text); }
+
+.icon-more { align-self: center; }
+.icon-more[hidden] { display: none; }
+.icon-warning { color: var(--warn); margin: 0; }
+.icon-warning[hidden] { display: none; }
+.icon-licence { margin: 0; }
+.icon-licence a { color: var(--muted); }
+.icon-count { margin-right: auto; color: var(--muted); font-size: 11.5px; }
+.icon-cache { color: var(--muted); font-size: 11.5px; }
+
 /* --------------------------------------------------------------- toast */
 
 .toast {

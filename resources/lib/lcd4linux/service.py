@@ -12,6 +12,7 @@ import time
 
 from . import ax206
 from . import display as display_module
+from . import faicons
 from .errors import DisplayError
 from . import layout as layout_module
 from . import localize
@@ -302,6 +303,7 @@ class Service(object):
         self.config = Config(self._overrides)
         self.fonts = FontCache(self.config.font_directories)
         self.images.clear()
+        faicons.configure(self.config)
         self.provider = make_provider(self._addon_info("name"),
                                       self._addon_info("version"))
         log("starting with %s" % self.config.describe())
@@ -796,6 +798,7 @@ class Service(object):
                 debug("cannot clear the display: %s" % err)
         self.stop_web_editor()
         self._publish_web_url("")
+        faicons.stop()
         self._close_target()
         # Last, so the power can be cut once the USB connection is closed.
         self.run_hook("stop", self.config.stop_command)

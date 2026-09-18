@@ -276,6 +276,96 @@ def show_status():
     dialog.textviewer(localize.text(32335, "Display status"), "\n".join(lines))
 
 
+def manage_icons():
+    """Look after the Font Awesome cache from Kodi's settings dialog.
+
+    The editor fetches an icon the moment it is used, so this is for the
+    box that is about to lose its internet connection - or has to give the
+    space back.
+    """
+    from . import faicons
+
+    config = Config()
+    faicons.configure(config)
+    state = faicons.cache_state()
+    dialog = _dialog()
+    summary = "%s: %d/%d · %.1f MB" % (
+        localize.text(32232, "Cached symbols"), state["count"],
+        state["variants"], state["bytes"] / (1024.0 * 1024.0))
+    if dialog is None:
+        print(summary)
+        print(state["directory"])
+        return
+    if not state["downloads"]:
+        summary += "\n%s" % localize.text(32231,
+                                          "Downloading symbols is switched off")
+    entries = [localize.text(32233, "Download every symbol for offline use"),
+               localize.text(32234, "Download only what the layouts use"),
+               localize.text(32235, "Empty the symbol cache")]
+    choice = dialog.select("%s · %s" % (localize.text(32230, "Symbol cache"),
+                                        summary), entries)
+    if choice < 0:
+        return
+    if choice == 2:
+        removed = faicons.clear_cache()
+        _toast(localize.text(32236, "%d symbols removed") % removed)
+        return
+    if not state["downloads"]:
+        dialog.ok(localize.text(32230, "Symbol cache"),
+                  localize.text(32231, "Downloading symbols is switched off"))
+        return
+    wanted = None
+    if choice == 1:
+        wanted = ["%s:%s" % pair for pair in _icons_in_layouts(config)]
+        if not wanted:
+            _toast(localize.text(32237, "No layout uses a Font Awesome symbol"))
+            return
+    progress = None
+    if xbmcgui is not None:
+        try:
+            progress = xbmcgui.DialogProgressBG()
+            progress.create(localize.text(32000, "LCD4Linux"),
+                            localize.text(32238, "Downloading symbols"))
+        except Exception as error:
+            log("no progress dialog: %s" % error)
+
+    def step(done, total, name):
+        if progress is not None:
+            progress.update(int(100.0 * done / max(1, total)), message=name)
+        return True
+
+    try:
+        cached, fetched, failed = faicons.prefetch(wanted, progress=step)
+    finally:
+        if progress is not None:
+            progress.close()
+    if failed and not fetched:
+        _toast(localize.text(32240, "No symbol could be downloaded"))
+        return
+    _toast(localize.text(32239, "%d symbols cached") % (cached + fetched))
+
+
+def _icons_in_layouts(config):
+    """Every Font Awesome icon the layouts on this box name."""
+    from . import faicons
+    from . import widgets
+
+    found = []
+    for name, path in sorted(layout_module.discover(
+            config.layout_directories).items()):
+        try:
+            # The same reader the renderer uses, so a layout with comment
+            # lines in it is not quietly skipped.
+            spec = layout_module.Layout.load(path).spec
+        except (IOError, OSError, ValueError) as error:
+            log("cannot read %s for its icons: %s" % (name, error))
+            continue
+        for pair in faicons.used_by(spec, widgets.ICONS):
+            if pair not in found:
+                found.append(pair)
+    return found
+
+
 def _base_url(config):
     """Where the add-on's HTTP server is (or will be) listening."""
     from . import webui
@@ -378,6 +468,7 @@ def show_preview():
 ACTIONS = {
     "layout": choose_layout,
     "webeditor": show_web_editor,
+    "icons": manage_icons,
     "status": show_status,
     "settings": open_settings,
     "preview": show_preview,
@@ -393,6 +484,7 @@ ACTIONS = {
 MENU = (
     ("layout", 32320, "Choose layout"),
     ("webeditor", 32343, "Web editor"),
+    ("icons", 32230, "Symbol cache"),
     ("preview", 32324, "Preview layout"),
     ("next_page", 32325, "Next page"),
     ("test_pattern", 32323, "Test pattern"),

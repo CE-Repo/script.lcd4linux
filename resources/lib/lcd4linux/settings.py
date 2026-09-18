@@ -53,6 +53,8 @@ DEFAULTS = {
     "fps_playing": 4,
     "fps_idle": 1,
     "smooth_images": True,
+    "icon_download": True,
+    "icon_source": "",
     "start_command": "",
     "stop_command": "",
     "command_timeout": 15,
@@ -193,6 +195,11 @@ class Config(object):
     @property
     def font_directories(self):
         return [profile_path("fonts"), addon_path("resources", "fonts")]
+
+    @property
+    def icon_cache_directory(self):
+        """Where downloaded Font Awesome outlines are kept."""
+        return profile_path("icons")
 
     @property
     def preview_path(self):

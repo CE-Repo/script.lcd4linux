@@ -117,6 +117,9 @@ included, and loads nothing from the internet.
   one does not throw away the other.
 * **Elements**: drag from the palette or click to place — text, image,
   progress bar, graph, rectangle, line, circle, icon, analogue clock.
+* **Icons**: the *Symbol* field opens a dialog with a search box over the
+  built-in shapes and the whole Font Awesome Free set; what you pick is
+  cached on the box, so it draws again without a network connection.
 * **Move and resize** with the mouse, snapping to the grid. `Alt` disables
   snapping, `Shift` constrains direction, arrow keys nudge by a pixel and with
   `Shift` by ten.
@@ -448,11 +451,38 @@ Vector icons, scalable and tintable.
 
 ```json
 {"type": "icon", "x": 18, "y": 212, "w": 20, "h": 20, "icon": "play", "color": "accent"}
+{"type": "icon", "x": 48, "y": 212, "w": 20, "h": 20, "icon": "solid:compact-disc"}
+{"type": "icon", "x": 78, "y": 212, "w": 20, "h": 20, "icon": "brands:youtube"}
 ```
 
+| Field | Default | Meaning |
+|---|---|---|
+| `icon` | `play` | Which symbol: a built-in name or a Font Awesome one |
+| `style` | – | `solid`, `regular` or `brands` for a Font Awesome name |
+| `color` | white | Fill colour |
+| `trim` | `false` | Scale the outline to the box instead of keeping Font Awesome's padding |
+
+**Built-in shapes**, drawn from primitives and always available:
 `play`, `pause`, `stop`, `next`, `previous`, `music`, `movie`, `tv`, `speaker`,
 `mute`, `clock`, `cpu`, `temp`, `star`, `heart`, `folder`, `wifi`, `shuffle`,
 `repeat`, `disc`, `dot`.
+
+**Font Awesome Free**, every one of its symbols: write the style in front of
+the name, `"icon": "solid:heart"`, `"regular:heart"`, `"brands:apple"`. The
+web editor has a dialog with a search box over the whole set — that is the
+easy way to find one of two thousand names. The style prefix also keeps the
+names apart: plain `heart` is the built-in shape, `solid:heart` the Font
+Awesome one.
+
+The style may be left off and put in `style` instead, which is what a token
+driven name needs: `{"icon": "${player.mediatype}", "style": "solid"}`. With
+neither, a name that only exists as a brand (`youtube`) still finds it. Names
+Font Awesome has retired keep working — `ambulance` draws `truck-medical`.
+
+Outlines are fetched once and then kept in `<addon data>/icons/`, so a box
+with no internet connection draws every symbol its layouts use. Filling that
+cache up front, emptying it, and switching the download off altogether are in
+*Settings → Layout → Symbol cache*; the editor's dialog has the same buttons.
 
 The name may be a token — `"icon": "${player.mediatype}"` with matching icon
 names, for instance.

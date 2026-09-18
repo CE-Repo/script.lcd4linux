@@ -33,10 +33,12 @@ except ImportError:
 class Sprite(object):
     """An image converted to RGB565 and split into fast and slow spans.
 
-    Each row is stored as ``(opaque_start, opaque_pixels, partial)`` where
-    ``opaque_pixels`` is an ``array('H')`` that a canvas can drop in with one
-    slice assignment, and ``partial`` lists the few pixels that need real
-    alpha blending (anti-aliased corners, letterboxing, soft edges).
+    Each row is stored as ``(runs, partial)``.  ``runs`` holds one
+    ``(start, array('H'))`` pair per stretch of fully opaque pixels, which a
+    canvas can drop in with a single slice assignment, and ``partial`` lists
+    the few pixels that need real alpha blending (anti-aliased edges,
+    letterboxing, soft corners).  Transparent pixels appear in neither, so
+    the hole in a clear logo or an icon keeps whatever was behind it.
     """
 
     __slots__ = ("width", "height", "rows")
@@ -52,37 +54,28 @@ def build_sprite(width, height, pixels):
     rows = []
     for y in range(height):
         base = y * width * 4
-        # Find the longest fully opaque run; that is the part that can be
-        # copied instead of blended.
-        start = 0
-        while start < width and pixels[base + start * 4 + 3] != 255:
-            start += 1
-        end = width
-        while end > start and pixels[base + (end - 1) * 4 + 3] != 255:
-            end -= 1
-        opaque = array("H")
+        runs = []
         partial = []
-        for x in range(start, end):
+        opaque = None
+        for x in range(width):
             index = base + x * 4
             alpha = pixels[index + 3]
-            value = (((pixels[index] & 0xF8) << 8)
-                     | ((pixels[index + 1] & 0xFC) << 3)
-                     | (pixels[index + 2] >> 3))
             if alpha == 255:
+                value = (((pixels[index] & 0xF8) << 8)
+                         | ((pixels[index + 1] & 0xFC) << 3)
+                         | (pixels[index + 2] >> 3))
+                if opaque is None:
+                    opaque = array("H")
+                    runs.append((x, opaque))
                 opaque.append(value)
-            else:
-                # A hole inside the run: keep the slot (it is overwritten
-                # again by the blend below) and remember the real pixel.
-                opaque.append(value)
-                partial.append((x, pixels[index], pixels[index + 1],
-                                pixels[index + 2], alpha))
-        for x in list(range(0, start)) + list(range(end, width)):
-            index = base + x * 4
-            alpha = pixels[index + 3]
+                continue
+            # Anything not fully opaque ends the run it interrupts; only
+            # pixels that actually cover something are blended.
+            opaque = None
             if alpha:
                 partial.append((x, pixels[index], pixels[index + 1],
                                 pixels[index + 2], alpha))
-        rows.append((start, opaque, partial))
+        rows.append((runs, partial))
     return Sprite(width, height, rows)
 
 

@@ -9,6 +9,7 @@ one matching the browser.  That keeps the ~200 short words of the editor out
 of the Kodi string table, which only covers what is drawn on the panel.
 """
 
+from . import faicons
 from . import widgets as widget_module
 
 #: Widget types in the order the palette shows them.
@@ -42,6 +43,11 @@ FIT_OPTIONS = _options(("contain", "contain", "einpassen"),
 SCROLL_OPTIONS = _options(("none", "none", "kein"),
                           ("marquee", "marquee", "Laufband"),
                           ("bounce", "bounce", "hin und her"))
+
+ICON_STYLE_OPTIONS = _options(("", "automatic", "automatisch"),
+                              ("solid", "solid", "gefüllt"),
+                              ("regular", "outlined", "Umriss"),
+                              ("brands", "brands", "Marken"))
 
 #: Properties every widget understands.
 COMMON_FIELDS = [
@@ -150,8 +156,16 @@ WIDGET_FIELDS = {
                options=VALIGN_OPTIONS),
     ],
     "icon": [
-        _field("icon", "icon", "Symbol", "Symbol", default="play"),
+        _field("icon", "icon", "Symbol", "Symbol", default="play",
+               hint="pick from the built-in shapes or all of Font Awesome Free",
+               hint_de="aus den eingebauten Formen oder ganz Font Awesome Free"),
+        _field("style", "select", "Style", "Stil", options=ICON_STYLE_OPTIONS,
+               hint="only for Font Awesome symbols",
+               hint_de="nur für Font-Awesome-Symbole"),
         _field("color", "color", "Colour", "Farbe"),
+        _field("trim", "bool", "Fill the box", "Rahmen ausfüllen",
+               hint="scale the outline instead of keeping Font Awesome's padding",
+               hint_de="Umriss skalieren statt den Rand von Font Awesome zu behalten"),
     ],
     "analogclock": [
         _field("face", "color", "Face", "Zifferblatt"),
@@ -452,6 +466,26 @@ def blank_layout(width=480, height=320):
     }
 
 
+def describe_icons():
+    """What the icon dialog needs to know before its first search.
+
+    The names themselves are not sent along: the whole free set is a few
+    thousand entries, so the dialog asks ``/api/icons`` for the page it is
+    showing instead of holding all of them.
+    """
+    book = faicons.catalogue()
+    return {
+        "version": book.version,
+        "count": book.count,
+        "styles": [{"value": style, "count": book.counts().get(style, 0)}
+                   for style in faicons.STYLES],
+        "default": faicons.DEFAULT_STYLE,
+        "downloads": faicons.downloads_enabled(),
+        "licence": "Font Awesome Free - icons: CC BY 4.0",
+        "url": "https://fontawesome.com/license/free",
+    }
+
+
 def describe(fonts=None):
     """The whole catalogue, as the editor fetches it from ``/api/schema``."""
     families = sorted(fonts.families()) if fonts is not None else ["sans", "mono"]
@@ -469,6 +503,7 @@ def describe(fonts=None):
         "sizes": SIZES,
         "fonts": families,
         "icons": sorted(widget_module.ICONS),
+        "faicons": describe_icons(),
         "tokens": [{"id": group["id"], "label": group["label"],
                     "label_de": group["label_de"],
                     "tokens": [{"token": token, "label": label,
