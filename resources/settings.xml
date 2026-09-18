@@ -371,6 +371,31 @@
         </setting>
       </group>
 
+      <group id="4" label="32230">
+        <setting id="icon_download" type="boolean" label="32241" help="32242">
+          <level>0</level>
+          <default>true</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="action_iconcache" type="action" label="32243" help="32244">
+          <level>0</level>
+          <data>RunScript(script.lcd4linux,icons)</data>
+          <!-- Downloading can take a moment and reports back with a
+               progress bar, so the settings stay open behind it. -->
+          <control type="button" format="action">
+            <close>false</close>
+          </control>
+        </setting>
+        <setting id="icon_source" type="string" label="32245" help="32246">
+          <level>3</level>
+          <default></default>
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string"/>
+        </setting>
+      </group>
+
       <group id="2" label="32013">
         <setting id="web_enabled" type="boolean" label="32211" help="32212">
           <level>0</level>

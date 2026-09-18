@@ -74,6 +74,42 @@ The three sizes of one design (`default.json`, `default-800x480.json`,
 `default-1024x600.json`) appear as a single entry, because loading picks the
 right one anyway.
 
+## Layout → Symbol cache
+
+The `icon` widget can draw any symbol of the Font Awesome Free set, about two
+thousand of them. Only the *index* — the names and the words they can be found
+by — ships with the add-on, which is what the editor's search dialog works on;
+the outlines are fetched the first time a symbol is used and then kept in
+`<addon data>/icons/`.
+
+| Setting | Meaning |
+|---|---|
+| Download Font Awesome symbols | off means only the built-in shapes and what is already cached are drawn (default on) |
+| Manage the symbol cache | how much is cached, and the buttons below |
+| Symbol source | where outlines come from; empty uses the Font Awesome CDN (expert level) |
+
+*Manage the symbol cache* offers three things:
+
+* **Download every symbol for offline use** — the whole free set, about
+  1.6 MB, in three requests. Worth doing before a box goes somewhere without
+  internet.
+* **Download only what the layouts use** — reads every layout on the box and
+  fetches the handful of symbols they name.
+* **Empty the symbol cache** — gives the space back. Symbols still in use are
+  fetched again the next time they are drawn.
+
+The editor's icon dialog has the same two cache buttons, and its footer says
+how much of the set is available offline.
+
+Nothing here ever holds up the display: the renderer draws what the cache has
+and hands a missing symbol to a background thread, so a frame is never waiting
+on an HTTP request. A symbol that could not be fetched is retried every five
+minutes rather than on every frame, and after a network failure all downloads
+pause for a minute.
+
+`Symbol source` takes a URL with the placeholders `%(version)s`, `%(style)s`
+and `%(name)s`, for a mirror on the local network.
+
 ## Layout → Web editor
 
 | Setting | Meaning |
@@ -83,6 +119,11 @@ right one anyway.
 | Port | 8050 by default |
 | Reachable from | `the whole network`, or `this box only` for a browser on the box itself |
 | Password | empty means no prompt; otherwise any user name plus this password |
+
+The editor draws its own font samples through `GET /api/fontsample`, which
+renders a line of text with the bundled bitmap fonts and answers with a PNG.
+It is part of the editor, so it follows the same password and the same
+`Reachable from` setting.
 
 ## Behaviour
 

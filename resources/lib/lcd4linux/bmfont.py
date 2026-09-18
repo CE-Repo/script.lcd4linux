@@ -275,6 +275,45 @@ def _scale_glyph(glyph, factor):
                  _trim_rows(bytes(dst), width, height))
 
 
+def text_mask(font, text, margin=1):
+    """Rasterise ``text`` into ``(width, height, coverage)``.
+
+    The coverage map is one byte per pixel, which is what the glyphs hold
+    anyway.  Used for the font samples the editor shows: a picture with a
+    real alpha channel sits on any background, and the browser cannot draw
+    a bitmap font itself.
+    """
+    margin = max(0, int(margin))
+    width = max(1, font.measure(text) + 2 * margin)
+    height = max(1, font.ascent + font.descent + 2 * margin)
+    baseline = font.ascent + margin
+    mask = bytearray(width * height)
+    pen = margin
+    for character in text:
+        glyph = font.glyph(ord(character))
+        if glyph is None:
+            continue
+        gx = pen + glyph.bearing_x
+        gy = baseline - glyph.bearing_y
+        for row_index, row in enumerate(glyph.rows or ()):
+            if row is None:
+                continue
+            py = gy + row_index
+            if py < 0 or py >= height:
+                continue
+            start, data = row
+            px = gx + start
+            base = py * width
+            for value in data:
+                if 0 <= px < width and value > mask[base + px]:
+                    # The brighter of two overlapping glyphs wins, so a
+                    # kerned pair does not come out darker where it meets.
+                    mask[base + px] = value
+                px += 1
+        pen += glyph.advance
+    return width, height, mask
+
+
 class FontCache(object):
     """Finds, loads and caches fonts, with nearest-size fallback."""
 

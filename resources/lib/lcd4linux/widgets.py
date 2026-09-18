@@ -8,6 +8,9 @@ history) between frames.
 import math
 import time
 
+from . import faicons
+from . import images as images_module
+from . import svgpath
 from . import tokens
 from .canvas import parse_color
 from .logger import debug
@@ -597,16 +600,93 @@ ICONS = {
 }
 
 
+# ---------------------------------------------------------------------------
+# Font Awesome outlines
+# ---------------------------------------------------------------------------
+
+#: Rasterised icons, keyed by outline, size, colour and trimming.  An icon
+#: costs a few hundred polygon edges to fill, which is fine once but not
+#: four times a second, so the finished picture is what gets kept.
+_RASTERS = {}
+_RASTER_LIMIT = 48
+
+#: Vertical samples per pixel row.  Four is the point where a 16 pixel glyph
+#: stops looking ragged; more is not visible on a 480x320 panel.
+_SAMPLES = 4
+
+
+def _raster(outline, width, height, color, trim):
+    """An RGBA :class:`~lcd4linux.images.Image` of one icon, cached."""
+    key = (outline.style, outline.name, width, height, color, trim)
+    entry = _RASTERS.get(key)
+    if entry is not None:
+        entry[1] = time.time()
+        return entry[0]
+    # Curves are flattened to roughly a third of a pixel at the size the
+    # icon is actually drawn, so a big icon stays round and a small one
+    # does not pay for points nobody can see.
+    per_pixel = max(outline.width / float(max(1, width)),
+                    outline.height / float(max(1, height)))
+    paths = svgpath.parse(outline.data, max(0.05, per_pixel * 0.35))
+    box = svgpath.bounds(paths) if trim else (0.0, 0.0, outline.width,
+                                              outline.height)
+    if box is None:
+        return None
+    box_width = max(1e-6, box[2] - box[0])
+    box_height = max(1e-6, box[3] - box[1])
+    scale = min(width / box_width, height / box_height)
+    offset_x = (width - box_width * scale) / 2.0 - box[0] * scale
+    offset_y = (height - box_height * scale) / 2.0 - box[1] * scale
+    mask = svgpath.mask(svgpath.transform(paths, scale, scale, offset_x,
+                                          offset_y),
+                        width, height, _SAMPLES, outline.even_odd)
+    red, green, blue = color[0], color[1], color[2]
+    alpha = color[3] if len(color) > 3 else 255
+    pixels = bytearray(width * height * 4)
+    for index in range(width * height):
+        coverage = mask[index]
+        if not coverage:
+            continue
+        base = index * 4
+        pixels[base] = red
+        pixels[base + 1] = green
+        pixels[base + 2] = blue
+        pixels[base + 3] = coverage if alpha >= 255 else coverage * alpha // 255
+    image = images_module.Image(width, height, pixels)
+    if len(_RASTERS) >= _RASTER_LIMIT:
+        for old, _ in sorted(_RASTERS.items(),
+                             key=lambda item: item[1][1])[:8]:
+            _RASTERS.pop(old, None)
+    _RASTERS[key] = [image, time.time()]
+    return image
+
+
+def clear_raster_cache():
+    """Drop the rasterised icons, e.g. after the icon cache was emptied."""
+    _RASTERS.clear()
+
+
 @register("icon")
 class IconWidget(Widget):
+    """A builtin shape or any icon from the Font Awesome Free set.
+
+    The two dozen shapes in :data:`ICONS` are drawn from primitives and
+    always available.  Everything else is looked up in the icon cache, which
+    fills itself from the network the first time an icon is used and is read
+    from disk from then on.
+    """
+
     def render(self, canvas, context):
         x, y, width, height = self.geometry(context)
         name = context.text(str(self.spec.get("icon", self.spec.get("name", "play"))))
-        shapes = ICONS.get(name.strip().lower())
-        if not shapes:
-            return
+        name = name.strip()
         color = self.alpha_of(context.color(self.spec.get("color"),
                                             (255, 255, 255, 255)), context)
+        shapes = ICONS.get(name.lower())
+        if not shapes:
+            self._render_outline(canvas, context, name, x, y, width, height,
+                                 color)
+            return
         size = min(width, height)
         offset_x = x + (width - size) / 2.0
         offset_y = y + (height - size) / 2.0
@@ -628,6 +708,33 @@ class IconWidget(Widget):
                             offset_y + values[1] * size,
                             values[2] * size / 2.0,
                             max(1, int(values[3] * size)), color)
+
+    def _render_outline(self, canvas, context, name, x, y, width, height,
+                        color):
+        """Draw a Font Awesome icon, if the cache already holds it.
+
+        Asking for one that is not cached yet queues the download and draws
+        nothing this frame; the icon turns up a moment later without the
+        panel ever waiting for the network.
+        """
+        if not name or width < 1 or height < 1:
+            return
+        style = self.spec.get("style")
+        style = context.text(str(style)).strip().lower() if style else None
+        outline = faicons.request(name, style or None)
+        if outline is None:
+            return
+        size = int(min(width, height))
+        if size < 1:
+            return
+        image = _raster(outline, size, size, tuple(color[:3]),
+                        bool(self.spec.get("trim", False)))
+        if image is None:
+            return
+        alpha = color[3] if len(color) > 3 else 255
+        canvas.blit_sprite(int(x + (width - size) // 2),
+                           int(y + (height - size) // 2),
+                           image.sprite(), alpha)
 
 
 @register("analogclock")

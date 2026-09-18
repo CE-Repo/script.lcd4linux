@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.join(ROOT, "resources", "lib"))
 
 from lcd4linux import ax206, jpegio, usbdev             # noqa: E402
 from lcd4linux.bmfont import FontCache                  # noqa: E402
-from lcd4linux.canvas import Canvas, parse_color        # noqa: E402
+from lcd4linux.canvas import Canvas, parse_color, unpack565        # noqa: E402
 from lcd4linux.display import AX206Target               # noqa: E402
 from lcd4linux.images import ImageCache                 # noqa: E402
 from lcd4linux.kodidata import DemoProvider             # noqa: E402
@@ -876,6 +876,35 @@ def test_fonts():
                    "sourcecode", "robotomono", "firamono", "plexmono",
                    "inconsolata", "spacemono", "sharetech", "courierprime"):
         check(family in families, "the %s family is bundled" % family)
+
+    # -- the samples the editor's font dialog shows -----------------------
+    # A browser cannot draw a bitmap font, so the add-on rasterises a line
+    # of it into a coverage map and sends that as a picture.
+    from lcd4linux import bmfont
+    sample = fonts.get("sans", 24)
+    width, height, mask = bmfont.text_mask(sample, "Hamburgefons 123")
+    check(width >= sample.measure("Hamburgefons 123")
+          and height >= sample.ascent + sample.descent,
+          "a font sample is as big as the text it draws (%dx%d)"
+          % (width, height))
+    check(len(mask) == width * height and max(mask) == 255 and min(mask) == 0,
+          "and covers some of its pixels fully and some not at all")
+    empty_width, empty_height, empty = bmfont.text_mask(sample, "")
+    check(not any(empty) and len(empty) == empty_width * empty_height,
+          "empty text draws an empty sample")
+    # Every family has to survive being asked for a sample: a face missing
+    # a glyph used to be found only once a layout showed it.
+    broken = []
+    for family in families:
+        try:
+            got = bmfont.text_mask(fonts.get(family, 20),
+                                   u"Hamburgefons 123 ÄÖÜ")
+            if not any(got[2]):
+                broken.append(family)
+        except Exception as error:               # noqa: BLE001 - reported
+            broken.append("%s (%s)" % (family, error))
+    check(not broken, "every bundled family draws a sample (%s)"
+          % (broken or "all %d of them" % len(families),))
 
 
 def test_images():
@@ -1955,6 +1984,262 @@ def test_image_cache():
         shutil.rmtree(directory, ignore_errors=True)
 
 
+def test_icons():
+    """Font Awesome: the bundled index, the cache and the renderer.
+
+    Nothing here touches the network - the download is replaced by a stub -
+    because the whole point of the cache is that the box works without one.
+    """
+    print("icons")
+    import json
+    import shutil
+    import subprocess
+    import tempfile
+    from lcd4linux import faicons, images, svgpath, webschema, widgets
+    from lcd4linux.settings import Config
+    from lcd4linux.webui import WebEditor
+
+    # -- the path reader and the filler ----------------------------------
+    square = svgpath.parse("M 0 0 H 10 V 10 H 0 Z")
+    check(len(square) == 1 and len(square[0]) >= 4,
+          "a path of straight lines reads as one subpath")
+    check(svgpath.bounds(square) == (0.0, 0.0, 10.0, 10.0),
+          "and covers the box it describes (%s)" % (svgpath.bounds(square),))
+    # The same square written relative, with implicit repeats and lower
+    # case commands, has to come out the same shape.
+    relative = svgpath.parse("m0 0 l10 0 l0 10 l-10 0 z")
+    check(svgpath.bounds(relative) == (0.0, 0.0, 10.0, 10.0),
+          "relative commands describe the same box (%s)"
+          % (svgpath.bounds(relative),))
+    curved = svgpath.parse("M0 0 C 0 10 10 10 10 0 Z", flatness=0.5)
+    check(len(curved[0]) > 10, "a curve is flattened into many points (%d)"
+          % len(curved[0]))
+
+    filled = svgpath.mask(square, 10, 10, samples=4)
+    check(filled[0] == 255 and filled[55] == 255,
+          "the inside of a polygon is opaque")
+    # A ring: the outer box wound one way, the inner one the other, which
+    # is how Font Awesome cuts the hole out of a glyph.
+    ring = svgpath.parse("M0 0 H10 V10 H0 Z M3 3 V7 H7 V3 Z")
+    holed = svgpath.mask(ring, 10, 10, samples=4)
+    check(holed[5 * 10 + 5] == 0 and holed[0] == 255,
+          "and the hole of a ring stays empty (centre %d, corner %d)"
+          % (holed[5 * 10 + 5], holed[0]))
+
+    # A sprite must leave the hole alone too, or every ring renders black.
+    pixels = bytearray(3 * 4)
+    pixels[0:4] = bytes((255, 255, 255, 255))
+    pixels[8:12] = bytes((255, 255, 255, 255))
+    canvas = Canvas(3, 1, (0, 0, 255, 255))
+    canvas.blit_sprite(0, 0, images.Image(3, 1, pixels).sprite(), 255)
+    check(canvas.buf[1] == canvas.buf[1] and unpack565(canvas.buf[1])[2] > 200
+          and unpack565(canvas.buf[0])[0] > 200,
+          "a transparent pixel between two opaque ones keeps the background")
+
+    # -- the bundled catalogue -------------------------------------------
+    book = faicons.catalogue()
+    check(book.count > 1500, "the bundled index lists the free set (%d icons)"
+          % book.count)
+    counts = book.counts()
+    check(all(counts.get(style) for style in faicons.STYLES),
+          "every style is represented (%s)" % counts)
+    total, rows = book.search("heart", limit=3)
+    check(total > 3 and rows and rows[0][0] == "heart",
+          "a search puts the exact name first (%s)"
+          % ([entry[0] for entry in rows],))
+    check(book.search("heart", style="regular")[1][0][1] == "regular",
+          "a style filter only returns that style")
+    check(book.search("volume", limit=0)[0]
+          and not book.search("zzzznope", limit=0)[0],
+          "a word nothing matches finds nothing")
+    check(faicons.resolve("youtube")[0] == "brands",
+          "a brand name resolves to the brands style")
+    check(faicons.resolve("ambulance") == ("solid", "truck-medical"),
+          "an old name resolves to the one that replaced it (%s)"
+          % (faicons.resolve("ambulance"),))
+    check(faicons.resolve("not-a-real-icon-name") == (None, "not-a-real-icon-name"),
+          "and a name that does not exist resolves to nothing")
+    for spelling in ("regular:heart", "regular/heart", "fa-regular-heart",
+                     "fa:regular:heart"):
+        check(faicons.resolve(spelling) == ("regular", "heart"),
+              "%r names the outlined heart" % spelling)
+    check(faicons.split_name("facebook")[1] == "facebook",
+          "a name starting with 'fa' is not mistaken for a prefix")
+    # The search words Font Awesome ships are what makes a name findable
+    # without knowing it; this is the path that does not touch the name.
+    check("0" in [name for name, _, _ in book.search("nada", limit=5)[1]],
+          "an icon is found by a word only its search terms hold")
+    check(not book.search("nada", limit=5)[1][0][0].startswith("nada"),
+          "and that word does not have to appear in the name")
+
+    # The renderer imports this module for every frame but only downloads
+    # on a cache miss.  urllib drags http.client, email and ssl in with it
+    # and settings drags the USB driver, so neither may be loaded just by
+    # importing the widgets - it is start-up time on the box, every boot.
+    if getattr(sys, "executable", ""):
+        probe = subprocess.run(
+            [sys.executable, "-c",
+             "import sys; sys.path.insert(0, %r);"
+             " from lcd4linux import widgets;"
+             " print([n for n in ('urllib.request', 'ssl', 'http.client',"
+             " 'lcd4linux.settings') if n in sys.modules])"
+             % os.path.join(ROOT, "resources", "lib")],
+            capture_output=True, text=True)
+        check(probe.stdout.strip() == "[]",
+              "importing the renderer stays light (%s)"
+              % (probe.stdout.strip() or probe.stderr.strip()[-80:],))
+
+    # -- reading an SVG and a sprite sheet -------------------------------
+    outline = faicons.parse_svg(
+        '<svg viewBox="0 0 448 512"><path fill="currentColor" '
+        'd="M1 2h3z"/></svg>', "demo", "solid")
+    check(outline is not None and outline.data == "M1 2h3z"
+          and (outline.width, outline.height) == (448.0, 512.0),
+          "the outline and the viewBox are read out of an icon file")
+    many = faicons.parse_sprite(
+        '<svg><symbol id="one" viewBox="0 0 512 512"><path d="M0 0h1z"/>'
+        '</symbol><symbol id="two" viewBox="0 0 256 512">'
+        '<path d="M1 1h2z"/></symbol></svg>', "solid")
+    check([entry.name for entry in many] == ["one", "two"]
+          and many[1].width == 256.0,
+          "every symbol of a sprite sheet is read (%s)"
+          % ([entry.name for entry in many],))
+
+    directory = tempfile.mkdtemp(prefix="lcd4linux-icons-")
+    calls = []
+    real_download = faicons.download
+    try:
+        faicons.configure(cache=directory, downloads=True)
+        faicons.clear_cache()
+
+        def fake_download(style, name):
+            calls.append((style, name))
+            if name == "bell":
+                return None   # stands in for an icon the CDN will not give
+            # A wedge filling the bottom right half, so a rendered icon has
+            # pixels in a corner that is known and empty ones in another.
+            found = faicons.Outline(name, style, "M512 0 L512 512 L0 512 Z",
+                                    512, 512, False, "download")
+            faicons.write_cached(found)
+            return found
+
+        faicons.download = fake_download
+
+        # -- the cache -----------------------------------------------------
+        first = faicons.outline("solid:star")
+        check(first is not None and first.source == "download",
+              "an icon nobody has yet is fetched once")
+        check(os.path.isfile(faicons.cached_file("solid", "star")),
+              "and lands in the cache directory")
+        faicons._outlines.clear()
+        again = faicons.outline("solid:star")
+        check(again is not None and again.source == "cache" and len(calls) == 1,
+              "the next lookup reads the file instead of the network (%d calls)"
+              % len(calls))
+
+        # Which is what has to keep working with no network at all.
+        faicons.configure(downloads=False)
+        faicons._outlines.clear()
+        offline = faicons.outline("solid:star")
+        check(offline is not None and offline.source == "cache",
+              "a cached icon still resolves with downloading switched off")
+        check(faicons.outline("solid:bell") is None,
+              "and one that is not cached simply has no outline")
+        faicons.configure(downloads=True)
+
+        # A cache entry from another Font Awesome release is not trusted.
+        path = faicons.cached_file("solid", "star")
+        with open(path, "r", encoding="utf-8") as handle:
+            stored = json.load(handle)
+        stored["version"] = "0.0.0"
+        with open(path, "w", encoding="utf-8") as handle:
+            json.dump(stored, handle)
+        faicons._outlines.clear()
+        check(faicons.read_cached("solid", "star") is None,
+              "an entry from an older release is fetched again")
+
+        # -- the renderer never waits for the network ----------------------
+        faicons.clear_cache()
+        faicons._misses.clear()
+        check(faicons.request("solid:play") is None,
+              "the renderer is not held up by a missing icon")
+        check(faicons.drain(10), "the background thread works the queue off")
+        check(faicons.request("solid:play") is not None,
+              "and the icon is there for the next frame")
+
+        # A name that cannot be fetched is not retried on every frame.
+        before = len(calls)
+        for _ in range(5):
+            faicons.request("solid:bell")
+            faicons.drain(5)
+        check(len(calls) - before == 1,
+              "a name that cannot be fetched is asked for once (%d)"
+              % (len(calls) - before))
+
+        # -- drawing -------------------------------------------------------
+        widgets.clear_raster_cache()
+        canvas = Canvas(20, 20, (0, 0, 0, 255))
+        widget = widgets.REGISTRY["icon"]({
+            "type": "icon", "x": 0, "y": 0, "w": 20, "h": 20,
+            "icon": "solid:play", "color": "#ffffff"}, None)
+        context = widgets.RenderContext(DemoProvider(0, 97.0, "playing", ""),
+                                        None, None, 20, 20)
+        widget.render(canvas, context)
+        check(unpack565(canvas.buf[19 * 20 + 19]) != (0, 0, 0),
+              "an icon widget paints the outline it was given")
+        check(unpack565(canvas.buf[0]) == (0, 0, 0),
+              "and leaves the part of the box the outline misses alone")
+
+        # The same icon twice is rasterised once.
+        widgets.clear_raster_cache()
+        widget.render(canvas, context)
+        rasters = len(widgets._RASTERS)
+        widget.render(canvas, context)
+        check(len(widgets._RASTERS) == rasters == 1,
+              "a redrawn icon comes from the raster cache (%d entries)"
+              % len(widgets._RASTERS))
+
+        # An unknown name draws nothing rather than failing.
+        blank = Canvas(20, 20, (0, 0, 0, 255))
+        widgets.REGISTRY["icon"]({"type": "icon", "w": 20, "h": 20,
+                                  "icon": "solid:no-such-icon"},
+                                 None).render(blank, context)
+        check(set(blank.buf) == {0}, "an unknown name draws nothing")
+
+        # -- what the editor serves ----------------------------------------
+        editor = WebEditor(Config({"icon_download": False}))
+        listing = editor.icons({"q": "heart", "limit": "5"})
+        check(listing["total"] > 1 and len(listing["icons"]) == 5,
+              "the API pages through the search results")
+        check(all(entry["name"] and entry["style"] for entry in listing["icons"]),
+              "every row names an icon and a style")
+        check(listing["cache"]["variants"] >= listing["cache"]["count"],
+              "the listing reports how much of the set is cached")
+        one = editor.icons({"keys": "solid/play"})["icons"]
+        check(one and one[0].get("d"), "a cached outline is served for a preview")
+        described = webschema.describe_icons()
+        check(described["count"] == book.count
+              and [entry["value"] for entry in described["styles"]]
+              == list(faicons.STYLES),
+              "the schema tells the dialog what the set holds")
+
+        # -- what a layout needs cached ------------------------------------
+        used = faicons.used_by({"pages": [{"widgets": [
+            {"type": "icon", "icon": "brands:youtube"},
+            {"type": "icon", "icon": "play"},
+            {"type": "icon", "icon": "${player.icon}"},
+            {"type": "text", "text": "not an icon"}]}]}, widgets.ICONS)
+        check(used == [("brands", "youtube")],
+              "only the icons that need fetching are collected (%s)" % (used,))
+    finally:
+        faicons.download = real_download
+        faicons.configure(cache=None, downloads=True)
+        faicons._outlines.clear()
+        faicons._misses.clear()
+        widgets.clear_raster_cache()
+        shutil.rmtree(directory, ignore_errors=True)
+
+
 def test_web_editor():
     """The browser editor: its API, its guards and its field catalogue."""
     print("web editor")
@@ -1991,6 +2276,38 @@ def test_web_editor():
           % (unknown or "none",))
     check(sorted(webschema.PALETTE) == sorted(webschema.WIDGET_FIELDS),
           "the palette lists every described widget")
+
+    # -- the font dialog needs a picture per family -----------------------
+    editor = webui.WebEditor(Config())
+    described = editor.schema()
+    families = dict((entry["name"], entry) for entry in described["fontinfo"])
+    check(sorted(families) == sorted(described["fonts"]),
+          "the schema describes every family it offers")
+    check(families["sans"]["sizes"] and families["sans"]["bold"]
+          and not families["sans-bold"]["bold"],
+          "and says which sizes it ships and where a bold cut exists")
+    png = editor.font_sample({"font": "bebas", "size": "28",
+                              "text": "Hamburgefons"})
+    check(png[:8] == b"\x89PNG\r\n\x1a\n", "a font sample comes back as a PNG")
+    width, height = _png_size(png)
+    check(width > 60 and 20 < height < 60,
+          "sized to the line it drew (%dx%d)" % (width, height))
+    check(png[25] == 6, "with an alpha channel, so it sits on any background")
+    bold = editor.font_sample({"font": "sans", "size": "28", "bold": "1",
+                              "text": "Hamburgefons"})
+    check(_png_size(bold) != _png_size(
+        editor.font_sample({"font": "sans", "size": "28",
+                            "text": "Hamburgefons"})),
+          "asking for bold draws the bold cut")
+    # Whatever the browser sends, the sample stays a sample.
+    huge = editor.font_sample({"font": "sans", "size": "999",
+                               "text": "x" * 400})
+    check(_png_size(huge)[0] <= editor.SAMPLE_WIDTH
+          and _png_size(huge)[1] < 200,
+          "an absurd request is cut down to a line (%dx%d)" % _png_size(huge))
+    check(editor.font_sample({"font": "no-such-family"})[:8]
+          == b"\x89PNG\r\n\x1a\n",
+          "an unknown family falls back the way the renderer does")
 
     # The ready made {...} groups are taught to users, so they have to be
     # true: one that renders nothing would teach the syntax wrongly.
@@ -2397,7 +2714,7 @@ def main():
                  test_layout_index, test_layout_chooser,
                  test_preview_ownership, test_preview_encoding,
                  test_preview_worker,
-                 test_power_hooks, test_rotation, test_web_editor,
+                 test_power_hooks, test_rotation, test_icons, test_web_editor,
                  test_network_display,
                  test_layouts):
         test()

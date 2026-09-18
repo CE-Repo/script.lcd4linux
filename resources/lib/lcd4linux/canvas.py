@@ -447,25 +447,26 @@ class Canvas(object):
         y = int(y)
         buf = self.buf
         canvas_width = self.width
-        for row_index, (start, opaque, partial) in enumerate(sprite.rows):
+        for row_index, (runs, partial) in enumerate(sprite.rows):
             py = y + row_index
             if py < cy0 or py >= cy1:
                 continue
             row_base = py * canvas_width
-            if opaque and opacity >= 255:
-                left = x + start
-                right = left + len(opaque)
-                cut_left = max(0, cx0 - left)
-                cut_right = max(0, right - cx1)
-                if cut_left or cut_right:
-                    if len(opaque) - cut_left - cut_right > 0:
-                        target = row_base + left + cut_left
-                        buf[target:target + len(opaque) - cut_left - cut_right] = \
-                            opaque[cut_left:len(opaque) - cut_right]
-                else:
-                    target = row_base + left
-                    buf[target:target + len(opaque)] = opaque
-            elif opaque:
+            for start, opaque in runs:
+                if opacity >= 255:
+                    left = x + start
+                    right = left + len(opaque)
+                    cut_left = max(0, cx0 - left)
+                    cut_right = max(0, right - cx1)
+                    if cut_left or cut_right:
+                        if len(opaque) - cut_left - cut_right > 0:
+                            target = row_base + left + cut_left
+                            buf[target:target + len(opaque) - cut_left - cut_right] = \
+                                opaque[cut_left:len(opaque) - cut_right]
+                    else:
+                        target = row_base + left
+                        buf[target:target + len(opaque)] = opaque
+                    continue
                 for offset in range(len(opaque)):
                     px = x + start + offset
                     if px < cx0 or px >= cx1:

@@ -66,6 +66,30 @@ const TEXTS = {
       + ' werden die Felder, die alle kennen; „verschieden“ heißt, sie haben'
       + ' dort noch unterschiedliche Werte.',
     nocommon: 'Diese Elementtypen haben keine gemeinsamen Eigenschaften.',
+    icontitle: 'Symbol wählen', iconsearch: 'Suchen, z. B. Herz, Film, wifi',
+    iconall: 'Alle', iconbuiltin: 'Eingebaut', iconsolid: 'Gefüllt',
+    iconregular: 'Umriss', iconbrands: 'Marken',
+    iconfound: '%s Symbole', iconnone: 'Nichts gefunden',
+    iconmore: 'Mehr laden', iconpick: 'Symbol wählen',
+    iconcached: '%s von %s offline verfügbar',
+    iconcacheall: 'Alle offline laden',
+    iconcaching: 'Lade Symbole …',
+    iconcachedone: '%s Symbole im Cache',
+    iconcachefail: 'Laden fehlgeschlagen: %s',
+    iconclear: 'Cache leeren', iconcleared: '%s Dateien gelöscht',
+    iconoffline: 'Ohne Netz zeigen nur die Symbole aus dem Cache eine'
+      + ' Vorschau – wählbar sind trotzdem alle.',
+    icondownloadoff: 'Herunterladen ist in den Einstellungen abgeschaltet.',
+    iconlicence: 'Font Awesome Free · Symbole unter CC BY 4.0',
+    iconbuiltinhint: 'Immer verfügbar, ohne Netz und ohne Cache.',
+    fonttitle: 'Schrift wählen', fontsearch: 'Schrift suchen',
+    fontpick: 'Schriften vergleichen', fontsample: 'Probetext',
+    fontsize: 'Probegröße', fontbold: 'Fett',
+    fontfound: '%s Schriften', fontnone: 'Keine Schrift gefunden',
+    fontsizes: 'Größen: %s', fontscaled: 'andere Größen werden skaliert',
+    fontsampledefault: 'Hamburgefons 123 ÄÖÜ',
+    fonthint: 'Die Proben zeichnet das Add-on mit derselben Schrift, die'
+      + ' später auf dem Display steht.',
   },
   en: {
     kit: 'Layout kit', open: 'Open', new: 'New', save: 'Save',
@@ -124,6 +148,30 @@ const TEXTS = {
       + ' fields shown are the ones they all know; "mixed" means they still'
       + ' hold different values there.',
     nocommon: 'These element types have no properties in common.',
+    icontitle: 'Choose a symbol', iconsearch: 'Search, e.g. heart, film, wifi',
+    iconall: 'All', iconbuiltin: 'Built-in', iconsolid: 'Solid',
+    iconregular: 'Outlined', iconbrands: 'Brands',
+    iconfound: '%s symbols', iconnone: 'Nothing found',
+    iconmore: 'Load more', iconpick: 'Choose a symbol',
+    iconcached: '%s of %s available offline',
+    iconcacheall: 'Cache all for offline use',
+    iconcaching: 'Fetching symbols …',
+    iconcachedone: '%s symbols cached',
+    iconcachefail: 'Fetching failed: %s',
+    iconclear: 'Empty the cache', iconcleared: '%s files deleted',
+    iconoffline: 'With no connection only cached symbols show a preview -'
+      + ' every one of them can still be picked.',
+    icondownloadoff: 'Downloading is switched off in the settings.',
+    iconlicence: 'Font Awesome Free · icons under CC BY 4.0',
+    iconbuiltinhint: 'Always there, with no network and no cache.',
+    fonttitle: 'Choose a font', fontsearch: 'Search fonts',
+    fontpick: 'Compare the fonts', fontsample: 'Sample text',
+    fontsize: 'Sample size', fontbold: 'Bold',
+    fontfound: '%s fonts', fontnone: 'No font found',
+    fontsizes: 'Sizes: %s', fontscaled: 'other sizes are scaled',
+    fontsampledefault: 'Hamburgefons 123 ÄÖÜ',
+    fonthint: 'The samples are drawn by the add-on with the very font that'
+      + ' will end up on the display.',
   },
 };
 
@@ -167,6 +215,7 @@ const S = {
   previewAgain: false,
   shotURL: '',
   strings: {},
+  iconCache: null,   // how much of Font Awesome is cached on the box
 };
 
 /* $LOCALIZE[32403] is a string id the panel translates; show the word. */
@@ -1235,6 +1284,9 @@ function commit(targets, key, value, live) {
   });
   drawLayers();
   drawCanvas();
+  // The font sample is drawn at the element's own size, weight and colour,
+  // so those have to redraw it - the panel itself is not rebuilt.
+  if (['size', 'bold', 'text'].includes(key)) refreshFontPreviews();
   schedulePreview(live ? LIVE_PREVIEW : STEP_PREVIEW);
 }
 
@@ -1258,16 +1310,61 @@ function buildField(field, targets) {
     });
     box.indeterminate = mixed;
     control.appendChild(box);
-  } else if (field.type === 'select' || field.type === 'font' || field.type === 'icon') {
-    const options = field.type === 'select'
-      ? field.options.map((option) => ({ value: option.value, text: label(option) }))
-      : (field.type === 'font' ? S.schema.fonts : S.schema.icons)
-        .map((name) => ({ value: name, text: name }));
+  } else if (field.type === 'icon') {
+    // A text box beside the dialog: the dialog is how an icon is found
+    // among a few thousand, typing is how a ${token} gets in there.
+    const input = el('input', Object.assign({
+      type: 'text', spellcheck: 'false', placeholder: blank || 'play',
+      value: value === undefined ? '' : value,
+    }, liveControl((node, live) => setter(node.value.trim(), live))));
+    const preview = el('button', {
+      class: 'icon-pick', title: t('iconpick'),
+      onclick: () => openIconPicker(input.value, (picked) => {
+        input.value = picked;
+        setter(picked);
+        drawIconPreview(preview, picked);
+      }),
+    });
+    drawIconPreview(preview, value === undefined ? '' : value);
+    input.addEventListener('change', () => drawIconPreview(preview, input.value));
+    control.append(preview, input, el('button', {
+      class: 'icon-btn', title: t('clear'), text: '✕',
+      onclick: () => {
+        input.value = '';
+        setter('');
+        drawIconPreview(preview, '');
+      },
+    }));
+  } else if (field.type === 'font') {
+    // The families are bitmap fonts, so the list can only give their
+    // names; what they look like has to be drawn by the add-on, which is
+    // what the sample under the row and the dialog behind "Aa" show.
+    const picked = () => (select.value || fontFallback(targets));
+    const select = el('select', {
+      onchange: (event) => { setter(event.target.value); update(); },
+    }, [el('option', { value: '', text: '—', selected: value === undefined })]
+      .concat(S.schema.fonts.map((name) => el('option', {
+        value: name, text: name, selected: String(value) === name,
+      }))));
+    const sample = el('img', { class: 'font-sample', alt: '' });
+    const update = () => { sample.src = fontSampleURL(picked(), fontSample(targets)); };
+    control.append(select, el('button', {
+      class: 'icon-btn', title: t('fontpick'), text: 'Aa',
+      onclick: () => openFontPicker(picked(), targets, (name) => {
+        select.value = name;
+        setter(name);
+        update();
+      }),
+    }));
+    row.appendChild(sample);
+    fontPreviews.push({ node: sample, update });
+    update();
+  } else if (field.type === 'select') {
     control.appendChild(el('select', {
       onchange: (event) => setter(event.target.value),
     }, [el('option', { value: '', text: '—', selected: value === undefined })]
-      .concat(options.map((option) => el('option', {
-        value: option.value, text: option.text,
+      .concat(field.options.map((option) => el('option', {
+        value: option.value, text: label(option),
         selected: String(value) === option.value,
       })))));
   } else if (field.type === 'color') {
@@ -1464,6 +1561,468 @@ function openTokenPicker(input, onInsert) {
       el('h3', { class: 'muted', text: t('groups') }),
       el('p', { class: 'hint', text: t('groupshint') }), snippets),
     [el('button', { text: t('cancel'), onclick: closeModal })]);
+}
+
+/* ---------------------------------------------------------- font dialog */
+
+/* Sizes the dialog offers for comparing; the element's own size is added
+ * to them, so it is always in the list. */
+const FONT_SIZES = [12, 16, 20, 24, 32, 48];
+
+/* The samples on the property panel, refreshed when the size, the weight
+ * or the colour they were drawn with changes. */
+let fontPreviews = [];
+
+function refreshFontPreviews() {
+  fontPreviews = fontPreviews.filter((entry) => entry.node.isConnected);
+  fontPreviews.forEach((entry) => entry.update());
+}
+
+const fontFallback = (targets) =>
+  ((targets && targets[0] && targets[0].font)
+    || (S.doc && S.doc.defaults && S.doc.defaults.font) || 'sans');
+
+/* Below this a typeface cannot be told from another, so the dialog opens
+ * at least this big however small the element is.  Its own size is in the
+ * list too, for checking whether the text still reads at 12 pixels. */
+const FONT_COMPARE = 20;
+
+/* How the element being edited would draw the sample: its own size, its
+ * weight and, when it is a literal, its own text.  The colour is not
+ * carried over - a dim grey caption is right on the panel but unreadable
+ * as a sample, and the canvas preview shows the real colour anyway. */
+function fontSample(targets) {
+  const target = (targets && targets[0]) || {};
+  const defaults = (S.doc && S.doc.defaults) || {};
+  const size = Number(target.size || defaults.size || 18) || 18;
+  let text = String(target.text === undefined ? '' : target.text).trim();
+  if (!text || text.includes('${') || text.includes('$LOCALIZE')
+      || text.length > 40) text = '';
+  return {
+    size: Math.max(6, Math.min(96, Math.round(size))),
+    bold: !!target.bold, text,
+  };
+}
+
+function fontSampleURL(family, options) {
+  const query = new URLSearchParams({
+    font: family || 'sans', size: String(options.size),
+  });
+  if (options.bold) query.set('bold', '1');
+  if (options.text) query.set('text', options.text);
+  return `/api/fontsample?${query}`;
+}
+
+function openFontPicker(current, targets, onPick) {
+  const options = fontSample(targets);
+  const families = S.schema.fontinfo
+    || (S.schema.fonts || []).map((name) => ({ name, sizes: [], bold: false }));
+  const list = el('div', { class: 'font-list' });
+  const counter = el('span', { class: 'icon-count' });
+  const search = el('input', {
+    type: 'search', class: 'icon-search', placeholder: t('fontsearch'),
+    spellcheck: 'false',
+  });
+  const text = el('input', {
+    type: 'text', class: 'font-text', spellcheck: 'false',
+    placeholder: t('fontsampledefault'), value: options.text,
+  });
+  const sizes = [...new Set([...FONT_SIZES, options.size])].sort((a, b) => a - b);
+  const opening = Math.max(options.size, FONT_COMPARE);
+  const size = el('select', {}, sizes.map((value) => el('option', {
+    value: String(value), text: `${value} px`, selected: value === opening,
+  })));
+  const bold = el('input', { type: 'checkbox', checked: options.bold });
+
+  function draw() {
+    const shown = {
+      size: Number(size.value) || opening,
+      bold: bold.checked,
+      text: text.value.trim(),
+    };
+    const query = search.value.trim().toLowerCase();
+    const matching = families.filter((entry) => entry.name.includes(query));
+    list.textContent = '';
+    matching.forEach((entry) => {
+      const meta = [];
+      if (entry.sizes.length) meta.push(t('fontsizes', entry.sizes.join(', ')));
+      if (entry.name.endsWith('-bold')) meta.push(t('fontbold'));
+      // A family is only drawn bold when it has a bold cut; asking for one
+      // that does not exist would silently show the regular weight.
+      const wanted = Object.assign({}, shown,
+                                    { bold: shown.bold && entry.bold });
+      list.appendChild(el('button', {
+        class: 'font-row' + (entry.name === current ? ' active' : ''),
+        title: entry.name,
+        onclick: () => { onPick(entry.name); closeModal(); },
+      },
+        el('img', {
+          class: 'font-sample', alt: '', loading: 'lazy',
+          src: fontSampleURL(entry.name, wanted),
+        }),
+        el('span', { class: 'font-name', text: entry.name }),
+        el('span', { class: 'font-meta', text: meta.join(' · ') })));
+    });
+    counter.textContent = t('fontfound', matching.length);
+    if (!matching.length) {
+      list.appendChild(el('p', { class: 'hint', text: t('fontnone') }));
+    }
+  }
+
+  let typing = null;
+  const later = () => { clearTimeout(typing); typing = setTimeout(draw, 200); };
+  search.addEventListener('input', later);
+  text.addEventListener('input', later);
+  size.addEventListener('change', draw);
+  bold.addEventListener('change', draw);
+
+  openModal(t('fonttitle'),
+    el('div', { class: 'font-picker' },
+      el('div', { class: 'icon-bar' }, search,
+        el('label', { class: 'font-opt' }, t('fontsample'), text),
+        el('label', { class: 'font-opt' }, t('fontsize'), size),
+        el('label', { class: 'font-opt' }, t('fontbold'), bold)),
+      list,
+      el('p', { class: 'hint', text: t('fonthint') })),
+    [counter, el('button', { text: t('cancel'), onclick: closeModal })]);
+  draw();
+  search.focus();
+}
+
+/* ---------------------------------------------------------- icon dialog */
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const ICON_STYLES = ['solid', 'regular', 'brands'];
+const ICON_PAGE = 60;
+
+/* Outlines the page has already been given, keyed "style/name".  Kept for
+ * as long as the tab is open, so scrolling back through the dialog and
+ * redrawing the inspector cost nothing.  An empty object marks a name the
+ * add-on could not get hold of, so it is not asked for again and again. */
+const iconOutlines = new Map();
+
+/* What the layout writes, split the way the add-on splits it. */
+function splitIcon(value) {
+  let text = String(value === undefined || value === null ? '' : value)
+    .trim().toLowerCase();
+  if (!text) return null;
+  text = text.replace(/^(?:fa:|fa-|fontawesome:)/, '');
+  const parts = text.split(/[:/]/);
+  if (parts.length === 2 && ICON_STYLES.includes(parts[0]) && parts[1]) {
+    return { style: parts[0], name: parts[1] };
+  }
+  const prefix = ICON_STYLES.find((style) =>
+    text.startsWith(`${style}-`) && text.length > style.length + 1);
+  if (prefix) return { style: prefix, name: text.slice(prefix.length + 1) };
+  return { style: '', name: text };
+}
+
+const iconKeyOf = (parts) => `${parts.style || 'solid'}/${parts.name}`;
+
+function isBuiltinIcon(parts) {
+  return !!parts && !parts.style
+    && (S.schema.icons || []).includes(parts.name);
+}
+
+/* An <svg> for one outline.  Built through the DOM rather than as markup:
+ * the path data comes from a file on the internet, and this way it can only
+ * ever be path data. */
+function iconNode(entry) {
+  const box = entry.box || [512, 512];
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${box[0]} ${box[1]}`);
+  svg.setAttribute('focusable', 'false');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(SVG_NS, 'path');
+  path.setAttribute('d', entry.d);
+  path.setAttribute('fill', 'currentColor');
+  if (entry.rule === 'evenodd') path.setAttribute('fill-rule', 'evenodd');
+  svg.appendChild(path);
+  return svg;
+}
+
+/* Ask the add-on for outlines it has not handed over yet.  Whatever is
+ * missing from its cache is fetched and cached there, so the same names
+ * answer straight from disk next time - with or without internet. */
+async function loadOutlines(keys) {
+  const wanted = [...new Set(keys)].filter((key) => !iconOutlines.has(key));
+  if (!wanted.length) return { icons: [] };
+  const data = await api(`/api/icons?keys=${encodeURIComponent(wanted.join(','))}`);
+  (data.icons || []).forEach((entry) => {
+    if (entry.d) iconOutlines.set(`${entry.style}/${entry.name}`, entry);
+  });
+  wanted.forEach((key) => { if (!iconOutlines.has(key)) iconOutlines.set(key, {}); });
+  if (data.cache) S.iconCache = data.cache;
+  return data;
+}
+
+/* The little button in front of the icon field. */
+function drawIconPreview(button, value) {
+  button.textContent = '';
+  button.className = 'icon-pick';
+  const text = String(value === undefined || value === null ? '' : value).trim();
+  if (!text) {
+    button.classList.add('blank');
+    button.textContent = '+';
+    return;
+  }
+  if (text.includes('${')) {
+    button.classList.add('token');
+    button.textContent = '${}';
+    return;
+  }
+  const parts = splitIcon(text);
+  if (isBuiltinIcon(parts)) {
+    button.classList.add('builtin');
+    button.textContent = parts.name.slice(0, 2);
+    return;
+  }
+  const key = iconKeyOf(parts);
+  const known = iconOutlines.get(key);
+  if (known) {
+    if (known.d) button.appendChild(iconNode(known));
+    else button.textContent = '?';
+    return;
+  }
+  button.textContent = '…';
+  loadOutlines([key]).then(() => {
+    const entry = iconOutlines.get(key) || {};
+    button.textContent = '';
+    if (entry.d) button.appendChild(iconNode(entry));
+    else button.textContent = '?';
+  }).catch(() => { button.textContent = '?'; });
+}
+
+function openIconPicker(current, onPick) {
+  const facts = S.schema.faicons || { count: 0, styles: [] };
+  const state = {
+    query: '', style: '', offset: 0, total: 0, busy: false, done: false,
+    generation: 0,
+  };
+  const grid = el('div', { class: 'icon-grid' });
+  const counter = el('span', { class: 'icon-count' });
+  const cacheNote = el('span', { class: 'icon-cache' });
+  const warning = el('p', { class: 'hint icon-warning', hidden: true });
+  const more = el('button', { class: 'icon-more', text: t('iconmore') });
+  const search = el('input', {
+    type: 'search', class: 'icon-search', placeholder: t('iconsearch'),
+    spellcheck: 'false',
+  });
+
+  const styleTabs = [
+    { value: '', text: t('iconall') },
+    { value: 'solid', text: t('iconsolid') },
+    { value: 'regular', text: t('iconregular') },
+    { value: 'brands', text: t('iconbrands') },
+    { value: 'builtin', text: t('iconbuiltin') },
+  ];
+  const tabs = el('div', { class: 'icon-tabs' });
+
+  function showCache() {
+    const cache = S.iconCache;
+    cacheNote.textContent = cache
+      ? t('iconcached', cache.count, cache.variants || cache.total) : '';
+    warning.hidden = facts.downloads !== false;
+    if (facts.downloads === false) warning.textContent = t('icondownloadoff');
+  }
+
+  function tile(entry) {
+    const key = `${entry.style}/${entry.name}`;
+    const picked = entry.builtin ? entry.name : `${entry.style}:${entry.name}`;
+    const glyph = el('span', { class: 'glyph' });
+    const button = el('button', {
+      class: 'icon-tile' + (picked === String(current || '').trim() ? ' active' : ''),
+      title: `${picked}${entry.label && entry.label !== entry.name ? ` · ${entry.label}` : ''}`,
+      onclick: () => { onPick(picked); closeModal(); },
+    }, glyph, el('span', { class: 'name', text: entry.name }));
+    if (entry.builtin) {
+      glyph.classList.add('builtin');
+      glyph.textContent = entry.name.slice(0, 2);
+    } else if (entry.d) {
+      glyph.appendChild(iconNode(entry));
+    } else {
+      glyph.textContent = '…';
+      button.dataset.key = key;
+    }
+    return button;
+  }
+
+  /* Tiles whose outline has not arrived yet are filled in afterwards, so
+   * the names show at once and the pictures follow. */
+  async function fillPreviews(mine) {
+    const waiting = [...grid.querySelectorAll('.icon-tile[data-key]')];
+    if (!waiting.length) return;
+    const keys = waiting.map((node) => node.dataset.key);
+    try {
+      await loadOutlines(keys);
+    } catch (err) {
+      waiting.forEach((node) => { node.querySelector('.glyph').textContent = '?'; });
+      return;
+    }
+    if (mine !== state.generation) return;
+    let missing = 0;
+    waiting.forEach((node) => {
+      const entry = iconOutlines.get(node.dataset.key) || {};
+      const glyph = node.querySelector('.glyph');
+      glyph.textContent = '';
+      if (entry.d) glyph.appendChild(iconNode(entry));
+      else { glyph.textContent = '?'; missing += 1; }
+      delete node.dataset.key;
+    });
+    if (missing && facts.downloads !== false) {
+      warning.hidden = false;
+      warning.textContent = t('iconoffline');
+    }
+    showCache();
+  }
+
+  /* A search while a page is still loading must win, so every run carries
+   * a number and a run that has been overtaken throws its answer away
+   * instead of appending tiles nobody asked for any more. */
+  async function page(reset) {
+    if (reset) {
+      state.offset = 0;
+      state.done = false;
+      state.busy = false;
+      grid.textContent = '';
+    } else if (state.busy || state.done) {
+      return;
+    }
+    const mine = ++state.generation;
+    if (state.style === 'builtin') {
+      const names = (S.schema.icons || []).filter((name) =>
+        !state.query || name.includes(state.query.toLowerCase()));
+      names.forEach((name) => grid.appendChild(
+        tile({ name, style: '', builtin: true, label: '' })));
+      state.total = names.length;
+      state.done = true;
+      counter.textContent = `${t('iconfound', names.length)} · ${t('iconbuiltinhint')}`;
+      more.hidden = true;
+      if (!names.length) grid.appendChild(el('p', { class: 'hint', text: t('iconnone') }));
+      return;
+    }
+    state.busy = true;
+    more.disabled = true;
+    try {
+      const query = new URLSearchParams({
+        q: state.query, style: state.style,
+        offset: String(state.offset), limit: String(ICON_PAGE),
+      });
+      const data = await api(`/api/icons?${query}`);
+      if (mine !== state.generation) return;
+      state.total = data.total;
+      state.offset += (data.icons || []).length;
+      (data.icons || []).forEach((entry) => {
+        if (entry.d) iconOutlines.set(`${entry.style}/${entry.name}`, entry);
+        grid.appendChild(tile(entry));
+      });
+      state.done = state.offset >= data.total || !(data.icons || []).length;
+      if (data.cache) S.iconCache = data.cache;
+      counter.textContent = t('iconfound', data.total);
+      more.hidden = state.done;
+      if (!data.total) grid.appendChild(el('p', { class: 'hint', text: t('iconnone') }));
+      showCache();
+      state.busy = false;
+      await fillPreviews(mine);
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      if (mine === state.generation) {
+        state.busy = false;
+        more.disabled = false;
+      }
+    }
+  }
+
+  styleTabs.forEach((entry, index) => {
+    const button = el('button', {
+      class: index === 0 ? 'active' : '', text: entry.text,
+      onclick: () => {
+        tabs.querySelectorAll('button').forEach((other) =>
+          other.classList.remove('active'));
+        button.classList.add('active');
+        state.style = entry.value;
+        page(true);
+      },
+    });
+    tabs.appendChild(button);
+  });
+
+  let typing = null;
+  search.addEventListener('input', () => {
+    clearTimeout(typing);
+    typing = setTimeout(() => {
+      state.query = search.value.trim();
+      page(true);
+    }, 180);
+  });
+  more.addEventListener('click', () => page(false));
+
+  /* Scrolling to the bottom loads the next page; the button stays for
+   * anyone driving the dialog from the keyboard. */
+  const body = el('div', { class: 'icon-picker' },
+    el('div', { class: 'icon-bar' }, search, tabs),
+    warning, grid, more,
+    el('p', { class: 'hint icon-licence' },
+      el('a', {
+        href: facts.url || 'https://fontawesome.com/license/free',
+        target: '_blank', rel: 'noreferrer noopener',
+        text: t('iconlicence'),
+      })));
+  grid.addEventListener('scroll', () => {
+    if (grid.scrollTop + grid.clientHeight >= grid.scrollHeight - 80) page(false);
+  });
+
+  const cacheAll = el('button', {
+    text: t('iconcacheall'), disabled: facts.downloads === false,
+    onclick: async () => {
+      cacheAll.disabled = true;
+      const before = cacheAll.textContent;
+      cacheAll.textContent = t('iconcaching');
+      try {
+        const data = await api('/api/icons', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'prefetch', all: true }),
+        });
+        S.iconCache = data.cache;
+        toast(t('iconcachedone', data.cache.count));
+        iconOutlines.clear();
+        await page(true);
+      } catch (err) {
+        toast(t('iconcachefail', err.message), true);
+      } finally {
+        cacheAll.textContent = before;
+        cacheAll.disabled = facts.downloads === false;
+      }
+    },
+  });
+  const emptyCache = el('button', {
+    text: t('iconclear'),
+    onclick: async () => {
+      try {
+        const data = await api('/api/icons', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'clear' }),
+        });
+        S.iconCache = data.cache;
+        iconOutlines.clear();
+        toast(t('iconcleared', data.removed));
+        await page(true);
+      } catch (err) {
+        toast(err.message, true);
+      }
+    },
+  });
+
+  openModal(t('icontitle'), body, [
+    counter, cacheNote, cacheAll, emptyCache,
+    el('button', { text: t('cancel'), onclick: closeModal }),
+  ]);
+  showCache();
+  page(true);
+  search.focus();
 }
 
 function openJsonEditor() {

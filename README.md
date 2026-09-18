@@ -52,13 +52,19 @@ An AX206 panel should light up immediately. For a Samsung frame, set
   complete JPEGs only, just the changed block rows are re-encoded.
 * **30 bundled fonts** — text, narrow, display and seventeen monospaced
   families, every one of them drawing the same characters, and every
-  monospaced one keeping a single cell width so figures line up.
+  monospaced one keeping a single cell width so figures line up. The editor
+  shows them all side by side as real samples, so a font can be compared
+  before it is picked.
 * **20 bundled layouts**, each in 480×320, 800×480 and 1024×600 plus portrait.
   You pick the name, the add-on picks the size that fits the attached panel.
 * **A layout editor in the browser** at `http://<box>:8050/` — drag elements
   around, with a preview drawn by the same renderer that feeds the display.
   Pick several at once to recolour or realign them in one go, copy them into
   another layout with `Ctrl+C` / `Ctrl+V`, and drag the layer list to reorder.
+* **Every Font Awesome Free icon**, about two thousand of them, picked from a
+  dialog with a search box. Each one is fetched once and then kept in the
+  add-on's own cache, so a box with no internet connection still draws them;
+  the whole set can be cached up front in three requests.
 * **Every Kodi InfoLabel** is available (`${info:MusicPlayer.Album}`), as is
   every Kodi condition (`Player.HasVideo`).
 * **Words that know when to leave.** `{Track ${player.track}}` writes the
@@ -98,8 +104,9 @@ python3 tools/selftest.py                         # check fonts, decoders, layou
 ```
 
 `tools/contact_sheet.py` builds the overview images, `tools/make_thumbs.py` the
-pictures for the layout chooser, and `tools/mkfont.py` regenerates the fonts
-(the only one that needs Pillow).
+pictures for the layout chooser, `tools/mkicons.py` rebuilds the Font Awesome
+index, and `tools/mkfont.py` regenerates the fonts (the only one that needs
+Pillow).
 
 ## Licence
 
@@ -108,6 +115,13 @@ MIT — see [LICENSE](LICENSE).
 The bundled fonts come from the [DejaVu fonts](https://dejavu-fonts.github.io/)
 (Bitstream Vera licence), see
 [resources/fonts/LICENSE-DejaVu.txt](resources/fonts/LICENSE-DejaVu.txt).
+
+The `icon` widget can draw the [Font Awesome Free](https://fontawesome.com/)
+set; the icons are licensed under CC BY 4.0, see
+[resources/icons/LICENSE-FontAwesome.txt](resources/icons/LICENSE-FontAwesome.txt).
+The add-on bundles only the index of names in
+`resources/icons/fontawesome.json` (rebuilt with `tools/mkicons.py`) and
+fetches the outlines it needs into `<addon data>/icons/`.
 
 The AX206 protocol follows the `dpf-ax` project and the AX206 driver of
 `lcd4linux` (`drv_dpf.c`). The Samsung SPF protocol follows lcd4linux's

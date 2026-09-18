@@ -332,6 +332,74 @@ msgctxt "#32221"
 msgid "Open the web editor"
 msgstr "Web-Editor öffnen"
 
+msgctxt "#32230"
+msgid "Symbol cache"
+msgstr "Symbol-Cache"
+
+msgctxt "#32231"
+msgid "Downloading symbols is switched off"
+msgstr "Das Laden von Symbolen ist abgeschaltet"
+
+msgctxt "#32232"
+msgid "Cached symbols"
+msgstr "Symbole im Cache"
+
+msgctxt "#32233"
+msgid "Download every symbol for offline use"
+msgstr "Alle Symbole für den Offline-Betrieb laden"
+
+msgctxt "#32234"
+msgid "Download only what the layouts use"
+msgstr "Nur die Symbole der Layouts laden"
+
+msgctxt "#32235"
+msgid "Empty the symbol cache"
+msgstr "Symbol-Cache leeren"
+
+msgctxt "#32236"
+msgid "%d symbols removed"
+msgstr "%d Symbole entfernt"
+
+msgctxt "#32237"
+msgid "No layout uses a Font Awesome symbol"
+msgstr "Kein Layout nutzt ein Font-Awesome-Symbol"
+
+msgctxt "#32238"
+msgid "Downloading symbols"
+msgstr "Symbole werden geladen"
+
+msgctxt "#32239"
+msgid "%d symbols cached"
+msgstr "%d Symbole im Cache"
+
+msgctxt "#32240"
+msgid "No symbol could be downloaded"
+msgstr "Es konnte kein Symbol geladen werden"
+
+msgctxt "#32241"
+msgid "Download Font Awesome symbols"
+msgstr "Font-Awesome-Symbole laden"
+
+msgctxt "#32242"
+msgid "Fetch symbols the layouts use from the internet once and keep them in the cache; off means only the built-in shapes and what is already cached are drawn"
+msgstr "Symbole der Layouts einmal aus dem Internet holen und im Cache behalten; aus heißt: nur die eingebauten Formen und was schon im Cache liegt werden gezeichnet"
+
+msgctxt "#32243"
+msgid "Manage the symbol cache"
+msgstr "Symbol-Cache verwalten"
+
+msgctxt "#32244"
+msgid "Load every symbol for offline use, or free the space again"
+msgstr "Alle Symbole für den Offline-Betrieb laden oder den Platz wieder freigeben"
+
+msgctxt "#32245"
+msgid "Symbol source"
+msgstr "Symbol-Quelle"
+
+msgctxt "#32246"
+msgid "Where outlines are fetched from; empty uses the Font Awesome CDN. Placeholders: %(version)s, %(style)s, %(name)s"
+msgstr "Woher die Umrisse geladen werden; leer nutzt das CDN von Font Awesome. Platzhalter: %(version)s, %(style)s, %(name)s"
+
 msgctxt "#32300"
 msgid "Video library scan started"
 msgstr "Scan der Videobibliothek gestartet"

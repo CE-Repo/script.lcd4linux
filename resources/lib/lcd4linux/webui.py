@@ -20,6 +20,9 @@ API
 ``GET  /api/state``      active layout, panel size, service status
 ``GET  /api/layouts``    every layout the add-on can see
 ``GET  /api/layout``     one layout: ``?file=default.json``
+``GET  /api/icons``      search Font Awesome: ``?q=heart&style=solid``
+``GET  /api/fontsample`` a line of text drawn in one bundled font, as a PNG
+``POST /api/icons``      cache upkeep: prefetch or clear
 ``POST /api/layout``     save ``{"file": ..., "spec": {...}}``
 ``POST /api/delete``     remove a layout from the user folder
 ``POST /api/activate``   make a layout the one shown on the panel
@@ -43,12 +46,16 @@ from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, urlparse
 
+from . import bmfont
 from . import display as display_module
+from . import faicons
 from . import layout as layout_module
 from . import layoutindex
 from . import pngio
 from . import tokens
 from . import webschema
+from . import widgets as widget_module
+from .canvas import parse_color
 from .logger import debug, error, log
 from .settings import Config, addon_path, ensure_user_directories
 
@@ -133,6 +140,15 @@ def _same_secret(given, expected):
     """Compare a password without leaking its length through timing."""
     return hmac.compare_digest(str(given).encode("utf-8"),
                                str(expected).encode("utf-8"))
+
+
+def _clamp(value, default, low, high):
+    """A query string number, kept inside sane bounds."""
+    try:
+        number = int(str(value))
+    except (TypeError, ValueError):
+        return default
+    return max(low, min(high, number))
 
 
 # ---------------------------------------------------------------------------
@@ -464,6 +480,10 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/layout":
             self._send_json(read_layout(query.get("file", ""),
                                         self.editor.config))
+        elif path == "/api/icons":
+            self._send_json(self.editor.icons(query))
+        elif path == "/api/fontsample":
+            self._send(200, self.editor.font_sample(query), "image/png")
         elif path == "/api/blank":
             size = query.get("size", "480x320").lower().split("x")
             width = int(size[0]) if size[0].isdigit() else 480
@@ -611,6 +631,9 @@ class Handler(BaseHTTPRequestHandler):
             payload = self._read_json()
             validate(payload.get("spec") or {})
             self._send_json({"ok": True})
+        elif path == "/api/icons":
+            payload = self._read_json()
+            self._send_json(self.editor.icon_cache(payload))
         else:
             self._send(404, "not found")
 
@@ -724,8 +747,133 @@ class WebEditor(object):
     # -- data for the handlers --------------------------------------------
     def schema(self):
         if self._schema is None:
+            # Built once, so the icon settings have to be in force before
+            # the catalogue describes itself to the dialog.
+            faicons.configure(self.config)
             self._schema = webschema.describe(self.preview.fonts)
         return self._schema
+
+    #: How many icons one request may ask for.  A dialog page is a few
+    #: dozen; more than this is a scraper, not a person browsing.
+    ICON_LIMIT = 240
+
+    #: What a font sample may ask for.  The editor shows one line per
+    #: family, so this only has to cover a line.
+    SAMPLE_CHARS = 64
+    SAMPLE_WIDTH = 1200
+
+    def font_sample(self, query):
+        """A PNG of one line of text in one of the bundled fonts.
+
+        The families are bitmap fonts, so a browser cannot show what they
+        look like - it gets a picture drawn by the same font renderer that
+        feeds the panel, with a real alpha channel so it sits on whatever
+        the editor puts behind it.
+        """
+        family = str(query.get("font", "") or "sans").strip()[:48]
+        if str(query.get("bold", "")) in ("1", "true", "yes") \
+                and not family.endswith("-bold"):
+            family += "-bold"
+        size = _clamp(query.get("size"), 22, 6, 96)
+        text = str(query.get("text", "") or "")[:self.SAMPLE_CHARS]
+        if not text.strip():
+            text = "Hamburgefons 123"
+        color = parse_color(query.get("color") or "", (230, 235, 245, 255))
+        font = self.preview.fonts.get(family, size)
+        width, height, mask = bmfont.text_mask(font, text)
+        if width > self.SAMPLE_WIDTH:
+            # Too long to be a sample; cut it where the renderer would.
+            text = font.ellipsize(text, self.SAMPLE_WIDTH)
+            width, height, mask = bmfont.text_mask(font, text)
+        red, green, blue = color[0], color[1], color[2]
+        alpha = color[3] if len(color) > 3 else 255
+        pixels = bytearray(width * height * 4)
+        for index, coverage in enumerate(mask):
+            if not coverage:
+                continue
+            base = index * 4
+            pixels[base] = red
+            pixels[base + 1] = green
+            pixels[base + 2] = blue
+            pixels[base + 3] = (coverage if alpha >= 255
+                                else coverage * alpha // 255)
+        return bytes(pngio.encode_rgba(width, height, pixels))
+
+    def icons(self, query):
+        """Search the Font Awesome catalogue, or fetch named outlines.
+
+        ``?q=heart&style=solid&offset=0&limit=60`` lists matches with the
+        outlines that are already cached.  ``?keys=solid/heart,regular/star``
+        fetches those, downloading what the cache is missing, which is how
+        the dialog fills in the previews for the page it is showing.
+        """
+        faicons.configure(self.config)
+        book = faicons.catalogue()
+        keys = [entry for entry in
+                str(query.get("keys", "")).replace(" ", "").split(",") if entry]
+        if keys:
+            return {"icons": self._icon_outlines(keys[:self.ICON_LIMIT]),
+                    "cache": faicons.cache_state()}
+        style = str(query.get("style", "") or "").lower()
+        if style not in faicons.STYLES:
+            style = None
+        limit = _clamp(query.get("limit"), 60, 1, self.ICON_LIMIT)
+        offset = _clamp(query.get("offset"), 0, 0, 100000)
+        total, rows = book.search(query.get("q", ""), style, offset, limit)
+        found = []
+        for name, best, label in rows:
+            entry = {"name": name, "style": best, "label": label,
+                     "styles": list(book.styles_of(name))}
+            outline = faicons.lookup(best, name)
+            if outline is not None:
+                entry.update(outline.describe())
+            found.append(entry)
+        return {"total": total, "offset": offset, "limit": limit,
+                "query": query.get("q", ""), "style": style or "",
+                "icons": found, "cache": faicons.cache_state()}
+
+    def _icon_outlines(self, keys):
+        """Resolve several icons at once, fetching what is not cached."""
+        found = faicons.resolve_many(keys)
+        results = []
+        for index, outline in enumerate(found):
+            if outline is not None:
+                results.append(outline.describe())
+                continue
+            style, name = faicons.resolve(keys[index])
+            results.append({"name": name, "style": style or "",
+                            "missing": True})
+        return results
+
+    def icon_cache(self, payload):
+        """Keep the icon cache: ``state``, ``prefetch`` or ``clear``."""
+        faicons.configure(self.config)
+        action = str((payload or {}).get("action", "state")).lower()
+        if action == "clear":
+            removed = faicons.clear_cache()
+            widget_module.clear_raster_cache()
+            return {"ok": True, "removed": removed,
+                    "cache": faicons.cache_state()}
+        if action == "prefetch":
+            style = str((payload or {}).get("style", "") or "").lower()
+            wanted = (payload or {}).get("icons")
+            if (payload or {}).get("all"):
+                # Every icon, from the sprite sheets: the whole free set for
+                # three requests, so the box can go offline afterwards.
+                wanted = None
+            elif not wanted:
+                spec = (payload or {}).get("spec") or {}
+                wanted = ["%s:%s" % pair for pair in
+                          faicons.used_by(spec, widget_module.ICONS)]
+            cached, fetched, failed = faicons.prefetch(
+                None if wanted is None
+                else [str(entry) for entry in wanted][:self.ICON_LIMIT],
+                style=style if style in faicons.STYLES else None)
+            return {"ok": True, "cached": cached, "fetched": fetched,
+                    "failed": failed, "cache": faicons.cache_state()}
+        if action != "state":
+            raise EditorError("unknown icon action %r" % action)
+        return {"ok": True, "cache": faicons.cache_state()}
 
     def state(self):
         config = self.config
