@@ -18,7 +18,7 @@ from . import layout as layout_module
 from . import localize
 from . import thumbs
 from .bmfont import FontCache
-from .images import ImageCache
+from .images import ImageCache, decoder_name
 from .kodidata import make_provider
 from .logger import debug, error, log
 from .settings import (Config, DEFAULTS, addon_path, ensure_user_directories,
@@ -114,7 +114,13 @@ class Service(object):
         self.provider = make_provider(self._addon_info("name"),
                                       self._addon_info("version"))
         self.fonts = FontCache(self.config.font_directories)
-        self.images = ImageCache(limit=32)
+        # The only cache with a loader thread: the service draws from a
+        # single loop, so a piece of fanart decoded inline would stop the
+        # clock and the progress bar for as long as it took.  Previews and
+        # the command line tools keep the plain synchronous cache, which
+        # renders a complete picture in one pass.
+        self.images = ImageCache(limit=32, background=True,
+                                 directory=self.config.image_cache_directory)
         self.target = None
         self.renderer = None
         self.layout = None
@@ -307,6 +313,10 @@ class Service(object):
         self.provider = make_provider(self._addon_info("name"),
                                       self._addon_info("version"))
         log("starting with %s" % self.config.describe())
+        # Worth a line of its own: without Pillow every piece of
+        # fanart is decoded in Python, which on a weak box is the
+        # difference between a second and a quarter of a minute.
+        log("pictures are decoded by %s" % decoder_name())
 
         self._close_target()
         # Runs before the display is opened, so it can switch the power on.
@@ -799,6 +809,7 @@ class Service(object):
         self.stop_web_editor()
         self._publish_web_url("")
         faicons.stop()
+        self.images.stop()
         self._close_target()
         # Last, so the power can be cut once the USB connection is closed.
         self.run_hook("stop", self.config.stop_command)

@@ -6,8 +6,13 @@ the bundled pure-Python PNG/JPEG readers; if Pillow happens to be installed
 is considerably faster.
 """
 
+import errno
+import hashlib
 import os
+import struct
+import threading
 import time
+import zlib
 from array import array
 
 try:
@@ -17,7 +22,7 @@ except ImportError:  # pragma: no cover - Python 2 safety net
 
 from . import pngio
 from . import jpegio
-from .logger import log
+from .logger import debug, debug_enabled, log
 
 try:
     from PIL import Image as _PILImage  # type: ignore
@@ -143,6 +148,46 @@ class Image(object):
         return result
 
     # -- effects ----------------------------------------------------------
+    def flattened(self, color=None, dim=0):
+        """An opaque copy over ``color``, blended ``dim``/255 toward black.
+
+        This is what a page background is: a solid colour, the picture on
+        top of it, and a black veil over both.  Drawing it that way meant
+        three passes over the canvas on the render thread, the veil alone
+        being an alpha blend per pixel.  Done here it is one pass, and it
+        happens wherever this image is prepared - for the service, on the
+        loader thread.
+        """
+        dim = max(0, min(255, int(dim)))
+        if color is None and dim <= 0:
+            return self
+        keep = 255 - dim
+        pixels = self.pixels
+        out = bytearray(len(pixels))
+        for index in range(0, len(pixels), 4):
+            alpha = pixels[index + 3]
+            if alpha == 255 or color is None:
+                red = pixels[index]
+                green = pixels[index + 1]
+                blue = pixels[index + 2]
+            else:
+                # The canvas is opaque, so whatever the picture does not
+                # cover is the page colour rather than a hole.
+                inverse = 255 - alpha
+                red = (pixels[index] * alpha + color[0] * inverse) // 255
+                green = (pixels[index + 1] * alpha + color[1] * inverse) // 255
+                blue = (pixels[index + 2] * alpha + color[2] * inverse) // 255
+                alpha = 255
+            if dim:
+                red = red * keep // 255
+                green = green * keep // 255
+                blue = blue * keep // 255
+            out[index] = red
+            out[index + 1] = green
+            out[index + 2] = blue
+            out[index + 3] = alpha
+        return Image(self.width, self.height, out)
+
     def rounded(self, radius):
         """Soften the corners by writing an anti-aliased alpha mask."""
         radius = int(radius)
@@ -228,7 +273,12 @@ def _resample_bilinear(pixels, src_w, src_h, dst_w, dst_h):
             fx = 0.0
         x0 = int(fx)
         x1 = min(x0 + 1, src_w - 1)
-        x_info.append((x0 * 4, x1 * 4, fx - x0))
+        wx = fx - x0
+        x_info.append((x0 * 4, x1 * 4, 1.0 - wx, wx))
+    dst = 0
+    # Written out rather than looped over the four channels: this runs once
+    # per pixel of a whole panel and the interpreter's own overhead - the
+    # range, the index arithmetic - was costing more than the arithmetic.
     for y in range(dst_h):
         fy = (y + 0.5) * src_h / dst_h - 0.5
         if fy < 0:
@@ -236,14 +286,33 @@ def _resample_bilinear(pixels, src_w, src_h, dst_w, dst_h):
         y0 = int(fy)
         y1 = min(y0 + 1, src_h - 1)
         wy = fy - y0
+        iwy = 1.0 - wy
         row0 = y0 * src_w * 4
         row1 = y1 * src_w * 4
-        dst = y * dst_w * 4
-        for x0off, x1off, wx in x_info:
-            for channel in range(4):
-                top = pixels[row0 + x0off + channel] * (1 - wx) + pixels[row0 + x1off + channel] * wx
-                bottom = pixels[row1 + x0off + channel] * (1 - wx) + pixels[row1 + x1off + channel] * wx
-                out[dst + channel] = int(top * (1 - wy) + bottom * wy + 0.5)
+        for x0off, x1off, iwx, wx in x_info:
+            top_left = row0 + x0off
+            top_right = row0 + x1off
+            low_left = row1 + x0off
+            low_right = row1 + x1off
+            w00 = iwx * iwy
+            w01 = wx * iwy
+            w10 = iwx * wy
+            w11 = wx * wy
+            out[dst] = int(pixels[top_left] * w00 + pixels[top_right] * w01
+                           + pixels[low_left] * w10 + pixels[low_right] * w11
+                           + 0.5)
+            out[dst + 1] = int(pixels[top_left + 1] * w00
+                               + pixels[top_right + 1] * w01
+                               + pixels[low_left + 1] * w10
+                               + pixels[low_right + 1] * w11 + 0.5)
+            out[dst + 2] = int(pixels[top_left + 2] * w00
+                               + pixels[top_right + 2] * w01
+                               + pixels[low_left + 2] * w10
+                               + pixels[low_right + 2] * w11 + 0.5)
+            out[dst + 3] = int(pixels[top_left + 3] * w00
+                               + pixels[top_right + 3] * w01
+                               + pixels[low_left + 3] * w10
+                               + pixels[low_right + 3] * w11 + 0.5)
             dst += 4
     return out
 
@@ -304,6 +373,28 @@ def decode_bytes(data, max_size=None):
     raise ValueError("unsupported image format")
 
 
+def decoder_name():
+    """Which decoder the pictures go through, for the log and the settings."""
+    return "Pillow" if _PILImage is not None else "the built-in decoder"
+
+
+def decode_size(width, height, fit="contain"):
+    """The longest edge a decoder has to deliver to fill a box sharply.
+
+    ``contain`` and ``stretch`` are bounded by the longer edge of the box.
+    ``cover`` is bounded by the shorter one, and how much of the original
+    that takes depends on the shape of the picture - which is not known
+    until it has been decoded.  16:9 is assumed, which is what fanart is and
+    is wider than any poster or piece of cover art, so the decode is never
+    short and never the full frame either.
+    """
+    width = max(1, int(width))
+    height = max(1, int(height))
+    if str(fit).lower() == "cover":
+        return max(width, height, min(width, height) * 16 // 9)
+    return max(width, height)
+
+
 def resolve_path(path):
     """Turn a Kodi art reference into something readable.
 
@@ -325,31 +416,97 @@ def resolve_path(path):
     return text
 
 
+def _vfs_read(path):
+    try:
+        handle = xbmcvfs.File(path)
+        try:
+            data = handle.readBytes()
+        finally:
+            handle.close()
+        return bytes(data) if data else b""
+    except Exception as error:
+        log("VFS read failed for %s: %s" % (path, error))
+        return b""
+
+
 def read_bytes(path):
     """Read a local, special:// or network path, preferring Kodi's VFS."""
-    path = resolve_path(path)
-    if not path:
+    text = str(path or "")
+    resolved = resolve_path(text)
+    if not resolved:
         return b""
     if xbmcvfs is not None:
-        try:
-            handle = xbmcvfs.File(path)
-            try:
-                data = handle.readBytes()
-            finally:
-                handle.close()
+        candidates = [resolved]
+        if text.startswith("image://"):
+            # Kodi's own copy first.  An ``image://`` URL only wraps the
+            # place the picture came from, and for library art that place
+            # is the web - unwrapping it and reading that means fetching
+            # the full sized original over the network all over again.
+            # Handed to the VFS unchanged, Kodi serves the texture it has
+            # already cached locally, scaled to its own limit.
+            candidates.insert(0, text)
+        for candidate in candidates:
+            data = _vfs_read(candidate)
             if data:
-                return bytes(data)
-        except Exception as error:
-            log("VFS read failed for %s: %s" % (path, error))
+                return data
     try:
-        with open(path, "rb") as handle:
+        with open(resolved, "rb") as handle:
             return handle.read()
     except (IOError, OSError):
         return b""
 
 
+#: Magic and version of the files in the on disk picture cache.  Not an
+#: image format anybody else reads: a finished RGBA buffer, deflated.
+#: Storing a PNG would mean un-filtering it again on the way back in, and
+#: that costs more than the deflate saves.
+_BLOB_MAGIC = b"L4LI"
+_BLOB_HEADER = struct.Struct(">4sHH")
+
+
+def _remove(path):
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
+def _short(path):
+    """The tail of a path or URL, which is all a log line needs."""
+    text = str(path or "")
+    if len(text) <= 60:
+        return text
+    return "..." + text[-57:]
+
+
+def _blob_encode(image):
+    return (_BLOB_HEADER.pack(_BLOB_MAGIC, image.width, image.height)
+            + zlib.compress(bytes(image.pixels), 1))
+
+
+def _blob_decode(data):
+    if len(data) <= _BLOB_HEADER.size:
+        raise ValueError("truncated")
+    magic, width, height = _BLOB_HEADER.unpack(data[:_BLOB_HEADER.size])
+    if magic != _BLOB_MAGIC:
+        raise ValueError("not one of ours")
+    pixels = bytearray(zlib.decompress(data[_BLOB_HEADER.size:]))
+    if len(pixels) != width * height * 4:
+        raise ValueError("wrong length")
+    return Image(width, height, pixels)
+
+
 class ImageCache(object):
-    """Decoded images keyed by source path and requested size."""
+    """Decoded images keyed by source path and requested size.
+
+    With ``background=True`` the cache also runs a worker thread and grows a
+    second, asynchronous entry point, :meth:`request`.  Decoding a piece of
+    fanart without Pillow costs seconds of pure Python, and the service draws
+    its frames from a single loop - doing that work inline froze the whole
+    panel, clock and progress bar included, until the picture was ready.  The
+    worker does the reading, decoding, scaling and sprite building instead;
+    the render thread only ever gets a finished picture or ``None``.
+    """
 
     #: How long a path that could not be read is remembered as missing.
     #: Long enough that a wall of cover art Kodi has not downloaded yet is
@@ -357,59 +514,369 @@ class ImageCache(object):
     #: on its own once the file is there.
     MISS_SECONDS = 5.0
 
-    def __init__(self, limit=24):
+    #: How many pictures may wait for the worker at once.  A page that asks
+    #: for more gets the rest on a later frame rather than piling up a queue
+    #: that is stale by the time it is worked off.
+    QUEUE_LIMIT = 8
+
+    #: Raw decodes held back for a moment so that a poster and a background
+    #: built from the same file do not decode it twice.  They are large and
+    #: only ever an intermediate step, so they are kept apart from the
+    #: prepared pictures instead of crowding them out of the cache.
+    RAW_LIMIT = 3
+
+    #: How many finished pictures ``directory`` keeps.  They are small - a
+    #: panel sized RGBA buffer deflates to some tens of kilobytes - so this
+    #: is a couple of megabytes for a whole library's worth of covers.
+    DISK_LIMIT = 200
+
+    #: And how long one of them is trusted.  Art behind an unchanged URL
+    #: does get replaced now and then, and a month is short enough that a
+    #: stale picture rights itself without anybody clearing a cache.
+    DISK_DAYS = 30
+
+    def __init__(self, limit=24, background=False, directory=None):
         self.limit = limit
+        self.directory = directory
         self._entries = {}
         self._misses = {}
+        self._raw = {}
+        self._lock = threading.RLock()
+        self._wake = threading.Condition(self._lock)
+        self._background = bool(background)
+        self._queue = []
+        self._pending = set()
+        self._worker = None
+        self._stop = False
+        self._writes = 0
 
+    # -- synchronous access ----------------------------------------------
     def get(self, path, max_size=None):
         key = (path, max_size)
-        entry = self._entries.get(key)
-        if entry is not None:
-            entry[1] = time.time()
-            return entry[0]
-        now = time.time()
-        missed_at = self._misses.get(key)
-        if missed_at is not None and now - missed_at < self.MISS_SECONDS:
-            return None
+        with self._lock:
+            entry = self._entries.get(key)
+            if entry is not None:
+                entry[1] = time.time()
+                return entry[0]
+            missed_at = self._misses.get(key)
+            if missed_at is not None and time.time() - missed_at < self.MISS_SECONDS:
+                return None
         data = read_bytes(path)
         if not data:
             # Remembered briefly rather than cached for good: the file may
             # still be on its way, but retrying it every frame means a
             # failing open per frame for as long as the page is up.
-            if len(self._misses) > 4 * self.limit:
-                self._misses.clear()
-            self._misses[key] = now
+            self._remember_miss(key)
             return None
-        self._misses.pop(key, None)
         try:
             image = decode_bytes(data, max_size)
         except Exception as error:
             log("cannot decode %s: %s" % (path, error))
             image = None
-        self._store(key, image)
+        with self._lock:
+            self._misses.pop(key, None)
+            self._store(key, image)
         return image
 
     def put(self, key, image):
-        self._store(key, image)
+        with self._lock:
+            self._store(key, image)
 
     def lookup(self, key):
-        entry = self._entries.get(key)
-        if entry is None:
-            return None
-        entry[1] = time.time()
-        return entry[0]
+        with self._lock:
+            entry = self._entries.get(key)
+            if entry is None:
+                return None
+            entry[1] = time.time()
+            return entry[0]
 
+    # -- asynchronous access ---------------------------------------------
+    def request(self, key, path, max_size=None, prepare=None):
+        """The finished picture for ``key``, or ``None`` while it is loading.
+
+        ``prepare`` turns the decoded original into whatever the caller wants
+        to keep - scaled to a widget, cropped, a dominant colour.  It runs on
+        the worker thread, so everything expensive stays off the render loop.
+        Without a worker the whole thing happens right here, which is what
+        the preview renderer and the command line tools need.
+        """
+        with self._lock:
+            entry = self._entries.get(key)
+            if entry is not None:
+                entry[1] = time.time()
+                return entry[0]
+            if self._background:
+                missed_at = self._misses.get(key)
+                if missed_at is not None \
+                        and time.time() - missed_at < self.MISS_SECONDS:
+                    return None
+                if key not in self._pending \
+                        and len(self._queue) < self.QUEUE_LIMIT:
+                    self._queue.append((key, path, max_size, prepare))
+                    self._pending.add(key)
+                    self._start_worker()
+                    self._wake.notify()
+                return None
+        return self._prepare(key, path, max_size, prepare)
+
+    #: Below this the decode is quick enough that a rough version first
+    #: would only put a blurry frame in front of the real one.  Above it -
+    #: a full panel of fanart, essentially - it is worth it.
+    DRAFT_ABOVE = 400
+
+    def progressive(self, key, path, max_size, prepare, draft_prepare=None):
+        """The finished picture, or something to look at until it is there.
+
+        Returns ``(image, finished)``.  ``finished`` is false both when
+        nothing can be drawn yet and when what comes back is the rough
+        version, so that a caller which caches its result knows not to.
+
+        ``draft_prepare`` builds the rough one and should cut whatever
+        corners it can - the caller's own smoothing, in particular, since
+        scaling a small picture up smoothly costs more than decoding it.
+        """
+        draft = None
+        if max_size >= self.DRAFT_ABOVE and not self.known(key):
+            size = max(1, max_size // 2)
+            draft = self.request(key + ("draft", size), path, size,
+                                 draft_prepare or prepare)
+        image = self.request(key, path, max_size, prepare)
+        if image is not None:
+            return image, True
+        return draft, False
+
+    def known(self, key):
+        """Whether this picture can be had without decoding anything.
+
+        Used to decide whether a rough stand-in is worth asking for: if the
+        real one is a deflate away, drawing something worse first would only
+        put a blurry frame in front of it.
+        """
+        with self._lock:
+            if key in self._entries:
+                return True
+        path = self._disk_path(key)
+        return bool(path) and os.path.exists(path)
+
+    def _prepare(self, key, path, max_size, prepare):
+        # A picture this panel has drawn before is already the right size:
+        # reading it back costs a deflate rather than a JPEG decode and a
+        # scale, which for a piece of 1080p fanart is the difference
+        # between a tenth of a second and several of them.
+        image = self._read_disk(key)
+        if image is not None:
+            started = time.time()
+            image.sprite()
+            with self._lock:
+                self._misses.pop(key, None)
+                self._store(key, image)
+            debug("%s from the picture cache in %d ms"
+                  % (_short(path), (time.time() - started) * 1000))
+            return image
+
+        started = time.time()
+        raw = self._raw_image(path, max_size)
+        decoded_at = time.time()
+        if raw is None:
+            # Nothing to show yet - or nothing that decodes.  Either way the
+            # answer keeps for a few seconds, so the caller does not ask for
+            # it again on every frame.
+            self._remember_miss(key)
+            return None
+        try:
+            image = raw if prepare is None else prepare(raw)
+        except Exception as error:
+            log("cannot prepare %s: %s" % (path, error))
+            image = None
+        if image is not None and hasattr(image, "sprite"):
+            # Built here rather than on the first blit: it is another pass
+            # over every pixel, and here it happens on the worker's time.
+            image.sprite()
+        finished_at = time.time()
+        if debug_enabled():
+            debug("%s: %dx%d read and decoded in %d ms, prepared in %d ms"
+                  % (_short(path), raw.width, raw.height,
+                     (decoded_at - started) * 1000,
+                     (finished_at - decoded_at) * 1000))
+        with self._lock:
+            self._misses.pop(key, None)
+            self._store(key, image)
+        self._write_disk(key, image)
+        return image
+
+    # -- the picture cache on disk ----------------------------------------
+    def _disk_path(self, key):
+        if not self.directory:
+            return None
+        name = hashlib.sha1(repr(key).encode("utf-8")).hexdigest()
+        return os.path.join(self.directory, name + ".l4i")
+
+    def _read_disk(self, key):
+        path = self._disk_path(key)
+        if not path:
+            return None
+        try:
+            with open(path, "rb") as handle:
+                data = handle.read()
+        except (IOError, OSError):
+            return None
+        try:
+            image = _blob_decode(data)
+        except Exception:
+            # A half written or outdated file is simply drawn again.
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+            return None
+        try:
+            os.utime(path, None)
+        except OSError:
+            pass
+        return image
+
+    def _write_disk(self, key, image):
+        path = self._disk_path(key)
+        if not path or image is None or not hasattr(image, "pixels"):
+            return
+        try:
+            if not os.path.isdir(self.directory):
+                os.makedirs(self.directory)
+            # Written beside the real name and moved into place, so that a
+            # reader never gets half a file - the worker writes these while
+            # the render thread is running.
+            temporary = "%s.%d" % (path, os.getpid())
+            with open(temporary, "wb") as handle:
+                handle.write(_blob_encode(image))
+            if os.path.exists(path):
+                os.remove(path)
+            os.rename(temporary, path)
+        except (IOError, OSError) as error:
+            if getattr(error, "errno", None) != errno.ENOSPC:
+                debug("cannot keep a picture in %s: %s" % (self.directory, error))
+            return
+        with self._lock:
+            self._writes += 1
+            due = self._writes % 25 == 1
+        if due:
+            self._prune_disk()
+
+    def _prune_disk(self):
+        """Drop the oldest and the stalest, now and then rather than always."""
+        try:
+            names = [name for name in os.listdir(self.directory)
+                     if name.endswith(".l4i")]
+        except OSError:
+            return
+        stale = time.time() - self.DISK_DAYS * 86400
+        entries = []
+        for name in names:
+            full = os.path.join(self.directory, name)
+            try:
+                touched = os.path.getmtime(full)
+            except OSError:
+                continue
+            if touched < stale:
+                _remove(full)
+                continue
+            entries.append((touched, full))
+        if len(entries) <= self.DISK_LIMIT:
+            return
+        entries.sort()
+        for _, full in entries[:len(entries) - self.DISK_LIMIT]:
+            _remove(full)
+
+    def _raw_image(self, path, max_size):
+        raw_key = (path, max_size)
+        with self._lock:
+            entry = self._raw.get(raw_key)
+            if entry is not None:
+                entry[1] = time.time()
+                return entry[0]
+        image = self.get(path, max_size)
+        if image is None:
+            return None
+        with self._lock:
+            self._raw[raw_key] = [image, time.time()]
+            if len(self._raw) > self.RAW_LIMIT:
+                oldest = sorted(self._raw.items(), key=lambda item: item[1][1])
+                for old_key, _ in oldest[:len(self._raw) - self.RAW_LIMIT]:
+                    self._raw.pop(old_key, None)
+            # The original is only a step on the way to the prepared picture;
+            # leaving a full frame of fanart in the main cache would push
+            # several of the pictures actually being drawn out of it.
+            self._entries.pop(raw_key, None)
+        return image
+
+    def _remember_miss(self, key):
+        with self._lock:
+            if len(self._misses) > 4 * self.limit:
+                self._misses.clear()
+            self._misses[key] = time.time()
+
+    # -- worker -----------------------------------------------------------
+    def _start_worker(self):
+        """Start the loader thread.  Called with the lock held."""
+        if self._worker is not None and self._worker.is_alive():
+            return
+        self._stop = False
+        self._worker = threading.Thread(target=self._work,
+                                        name="lcd4linux-images")
+        self._worker.daemon = True
+        self._worker.start()
+
+    def _work(self):
+        while True:
+            with self._lock:
+                while not self._queue and not self._stop:
+                    self._wake.wait(1.0)
+                if self._stop:
+                    return
+                key, path, max_size, prepare = self._queue.pop(0)
+            try:
+                self._prepare(key, path, max_size, prepare)
+            except Exception as error:
+                log("cannot load %s: %s" % (path, error))
+            finally:
+                with self._lock:
+                    self._pending.discard(key)
+
+    def stop(self):
+        """Let the worker finish; safe on a cache that never started one."""
+        with self._lock:
+            self._stop = True
+            self._queue = []
+            self._pending.clear()
+            self._wake.notify_all()
+            worker = self._worker
+            self._worker = None
+        if worker is not None and worker.is_alive():
+            worker.join(2.0)
+
+    # -- housekeeping -----------------------------------------------------
     def _store(self, key, image):
+        """Remember one entry, evicting the coldest.  Lock held."""
         self._entries[key] = [image, time.time()]
         if len(self._entries) > self.limit:
             oldest = sorted(self._entries.items(), key=lambda item: item[1][1])
             for old_key, _ in oldest[:len(self._entries) - self.limit]:
                 self._entries.pop(old_key, None)
 
-    def clear(self):
-        self._entries.clear()
-        self._misses.clear()
+    def clear(self, disk=False):
+        with self._lock:
+            self._entries.clear()
+            self._misses.clear()
+            self._raw.clear()
+            self._queue = []
+            self._pending.clear()
+        if disk and self.directory:
+            try:
+                names = os.listdir(self.directory)
+            except OSError:
+                return
+            for name in names:
+                if name.endswith(".l4i"):
+                    _remove(os.path.join(self.directory, name))
 
 
 def load_file(path, max_size=None):

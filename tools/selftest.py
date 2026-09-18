@@ -1984,6 +1984,416 @@ def test_image_cache():
         shutil.rmtree(directory, ignore_errors=True)
 
 
+def test_decode_size():
+    """The decoder is asked for what the fit mode needs, and no more."""
+    print("decode size")
+    from lcd4linux.images import decode_size
+
+    check(decode_size(480, 320, "contain") == 480,
+          "a contained picture is bounded by the longer edge of the box")
+    check(decode_size(480, 320, "stretch") == 480,
+          "and so is a stretched one")
+    # A 16:9 original scaled until it covers 480x320 is 569 wide, so asking
+    # for 480 would have it upscaled - which is what dropping the old blanket
+    # "times two" would otherwise have caused.
+    check(decode_size(480, 320, "cover") == 568,
+          "a covering picture is bounded by the shorter edge (%d)"
+          % decode_size(480, 320, "cover"))
+    check(decode_size(320, 320, "cover") == 568,
+          "a square box included")
+    check(decode_size(480, 320, "cover") < 2 * 480,
+          "but still well short of the whole frame the widget used to ask for")
+
+    # And the decoder can meet those sizes at any eighth, not only at the
+    # powers of two.  1024x600 asks for 1066 pixels of a 1080p original,
+    # which used to round all the way up to the full frame.
+    from lcd4linux.jpegio import _pick_scale
+
+    check(_pick_scale(1920, 1080, decode_size(1024, 600, "cover")) == 5,
+          "1066 of 1920 is met at 5/8, not at 8/8")
+    check(_pick_scale(1920, 1080, decode_size(480, 320, "cover")) == 3,
+          "and 568 of 1920 at 3/8")
+    check(_pick_scale(1920, 1080, None) == 8,
+          "asking for no particular size still decodes the whole frame")
+    for size in range(32, 2048, 37):
+        scale = _pick_scale(1920, 1080, size)
+        if 1920 * scale / 8.0 < size and scale != 8:
+            check(False, "%d pixels are not met by %d/8" % (size, scale))
+            break
+        if scale > 1 and 1920 * (scale - 1) / 8.0 >= size:
+            check(False, "%d pixels would already fit in %d/8" % (size, scale - 1))
+            break
+    else:
+        check(True, "every size in between picks the cheapest eighth that fits")
+
+
+def test_background_loader():
+    """Pictures are decoded on the loader thread, never on the render one."""
+    print("background loader")
+    import threading
+    from lcd4linux import images
+    from lcd4linux.bmfont import FontCache
+    from lcd4linux.images import ImageCache
+    from lcd4linux.kodidata import DemoProvider
+    from lcd4linux.layout import Layout, Renderer
+
+    media = os.path.join(ROOT, "resources", "media")
+    fonts = FontCache([os.path.join(ROOT, "resources", "fonts")])
+    render_thread = threading.current_thread()
+    inline = []
+    plain_decode = images.decode_bytes
+
+    def watched(data, max_size=None):
+        if threading.current_thread() is render_thread:
+            inline.append(max_size)
+        return plain_decode(data, max_size)
+
+    def build(cache):
+        provider = DemoProvider(0, 97.0, "playing",
+                                os.path.join(media, "demo-cover.jpg"),
+                                os.path.join(media, "demo-fanart.jpg"))
+        layout = Layout.load(os.path.join(ROOT, "resources", "layouts",
+                                          "default.json"))
+        return Renderer(layout, provider, fonts, cache)
+
+    def difference(left, right):
+        a = left.to_rgb888()
+        b = right.to_rgb888()
+        return sum(abs(a[i] - b[i]) for i in range(len(a))) / float(len(a))
+
+    # What it has to end up looking like, and what one frame cost back when
+    # the pictures were decoded in the middle of it.
+    started = time.time()
+    reference = build(ImageCache(limit=32)).render(0.0)
+    inline_cost = time.time() - started
+
+    images.decode_bytes = watched
+    cache = ImageCache(limit=32, background=True)
+    try:
+        renderer = build(cache)
+        started = time.time()
+        renderer.render(started)
+        slowest = time.time() - started
+
+        deadline = time.time() + 60
+        delta = 255.0
+        frames = 1
+        while time.time() < deadline:
+            time.sleep(0.1)
+            frame_started = time.time()
+            canvas = renderer.render(frame_started)
+            slowest = max(slowest, time.time() - frame_started)
+            frames += 1
+            delta = difference(canvas, reference)
+            if delta < 1.0:
+                break
+
+        check(not inline, "nothing is decoded on the render thread (%d decodes)"
+              % len(inline))
+        check(delta < 1.0,
+              "the frames catch up with what the synchronous cache draws "
+              "(mean difference %.2f after %d frames)" % (delta, frames))
+        # Not zero: while the loader is busy it competes with the render
+        # thread for the interpreter, so frames do get slower.  They keep
+        # coming, though, which is the whole point - the panel used to stop
+        # dead for the full decode.
+        check(slowest < inline_cost / 2.0,
+              "and the worst of them is a fraction of the old inline cost "
+              "(%d ms against %d ms)" % (slowest * 1000, inline_cost * 1000))
+
+        # The page background used to be cached even when its picture had
+        # not arrived, which pinned the empty version under a key that never
+        # changed again - the fanart of a freshly started track never showed.
+        pages = [entry for entry in renderer.layout.pages
+                 if entry.background_image]
+        check(pages, "default.json has a page with a background picture")
+        for entry in pages:
+            entry._background_cache = None
+            entry._background_key = None
+        empty = ImageCache(limit=32, background=True)
+        renderer.images = empty
+        try:
+            renderer.render(time.time())
+            pinned = [entry.name for entry in pages
+                      if entry._background_key is not None]
+            check(not pinned,
+                  "a background whose picture is still loading is not cached "
+                  "(%s)" % (pinned or "none",))
+        finally:
+            empty.stop()
+    finally:
+        images.decode_bytes = plain_decode
+        cache.stop()
+
+    check(not [thread for thread in threading.enumerate()
+               if thread.name == "lcd4linux-images"],
+          "and no loader thread is left behind")
+
+
+def test_kodi_texture():
+    """An ``image://`` URL is Kodi's copy; the original is the fallback."""
+    print("kodi texture")
+    from lcd4linux import images
+
+    try:
+        from urllib.parse import quote
+    except ImportError:                                   # pragma: no cover
+        from urllib import quote
+
+    original = "https://assets.example.org/fanart/a%20film.jpg"
+    wrapped = "image://" + quote(original, safe="") + "/"
+
+    asked = []
+
+    class FakeFile(object):
+        def __init__(self, path):
+            asked.append(path)
+            self._path = path
+
+        def readBytes(self):
+            # Only Kodi's own copy has anything; the point is which one is
+            # asked for first, not what comes back.
+            return b"\xff\xd8fake" if self._path.startswith("image://") else b""
+
+        def close(self):
+            pass
+
+    class FakeVFS(object):
+        File = FakeFile
+
+        @staticmethod
+        def translatePath(path):
+            return path
+
+    previous = images.xbmcvfs
+    images.xbmcvfs = FakeVFS
+    try:
+        del asked[:]
+        data = images.read_bytes(wrapped)
+        check(asked and asked[0] == wrapped,
+              "the wrapped URL goes to the VFS unchanged (%s)"
+              % (asked[0][:40] if asked else "nothing asked"))
+        check(data == b"\xff\xd8fake", "and its bytes are what comes back")
+        check(len(asked) == 1,
+              "the original is not fetched as well (%d reads)" % len(asked))
+
+        # Unwrapping it is still what a path without the wrapper means, and
+        # still the fallback when Kodi has no texture of its own.
+        check(images.resolve_path(wrapped) == original,
+              "unwrapping still yields the original")
+
+        del asked[:]
+        images.read_bytes("special://profile/Thumbnails/a/abc.jpg")
+        check(len(asked) == 1 and not asked[0].startswith("image://"),
+              "a plain path is read once, as before")
+    finally:
+        images.xbmcvfs = previous
+
+
+def test_picture_cache():
+    """A picture the panel has already drawn is not decoded a second time."""
+    print("picture cache")
+    import tempfile
+    from lcd4linux.images import ImageCache
+
+    source = os.path.join(ROOT, "resources", "media", "demo-fanart.jpg")
+    directory = tempfile.mkdtemp(prefix="lcd4linux-pictures-")
+    key = ("bg", source, 480, 320, True)
+
+    def prepare(raw):
+        return raw.fitted(480, 320, "cover")
+
+    try:
+        started = time.time()
+        cold_cache = ImageCache(limit=8, directory=directory)
+        cold = cold_cache.request(key, source, 568, prepare)
+        cold_cost = time.time() - started
+        check(cold is not None and (cold.width, cold.height) == (480, 320),
+              "the picture is prepared to the size the page asked for")
+
+        kept = [name for name in os.listdir(directory) if name.endswith(".l4i")]
+        check(len(kept) == 1, "and kept on disk (%d file(s))" % len(kept))
+
+        # A cache that knows nothing, as after Kodi has been restarted.
+        started = time.time()
+        warm = ImageCache(limit=8, directory=directory).request(
+            key, source, 568, prepare)
+        warm_cost = time.time() - started
+        check(warm is not None and bytes(warm.pixels) == bytes(cold.pixels),
+              "a fresh cache reads back exactly the same pixels")
+        check(warm_cost < cold_cost / 3.0,
+              "and gets there far quicker than decoding again "
+              "(%d ms against %d ms)" % (warm_cost * 1000, cold_cost * 1000))
+        check(warm._sprite is not None,
+              "with the sprite built, so the render thread only blits")
+
+        # Half a file, a file from an older version, a file somebody else
+        # wrote: none of them may take the picture down with them.
+        with open(os.path.join(directory, kept[0]), "wb") as handle:
+            handle.write(b"not one of ours")
+        recovered = ImageCache(limit=8, directory=directory).request(
+            key, source, 568, prepare)
+        check(recovered is not None
+              and (recovered.width, recovered.height) == (480, 320),
+              "a damaged entry is drawn again rather than raised")
+
+        # And the directory does not grow without end.
+        pruning = ImageCache(limit=8, directory=directory)
+        pruning.DISK_LIMIT = 4
+        for index in range(30):
+            pruning.request(("bg", source, 480, 320, index), source, 568,
+                            prepare)
+        left = len([name for name in os.listdir(directory)
+                    if name.endswith(".l4i")])
+        check(left <= 30, "the cache is pruned back (%d files left)" % left)
+        check(left >= pruning.DISK_LIMIT,
+              "but not emptied (%d files left)" % left)
+
+        # Clearing it is explicit: a reload must not throw the work away.
+        pruning.clear()
+        check([name for name in os.listdir(directory) if name.endswith(".l4i")],
+              "clearing the memory cache leaves the disk alone")
+        pruning.clear(disk=True)
+        check(not [name for name in os.listdir(directory)
+                   if name.endswith(".l4i")],
+              "and asking for the disk too empties it")
+
+        # Without a directory nothing is written at all.
+        plain = ImageCache(limit=8)
+        check(plain.request(key, source, 568, prepare) is not None,
+              "a cache without a directory still works")
+        check(not os.listdir(directory), "and writes nothing")
+    finally:
+        shutil.rmtree(directory, ignore_errors=True)
+
+
+def test_rough_first():
+    """A big picture shows up roughly before it shows up properly."""
+    print("rough first")
+    import tempfile
+    from lcd4linux.images import ImageCache
+
+    source = os.path.join(ROOT, "resources", "media", "demo-fanart.jpg")
+    directory = tempfile.mkdtemp(prefix="lcd4linux-rough-")
+
+    def prepare(raw):
+        return raw.fitted(800, 480, "cover", True)
+
+    def roughly(raw):
+        return raw.fitted(800, 480, "cover", False)
+
+    try:
+        cache = ImageCache(limit=16, background=True, directory=directory)
+        key = ("cover", source, 800, 480)
+        wanted = 853
+
+        image, finished = cache.progressive(key, source, wanted, prepare,
+                                            roughly)
+        check(image is None and not finished,
+              "the first frame has nothing to draw yet")
+
+        # The rough one is queued first, so it is the one that turns up
+        # first - that is the whole point of it.
+        deadline = time.time() + 60
+        rough = None
+        while time.time() < deadline:
+            image, finished = cache.progressive(key, source, wanted, prepare,
+                                                roughly)
+            if image is not None and not finished:
+                rough = image
+                break
+            if finished:
+                break
+            time.sleep(0.02)
+        check(rough is not None,
+              "a rough version is drawn before the sharp one is ready")
+        check(rough is None or (rough.width, rough.height) == (800, 480),
+              "at the size the page wanted, just built more cheaply")
+
+        deadline = time.time() + 60
+        final = None
+        while time.time() < deadline:
+            image, finished = cache.progressive(key, source, wanted, prepare,
+                                                roughly)
+            if finished:
+                final = image
+                break
+            time.sleep(0.02)
+        check(final is not None, "and the sharp one replaces it")
+        check(final is not None and rough is not None
+              and bytes(final.pixels) != bytes(rough.pixels),
+              "the two really are different pictures")
+
+        # Once the good one is to be had without decoding, a rough version
+        # in front of it would only be a step backwards.
+        check(cache.known(key), "the sharp one is now there for the asking")
+        again, finished = cache.progressive(key, source, wanted, prepare,
+                                            roughly)
+        check(finished and again is final,
+              "so asking again gets it straight away, not the rough one")
+
+        # And a small picture is never worth the detour.
+        small = ("cover", source, 120, 80)
+        cache.progressive(small, source, 120, prepare, roughly)
+        drafted = [entry for entry in list(cache._pending) + [
+            job[0] for job in cache._queue] if "draft" in repr(entry)
+            and repr(small) in repr(entry)]
+        check(not drafted,
+              "a picture below the threshold is decoded once, not twice")
+        cache.stop()
+    finally:
+        shutil.rmtree(directory, ignore_errors=True)
+
+
+def test_huffman_table():
+    """The lookup must answer exactly what walking the code bit by bit does."""
+    print("huffman table")
+    from lcd4linux.jpegio import _Huffman, _PEEK
+
+    # The luminance DC table out of the specification's example set, plus a
+    # table built to need codes longer than the lookup covers.
+    cases = {
+        "spec DC": ([0, 1, 5, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+                    list(range(12))),
+        "long codes": ([0] * 9 + [2, 1, 0, 0, 0, 0, 0], [40, 41, 42]),
+    }
+    for name, (counts, symbols) in cases.items():
+        table = _Huffman(counts, symbols)
+        covered = 0
+        code = 0
+        index = 0
+        for length in range(1, 17):
+            for _ in range(counts[length - 1]):
+                symbol = symbols[index]
+                if length <= _PEEK:
+                    prefix = code << (_PEEK - length)
+                    entry = table.fast[prefix]
+                    if entry != (symbol, length):
+                        check(False, "%s: code of %d bits looks up wrong" % (name, length))
+                        break
+                    # Every filler below that prefix must give the same
+                    # answer, whatever the bits after the code happen to be.
+                    tail = 1 << (_PEEK - length)
+                    if any(table.fast[prefix + slot] != (symbol, length)
+                           for slot in range(tail)):
+                        check(False, "%s: the %d bit code does not fill its slots" % (name, length))
+                        break
+                    covered += tail
+                code += 1
+                index += 1
+            code <<= 1
+        check(True, "%s: every short code is in the table (%d of %d slots)"
+              % (name, covered, 1 << _PEEK))
+        check(all(entry is None for entry in table.fast[covered:]) or covered == (1 << _PEEK),
+              "%s: nothing beyond them is claimed" % name)
+
+    # A table whose codes are all longer than the lookup leaves it empty,
+    # and the walk has to carry the decode on its own.
+    long_only = _Huffman([0] * 9 + [2, 1, 0, 0, 0, 0, 0], [40, 41, 42])
+    check(all(entry is None for entry in long_only.fast),
+          "codes longer than %d bits stay out of the table" % _PEEK)
+
+
 def test_icons():
     """Font Awesome: the bundled index, the cache and the renderer.
 
@@ -2707,6 +3117,9 @@ def main():
     for test in (test_encoding, test_fonts, test_images, test_tokens,
                  test_media_info, test_dolby_vision,
                  test_pixel_conversion, test_frame_cache, test_image_cache,
+                 test_decode_size, test_background_loader,
+                 test_kodi_texture, test_picture_cache, test_rough_first,
+                 test_huffman_table,
                  test_jpeg_encoder, test_protocol, test_target_from_settings,
                  test_samsung_spf, test_late_display, test_brightness,
                  test_localisation,

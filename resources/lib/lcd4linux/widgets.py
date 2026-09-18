@@ -508,6 +508,7 @@ class ImageWidget(Widget):
         Widget.__init__(self, spec, layout)
         self._cached_key = None
         self._cached_image = None
+        self._cached_final = False
 
     def render(self, canvas, context):
         x, y, width, height = self.geometry(context)
@@ -518,21 +519,31 @@ class ImageWidget(Widget):
             return
         fit = str(self.spec.get("fit", "contain")).lower()
         radius = resolve_length(self.spec.get("radius", 0), min(width, height))
-        key = (source, width, height, fit, radius)
-        if key != self._cached_key:
-            image = context.images.lookup(key)
-            if image is None:
-                raw = context.images.get(source, max(width, height) * 2)
-                if raw is None:
-                    self._cached_key = key
-                    self._cached_image = None
-                    return
-                image = raw.fitted(width, height, fit, context.smooth_images)
+        smooth = context.smooth_images
+        key = (source, width, height, fit, radius, smooth)
+        # Held on to only once it is the finished picture.  Until then the
+        # widget asks again on every frame - which is what lets a rough
+        # version be replaced by the sharp one, and what makes a picture
+        # that is still being fetched turn up on its own.  The cache sees
+        # to it that asking is cheap and not a re-read per frame.
+        if key != self._cached_key or not self._cached_final:
+
+            def prepare(raw, rough=False):
+                prepared = raw.fitted(width, height, fit, smooth and not rough)
                 if radius:
-                    image = image.rounded(radius)
-                context.images.put(key, image)
+                    prepared = prepared.rounded(radius)
+                return prepared
+
+            # The decoder only has to deliver what this widget draws.
+            # Asking for twice the box, as this used to, pushed the scaled
+            # JPEG decoder a step finer and cost roughly three times as long
+            # for a picture that looks the same once it has been fitted.
+            self._cached_image, self._cached_final = \
+                context.images.progressive(
+                    key, source,
+                    images_module.decode_size(width, height, fit),
+                    prepare, lambda raw: prepare(raw, True))
             self._cached_key = key
-            self._cached_image = image
         image = self._cached_image
         if image is None:
             return

@@ -202,6 +202,17 @@ class Config(object):
         return profile_path("icons")
 
     @property
+    def image_cache_directory(self):
+        """Where pictures already scaled to this panel are kept.
+
+        Cover art and fanart come back around - the same album, the next
+        episode of the same series - and decoding a full sized JPEG in
+        Python is expensive enough that keeping the finished picture is
+        worth a few megabytes.
+        """
+        return profile_path("pictures")
+
+    @property
     def preview_path(self):
         return profile_path("preview.png")
 

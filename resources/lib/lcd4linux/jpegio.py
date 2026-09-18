@@ -50,14 +50,28 @@ def _basis(n):
     return table
 
 
+#: How many bits the lookup below is indexed by.  Eight covers the great
+#: majority of the codes in a photograph and keeps the table at 256 entries,
+#: which is built once per table and per picture.
+_PEEK = 8
+
+
 class _Huffman(object):
-    """Canonical Huffman table as described in ITU T.81 annex F."""
+    """Canonical Huffman table as described in ITU T.81 annex F.
+
+    Alongside the three arrays the specification describes, a flat lookup
+    from the next eight bits to ``(symbol, length)``.  Walking the code bit
+    by bit was costing a Python call per bit - some three quarters of a
+    million of them for one piece of fanart - and nearly every code is
+    short enough to come out of the table in one step.
+    """
 
     def __init__(self, counts, symbols):
         self.symbols = symbols
         self.mincode = [0] * 17
         self.maxcode = [-1] * 17
         self.valptr = [0] * 17
+        self.fast = [None] * (1 << _PEEK)
         code = 0
         k = 0
         for length in range(1, 17):
@@ -66,6 +80,13 @@ class _Huffman(object):
             code += counts[length - 1]
             k += counts[length - 1]
             self.maxcode[length] = code - 1 if counts[length - 1] else -1
+            if length <= _PEEK:
+                spread = 1 << (_PEEK - length)
+                for offset in range(counts[length - 1]):
+                    entry = (symbols[self.valptr[length] + offset], length)
+                    start = (self.mincode[length] + offset) << (_PEEK - length)
+                    for slot in range(start, start + spread):
+                        self.fast[slot] = entry
             code <<= 1
 
 
@@ -99,6 +120,19 @@ class _BitReader(object):
             return 0
         return byte
 
+    def _fill(self, need):
+        """Make sure at least ``need`` bits are in the buffer.
+
+        Everything above ``count`` is dropped on the way, so the buffer
+        stays a handful of bits wide however long the scan runs.  Past a
+        marker ``_next_byte`` keeps handing out zeroes without moving on,
+        which is exactly the padding the specification asks for.
+        """
+        while self.count < need:
+            self.buf = ((self.buf & ((1 << self.count) - 1)) << 8) \
+                | self._next_byte()
+            self.count += 8
+
     def bit(self):
         if self.count == 0:
             self.buf = self._next_byte()
@@ -107,12 +141,20 @@ class _BitReader(object):
         return (self.buf >> self.count) & 1
 
     def bits(self, length):
-        value = 0
-        for _ in range(length):
-            value = (value << 1) | self.bit()
-        return value
+        if length <= 0:
+            return 0
+        self._fill(length)
+        self.count -= length
+        return (self.buf >> self.count) & ((1 << length) - 1)
 
     def decode(self, table):
+        self._fill(_PEEK)
+        entry = table.fast[(self.buf >> (self.count - _PEEK)) & ((1 << _PEEK) - 1)]
+        if entry is not None:
+            self.count -= entry[1]
+            return entry[0]
+        # A code longer than the table covers: rare, and worth nothing more
+        # than the plain walk the specification describes.
         code = 0
         for length in range(1, 17):
             code = (code << 1) | self.bit()
@@ -325,10 +367,18 @@ def decode(data, max_size=None):
 
 
 def _pick_scale(width, height, max_size):
+    """The cheapest eighth that still delivers ``max_size`` pixels.
+
+    Every step from 1/8 to 8/8 is available, not just the powers of two:
+    the basis is built for whatever ``n`` is asked for.  That matters at
+    the top end, where the jump from 4/8 to 8/8 used to quadruple the work
+    for a picture only ten per cent wider than 4/8 already gave - a
+    1024x600 panel showing 1080p fanart landed on exactly that step.
+    """
     if not max_size:
         return 8
     longest = max(width, height)
-    for n in (1, 2, 4, 8):
+    for n in range(1, 9):
         if longest * n / 8.0 >= max_size:
             return n
     return 8

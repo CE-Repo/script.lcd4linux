@@ -265,8 +265,8 @@ msgid "Smooth image scaling"
 msgstr "Bilder weich skalieren"
 
 msgctxt "#32164"
-msgid "Better looking cover art, slightly more CPU when the artwork changes."
-msgstr "Schöneres Cover, etwas mehr CPU beim Wechsel des Bildes."
+msgid "Sharper cover art. Turning it off makes a picture change about a quarter quicker, which shows on a slow box."
+msgstr "Schärferes Cover. Ausgeschaltet ist ein Bildwechsel rund ein Viertel schneller — auf schwacher Hardware spürbar."
 
 msgctxt "#32165"
 msgid "Show Kodi notifications on the display"

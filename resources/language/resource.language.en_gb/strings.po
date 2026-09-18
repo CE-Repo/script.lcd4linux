@@ -265,7 +265,7 @@ msgid "Smooth image scaling"
 msgstr ""
 
 msgctxt "#32164"
-msgid "Better looking cover art, slightly more CPU when the artwork changes."
+msgid "Sharper cover art. Turning it off makes a picture change about a quarter quicker, which shows on a slow box."
 msgstr ""
 
 msgctxt "#32165"

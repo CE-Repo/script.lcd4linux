@@ -46,7 +46,9 @@ An AX206 panel should light up immediately. For a Samsung frame, set
 
 * **No dependencies.** USB access is `libusb` through ctypes; the PNG and JPEG
   decoders, the JPEG encoder the Samsung frames need, and the font renderer
-  are all part of the add-on. No `pyusb`, no Pillow, no compiler.
+  are all part of the add-on. No `pyusb`, no Pillow, no compiler. Pillow is
+  picked up if `script.module.pillow` happens to be installed, which makes
+  decoding large fanart much cheaper, but nothing depends on it.
 * **Sends only what changed.** On the AX206 a ticking seconds hand costs a few
   hundred bytes instead of 300 kB per frame; on the Samsung, which accepts
   complete JPEGs only, just the changed block rows are re-encoded.

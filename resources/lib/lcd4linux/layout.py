@@ -21,6 +21,7 @@ import json
 import os
 import time
 
+from . import images
 from . import tokens
 from . import widgets as widget_module
 from .canvas import Canvas, parse_color
@@ -64,32 +65,50 @@ class Page(object):
         if source:
             # The composed background rarely changes, so keep it and copy it
             # in with row slices instead of blending it again every frame.
-            if key != self._background_key or self._background_cache is None:
-                cached = Canvas(canvas.width, canvas.height)
-                cached.clear(color)
-                self._render_background(cached, context, source)
-                self._background_cache = cached
-                self._background_key = key
-            canvas.blit_canvas(self._background_cache, 0, 0)
+            composed = self._background_cache
+            if key != self._background_key or composed is None:
+                composed = Canvas(canvas.width, canvas.height)
+                composed.clear(color)
+                # Only a background that really got its picture is worth
+                # keeping.  Storing the bare colour pinned it under the final
+                # key, and because the key never changed again after that,
+                # the fanart of a freshly started track never appeared.
+                if self._render_background(composed, context, source, color):
+                    self._background_cache = composed
+                    self._background_key = key
+            canvas.blit_canvas(composed, 0, 0)
         else:
             canvas.clear(color)
         for widget in self.widgets:
             widget.draw(canvas, context)
 
-    def _render_background(self, canvas, context, source):
-        key = ("bg", source, canvas.width, canvas.height)
-        image = context.images.lookup(key)
+    def _render_background(self, canvas, context, source, color):
+        """Draw the picture behind the page.
+
+        Returns ``False`` while the final picture is still being made - a
+        rough stand-in may well have been drawn, but the caller must not
+        cache a background that is going to be replaced.
+        """
+        width = canvas.width
+        height = canvas.height
+        smooth = context.smooth_images
+        dim = max(0, min(255, self.background_dim * 255 // 100))
+        wanted = images.decode_size(width, height, "cover")
+        key = ("bg", source, width, height, smooth, color, dim, wanted)
+
+        def compose(raw, rough=False):
+            # The colour underneath and the dim on top are folded into the
+            # picture itself, so that the one thing left on the render
+            # thread is a blit of something already finished.
+            return (raw.fitted(width, height, "cover", smooth and not rough)
+                       .flattened(color, dim))
+
+        image, finished = context.images.progressive(
+            key, source, wanted, compose, lambda raw: compose(raw, True))
         if image is None:
-            raw = context.images.get(source, max(canvas.width, canvas.height))
-            if raw is None:
-                return
-            image = raw.fitted(canvas.width, canvas.height, "cover",
-                               context.smooth_images)
-            context.images.put(key, image)
+            return False
         canvas.blit_sprite(0, 0, image.sprite())
-        if self.background_dim:
-            canvas.fill_rect(0, 0, canvas.width, canvas.height,
-                             (0, 0, 0, max(0, min(255, self.background_dim * 255 // 100))))
+        return finished
 
 
 class Layout(object):
@@ -242,15 +261,10 @@ class Renderer(object):
             path = context.text(source)
             if not path:
                 return None
-            key = ("accent", path)
-            cached = self.images.lookup(key)
-            if cached is None:
-                image = self.images.get(path, 96)
-                if image is None:
-                    return None
-                cached = image.dominant_color()
-                self.images.put(key, cached)
-            return cached
+            # ``None`` until the picture has been read; the page simply
+            # uses the layout colour for a frame or two.
+            return self.images.request(("accent", path), path, 96,
+                                       lambda image: image.dominant_color())
         return context.color(text)
 
 
