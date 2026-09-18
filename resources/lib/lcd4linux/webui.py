@@ -50,7 +50,7 @@ from . import pngio
 from . import tokens
 from . import webschema
 from .logger import debug, error, log
-from .settings import Config, addon_path, ensure_user_directories, profile_path
+from .settings import Config, addon_path, ensure_user_directories
 
 try:
     import xbmc  # type: ignore
@@ -141,8 +141,7 @@ def _same_secret(given, expected):
 
 def user_directory(config=None):
     """Where the editor saves: the user's layout folder."""
-    config = config or Config()
-    return config.get("layout_dir") or profile_path("layouts")
+    return (config or Config()).user_layout_directory
 
 
 def safe_name(name):

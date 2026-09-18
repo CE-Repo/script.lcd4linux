@@ -892,6 +892,58 @@ def test_encoding():
         Layout.load(path)
 
 
+def test_layout_precedence():
+    """A layout the user wrote wins over the bundled one of the same name."""
+    print("layout precedence")
+    import tempfile
+    from lcd4linux.layout import discover, load_layout
+    from lcd4linux.settings import Config
+
+    bundled = os.path.join(ROOT, "resources", "layouts")
+    own = tempfile.mkdtemp()
+    mine = os.path.join(own, "default.json")
+    with open(mine, "w") as handle:
+        handle.write('{"name": "Mine", "size": [480, 320],'
+                     ' "pages": [{"name": "p", "widgets": []}]}')
+
+    config = Config(overrides={"layout_dir": own})
+    check(config.layout_directories[0] == own,
+          "the user's folder is searched before the bundled one")
+
+    available = discover(config.layout_directories)
+    check(available["default.json"] == mine,
+          "and their default.json is the one the add-on finds")
+    check(available["default-800x480.json"].startswith(bundled),
+          "while the variants they did not write stay bundled")
+    check(len(available) == len(discover([bundled])),
+          "overriding replaces a layout rather than adding one")
+    check(load_layout("default.json", config.layout_directories,
+                      (480, 320)).name == "Mine",
+          "loading the active layout gets theirs, not the template")
+
+    # Nothing of theirs, nothing changed.
+    check(discover([tempfile.mkdtemp(), bundled]) == discover([bundled]),
+          "an empty user folder leaves the bundled set alone")
+
+    # Which is what the web editor's save promises: it only ever writes to
+    # the user folder, and that has to be enough to shadow a bundled name.
+    from lcd4linux import webui
+    fresh = Config(overrides={"layout_dir": tempfile.mkdtemp()})
+    spec = {"name": "Saved", "size": [480, 320],
+            "pages": [{"name": "p", "widgets": []}]}
+    saved = webui.write_layout("default.json", spec, fresh)
+    check(discover(fresh.layout_directories)["default.json"] == saved,
+          "saving default.json in the editor shadows the bundled one")
+    listed = {entry["file"]: entry for entry in webui.list_layouts(fresh)}
+    check(listed["default.json"]["user"]
+          and listed["default.json"]["name"] == "Saved",
+          "and the editor lists it as theirs, with their name")
+    webui.delete_layout("default.json", fresh)
+    check(discover(fresh.layout_directories)["default.json"].startswith(
+              bundled),
+          "deleting their copy brings the bundled layout back")
+
+
 def test_layout_index():
     """The chooser and the editor list layouts from a cached index."""
     print("layout index")
@@ -1052,7 +1104,7 @@ def test_layout_chooser():
     own = tempfile.mkdtemp()
     shutil.copyfile(available["minimal.json"], os.path.join(own, "mine.json"))
     config = Config(overrides={"layout": "vinyl.json", "layout_dir": own})
-    mixed = discover([directory, own])
+    mixed = discover([own, directory])
     mixed_entries = ui._layout_designs(mixed)
     sent = []
     status = [""]
@@ -2123,7 +2175,8 @@ def main():
                  test_jpeg_encoder, test_protocol, test_target_from_settings,
                  test_samsung_spf, test_late_display, test_brightness,
                  test_localisation,
-                 test_settings_xml, test_layout_index, test_layout_chooser,
+                 test_settings_xml, test_layout_precedence,
+                 test_layout_index, test_layout_chooser,
                  test_preview_ownership, test_preview_encoding,
                  test_preview_worker,
                  test_power_hooks, test_rotation, test_web_editor,

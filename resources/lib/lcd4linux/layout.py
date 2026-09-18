@@ -288,7 +288,13 @@ def read_info(path):
 
 
 def discover(directories):
-    """Find layout files, later directories overriding earlier ones."""
+    """Find layout files, the first directory that has one winning.
+
+    A search path, like ``PATH``: the caller lists the user's own folder
+    before the bundled one, so a ``default.json`` they wrote themselves is
+    the ``default.json`` the add-on uses, and an update cannot take it
+    away again.
+    """
     found = {}
     for directory in directories:
         if not directory or not os.path.isdir(directory):
@@ -296,7 +302,7 @@ def discover(directories):
         for name in sorted(os.listdir(directory)):
             if not name.lower().endswith(".json"):
                 continue
-            found[name] = os.path.join(directory, name)
+            found.setdefault(name, os.path.join(directory, name))
     return found
 
 
