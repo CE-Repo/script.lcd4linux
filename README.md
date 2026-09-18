@@ -54,8 +54,8 @@ An AX206 panel should light up immediately. For a Samsung frame, set
   You pick the name, the add-on picks the size that fits the attached panel.
 * **A layout editor in the browser** at `http://<box>:8050/` — drag elements
   around, with a preview drawn by the same renderer that feeds the display.
-  Pick several at once, copy them into another layout with `Ctrl+C` /
-  `Ctrl+V`, and drag the layer list to reorder.
+  Pick several at once to recolour or realign them in one go, copy them into
+  another layout with `Ctrl+C` / `Ctrl+V`, and drag the layer list to reorder.
 * **Every Kodi InfoLabel** is available (`${info:MusicPlayer.Album}`), as is
   every Kodi condition (`Player.HasVideo`).
 * **Words that know when to leave.** `{Track ${player.track}}` writes the

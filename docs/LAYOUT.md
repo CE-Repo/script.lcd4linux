@@ -119,8 +119,11 @@ included, and loads nothing from the internet.
 * **Several at once**: `Ctrl`-click (`Cmd` on a Mac) adds an element to the
   selection, `Shift`-click takes everything in between, `Ctrl+A` takes the
   whole page. Moving, nudging, aligning, duplicating and deleting then apply
-  to all of them; the properties on the right stay with one element, because
-  writing one value into elements of different types would be a guess.
+  to all of them, and so do the properties on the right: set one colour, font
+  or size and every selected element takes it. The panel shows the fields
+  they all understand — pick three texts and you get every text field, pick a
+  text and a rectangle and `Colour` remains. A field the selection does not
+  agree on reads *mixed* until you write something into it.
 * **Copy between layouts** with `Ctrl+C` / `Ctrl+X` / `Ctrl+V` or the buttons
   under the layer list. The clipboard lives in the browser, so it survives
   opening another layout, a reload and a second tab. Elements keep their

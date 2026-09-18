@@ -1987,6 +1987,21 @@ def test_web_editor():
         body = editor_source.split("function %s(" % name, 1)[-1]
         body = body.split("\nfunction ", 1)[0]
         check("picked()" in body, "%s() works on the whole selection" % name)
+    # A property field writes to every element it was built for, and every
+    # caller has to hand it a list -- a bare object would be edited letter by
+    # letter, because a string is iterable too.
+    commit_body = editor_source.split("function commit(", 1)[-1]
+    commit_body = commit_body.split("\nfunction ", 1)[0]
+    check("targets.filter(" in commit_body and "changing.forEach(" in commit_body,
+          "one field writes its value into every selected element")
+    single = re.findall(r"fieldGroup\([^;]*?\)\);", editor_source, re.S)
+    loose = [call for call in single
+             if not re.search(r",\s*(\[|targets)", call.replace("\n", " "))]
+    check(not loose, "every field group is given a list of targets (%s)"
+          % (loose or "all of them",))
+    check("function sharedFields" in editor_source
+          and "t('mixed')" in editor_source,
+          "elements of different types offer the fields they share")
     # The clipboard has to outlive the layout, so it cannot be a variable.
     check("localStorage.getItem(CLIP_KEY)" in editor_source
           and "localStorage.setItem(CLIP_KEY" in editor_source,

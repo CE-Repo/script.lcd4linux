@@ -55,9 +55,11 @@ const TEXTS = {
     pastedsize: '%d Element(e) eingefügt · kamen aus %d × %d',
     pastetitle: '%d Element(e) in der Ablage',
     clipempty: 'Die Ablage ist leer', nothingpicked: 'Kein Element gewählt',
-    manypicked: '%d Elemente gewählt',
-    manyhint: 'Verschieben, Ausrichten, Kopieren und Löschen gelten für alle.'
-      + ' Für die Eigenschaften eines einzelnen: eines davon anklicken.',
+    manypicked: '%d Elemente gewählt', mixed: 'verschieden',
+    manyhint: 'Alles hier unten gilt für alle gewählten Elemente. Gezeigt'
+      + ' werden die Felder, die alle kennen; „verschieden“ heißt, sie haben'
+      + ' dort noch unterschiedliche Werte.',
+    nocommon: 'Diese Elementtypen haben keine gemeinsamen Eigenschaften.',
   },
   en: {
     kit: 'Layout kit', open: 'Open', new: 'New', save: 'Save',
@@ -105,9 +107,11 @@ const TEXTS = {
     pastedsize: '%d element(s) pasted · they came from %d × %d',
     pastetitle: '%d element(s) on the clipboard',
     clipempty: 'The clipboard is empty', nothingpicked: 'Nothing selected',
-    manypicked: '%d elements selected',
-    manyhint: 'Moving, aligning, copying and deleting apply to all of them.'
-      + ' Click one to edit its own properties.',
+    manypicked: '%d elements selected', mixed: 'mixed',
+    manyhint: 'Everything below applies to all of the selected elements. The'
+      + ' fields shown are the ones they all know; "mixed" means they still'
+      + ' hold different values there.',
+    nocommon: 'These element types have no properties in common.',
   },
 };
 
@@ -995,10 +999,12 @@ function drawWidgetInspector(panel) {
     panel.appendChild(el('p', { class: 'empty', text: t('noselection') }));
     return;
   }
-  // Several at once share the actions but not the fields: writing one value
-  // into elements of different types would be a guess.
+  // Several at once are edited through the fields they all understand: the
+  // rest would have nowhere to put the value.
   if (chosen.length > 1) {
     const items = widgets();
+    const targets = [spec].concat(chosen.filter((index) => index !== S.sel)
+      .map((index) => items[index]));
     panel.appendChild(el('div', { class: 'group' },
       el('h3', { text: t('manypicked', chosen.length) }),
       el('div', { class: 'list' }, chosen.map((index) => el('div', {
@@ -1009,6 +1015,13 @@ function drawWidgetInspector(panel) {
         el('span', { class: 'label', text: widgetTitle(items[index], index) })))),
       selectionActions(),
       el('p', { class: 'hint', text: t('manyhint') })));
+    panel.appendChild(fieldGroup(t('geometry'), S.schema.common, targets));
+    const shared = sharedFields(targets);
+    panel.appendChild(shared.length
+      ? fieldGroup(t('properties'), shared, targets)
+      : el('div', { class: 'group' },
+        el('h3', { text: t('properties') }),
+        el('p', { class: 'hint', text: t('nocommon') })));
     return;
   }
   const types = S.schema.widgets.map((entry) => entry.type);
@@ -1030,9 +1043,10 @@ function drawWidgetInspector(panel) {
   panel.appendChild(head);
 
   const common = S.schema.common;
-  panel.appendChild(fieldGroup(t('geometry'), common, spec));
+  panel.appendChild(fieldGroup(t('geometry'), common, [spec]));
   const definition = S.schema.widgets.find((entry) => entry.type === (spec.type || 'text'));
-  panel.appendChild(fieldGroup(t('properties'), definition ? definition.fields : [], spec));
+  panel.appendChild(fieldGroup(t('properties'),
+                               definition ? definition.fields : [], [spec]));
 }
 
 function drawPageInspector(panel) {
@@ -1049,7 +1063,7 @@ function drawPageInspector(panel) {
       el('button', { text: '▶', onclick: () => movePage(1) }),
     )));
   panel.appendChild(fieldGroup(`${t('page')} ${S.page + 1}`,
-                               S.schema.page, current));
+                               S.schema.page, [current]));
 }
 
 function drawLayoutInspector(panel) {
@@ -1078,10 +1092,11 @@ function drawLayoutInspector(panel) {
       onclick: () => setSize(entry.size[0], entry.size[1]),
     }))));
 
-  panel.appendChild(fieldGroup(t('tablayout'), S.schema.layout, S.doc));
+  panel.appendChild(fieldGroup(t('tablayout'), S.schema.layout, [S.doc]));
   panel.appendChild(sizeGroup);
   if (!S.doc.defaults) S.doc.defaults = {};
-  panel.appendChild(fieldGroup(t('defaults'), S.schema.defaults, S.doc.defaults));
+  panel.appendChild(fieldGroup(t('defaults'), S.schema.defaults,
+                               [S.doc.defaults]));
 }
 
 function setSize(width, height, live) {
@@ -1106,38 +1121,64 @@ function setSize(width, height, live) {
   schedulePreview(LIVE_PREVIEW);
 }
 
-function fieldGroup(title, fields, target) {
+/* ``targets`` is every object the group writes to: one element, or the
+ * whole selection when several are picked. */
+function fieldGroup(title, fields, targets) {
   const group = el('div', { class: 'group' }, el('h3', { text: title }));
-  fields.forEach((field) => group.appendChild(buildField(field, target)));
+  fields.forEach((field) => group.appendChild(buildField(field, targets)));
   return group;
 }
 
-function commit(target, key, value, live) {
+/* The fields every picked element understands.  ``specs`` starts with the
+ * one the inspector calls its own, so its wording is the wording shown:
+ * `color` reads "Hands" on a clock and "Colour" everywhere else. */
+function sharedFields(specs) {
+  const lists = specs.map((spec) => {
+    const definition = S.schema.widgets.find(
+      (entry) => entry.type === (spec.type || 'text'));
+    return definition ? definition.fields : [];
+  });
+  return lists[0].filter((field) => lists.every((other) => other.some(
+    (entry) => entry.key === field.key && entry.type === field.type)));
+}
+
+function commit(targets, key, value, live) {
   const blank = value === '' || value === undefined || value === null;
   // Leaving a field repeats the value its keystrokes already applied; redoing
   // the work would cost another render for nothing.
-  if (blank ? !(key in target) : target[key] === value) return;
-  if (startEdit(target, key, live)) snapshot();
-  if (blank) delete target[key];
-  else target[key] = value;
+  const changing = targets.filter((target) => (blank ? key in target
+                                                     : target[key] !== value));
+  if (!changing.length) return;
+  if (startEdit(targets[0], key, live)) snapshot();
+  changing.forEach((target) => {
+    if (blank) delete target[key];
+    else target[key] = value;
+  });
   drawLayers();
   drawCanvas();
   schedulePreview(live ? LIVE_PREVIEW : STEP_PREVIEW);
 }
 
-function buildField(field, target) {
-  const value = target[field.key];
+function buildField(field, targets) {
+  // Several elements that disagree show nothing rather than one of their
+  // values; typing then writes the new one into all of them.
+  const held = targets.map((target) => target[field.key]);
+  const mixed = held.some((entry) => entry !== held[0]);
+  const value = mixed ? undefined : held[0];
   const control = el('div', { class: 'control' });
   const row = el('div', { class: 'field' + (field.multiline ? ' wide' : '') },
     el('label', { text: label(field) }), control);
 
-  const setter = (raw, live) => commit(target, field.key, raw, live);
+  const setter = (raw, live) => commit(targets, field.key, raw, live);
+  const blank = mixed ? t('mixed') : '';
 
   if (field.type === 'bool') {
-    control.appendChild(el('input', {
+    const box = el('input', {
       type: 'checkbox', checked: !!value,
       onchange: (event) => setter(event.target.checked ? true : ''),
-    }));
+    });
+    box.indeterminate = mixed;
+    control.appendChild(box);
   } else if (field.type === 'select' || field.type === 'font' || field.type === 'icon') {
     const options = field.type === 'select'
       ? field.options.map((option) => ({ value: option.value, text: label(option) }))
@@ -1153,7 +1194,7 @@ function buildField(field, target) {
   } else if (field.type === 'color') {
     const text = el('input', Object.assign({
       type: 'text', value: value === undefined ? '' : value,
-      placeholder: '#rrggbb', spellcheck: 'false',
+      placeholder: blank || '#rrggbb', spellcheck: 'false',
     }, liveControl((node, live) => setter(node.value.trim(), live))));
     const picker = el('input', {
       type: 'color', value: toHexColor(value),
@@ -1171,9 +1212,10 @@ function buildField(field, target) {
   } else if (field.type === 'token') {
     const wiring = liveControl((node, live) => setter(node.value, live));
     const input = field.multiline
-      ? el('textarea', Object.assign({ spellcheck: 'false' }, wiring))
+      ? el('textarea', Object.assign({ spellcheck: 'false',
+                                       placeholder: blank }, wiring))
       : el('input', Object.assign({
-        type: 'text', spellcheck: 'false',
+        type: 'text', spellcheck: 'false', placeholder: blank,
         value: value === undefined ? '' : value,
       }, wiring));
     if (field.multiline) input.value = value === undefined ? '' : value;
@@ -1183,7 +1225,7 @@ function buildField(field, target) {
     }));
   } else if (field.type === 'condition') {
     const input = el('input', Object.assign({
-      type: 'text', spellcheck: 'false',
+      type: 'text', spellcheck: 'false', placeholder: blank,
       value: value === undefined ? '' : value,
     }, liveControl((node, live) => setter(node.value.trim(), live))));
     const presets = el('select', {
@@ -1199,14 +1241,14 @@ function buildField(field, target) {
     control.append(input, presets);
   } else if (field.type === 'number') {
     control.appendChild(el('input', Object.assign({
-      type: 'number',
+      type: 'number', placeholder: blank,
       value: value === undefined ? '' : value,
       min: field.min, max: field.max, step: field.step || 1,
     }, liveControl((node, live) =>
       setter(node.value === '' ? '' : Number(node.value), live)))));
   } else {  // text and length
     control.appendChild(el('input', Object.assign({
-      type: 'text', spellcheck: 'false',
+      type: 'text', spellcheck: 'false', placeholder: blank,
       value: value === undefined ? '' : value,
     }, liveControl((node, live) => {
       const raw = node.value.trim();
