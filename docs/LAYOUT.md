@@ -8,7 +8,7 @@ full reference for writing your own.
 [The browser editor](#the-browser-editor) ·
 [Writing your own](#writing-your-own) · [Skeleton](#skeleton) ·
 [Pages](#pages) · [Widget basics](#widget-basics) · [Widgets](#widgets) ·
-[Data fields](#data-fields) · [Filters](#filters) ·
+[Data fields](#data-fields) · [Filters](#filters) · [Groups](#groups) ·
 [Conditions](#conditions) · [Practical notes](#practical-notes)
 
 ---
@@ -110,22 +110,47 @@ small web server that serves an editor.
 `http://<box-ip>:8050/`. It runs in any current browser, phone and tablet
 included, and loads nothing from the internet.
 
-* **Pages**: create, copy, reorder, delete — the tabs top left.
+* **Pages**: create, duplicate, reorder, delete — the tabs top left.
+  *Copy page* and *Paste page* carry a whole page, elements and all, into
+  another layout; a page pasted into a canvas too small for it keeps every
+  element in reach. Pages and elements have separate clipboards, so copying
+  one does not throw away the other.
 * **Elements**: drag from the palette or click to place — text, image,
   progress bar, graph, rectangle, line, circle, icon, analogue clock.
 * **Move and resize** with the mouse, snapping to the grid. `Alt` disables
   snapping, `Shift` constrains direction, arrow keys nudge by a pixel and with
   `Shift` by ten.
+* **Several at once**: `Ctrl`-click (`Cmd` on a Mac) adds an element to the
+  selection, `Shift`-click takes everything in between, `Ctrl+A` takes the
+  whole page. Moving, nudging, aligning, duplicating and deleting then apply
+  to all of them, and so do the properties on the right: set one colour, font
+  or size and every selected element takes it. The panel shows the fields
+  they all understand — pick three texts and you get every text field, pick a
+  text and a rectangle and `Colour` remains. A field the selection does not
+  agree on reads *mixed* until you write something into it.
+* **Copy between layouts** with `Ctrl+C` / `Ctrl+X` / `Ctrl+V` or the buttons
+  under the layer list. The clipboard lives in the browser, so it survives
+  opening another layout, a reload and a second tab. Elements keep their
+  coordinates; only a layout too small to hold them moves them back onto the
+  canvas, and the message says which size they came from.
+* **Reorder layers** by dragging a row in the *Layers* list. The list reads
+  top layer first, so dragging a row upwards brings the element to the front.
+  A whole selection travels together.
 * **Properties** on the right: every field the renderer knows, with colour
   pickers, font lists and condition templates.
 * **Data fields** behind the `${}` button: every token explained, plus the
   filters, inserted at the cursor.
 * **Preview**: the add-on renders each change itself, so you see exactly what
   the panel will show — switchable between music, video, paused, idle and, on
-  the box, live data.
+  the box, live data. It follows the keyboard: a value is on the picture while
+  it is still being typed, and a box is dragged with the preview underneath
+  it, so nothing has to be clicked away first. Undo steps back over a whole
+  word or a whole drag, not over single keystrokes.
 * **Save** writes to your layout folder; *To the display* applies it at once.
 * Undo/redo (`Ctrl+Z` / `Ctrl+Y`), duplicate (`Ctrl+D`), save (`Ctrl+S`),
-  delete (`Del`), alignment buttons, and a JSON view for the finishing touches.
+  select all (`Ctrl+A`), delete (`Del`), alignment buttons, and a JSON view
+  for the finishing touches. Every shortcut stays out of the way while a text
+  field has the cursor, so `Ctrl+C` there still copies text.
 
 It always saves into your own folder, never over a bundled layout: your copy
 wins, and deleting it brings the original back.
@@ -265,9 +290,28 @@ layout accent, or a name: `black`, `white`, `red`, `green`, `blue`, `cyan`,
 `lime`, `teal`, `brown`, `navy`, `gold`, `kodiblue`, `transparent`. Colours may
 contain tokens.
 
-**Fonts** are `sans`, `sans-bold`, `mono`, `mono-bold` at any pixel size; sizes
-that are not bundled are resampled from the nearest one. Extra `.l4f` fonts go
-in a `fonts` folder next to `layouts` (build them with `tools/mkfont.py`).
+**Fonts** work at any pixel size; a size that is not bundled is resampled from
+the nearest one. Extra `.l4f` fonts go in a `fonts` folder next to `layouts`
+(build them with `tools/mkfont.py`).
+
+| Kind | Families |
+|---|---|
+| Text | `sans`, `sans-bold` · `inter`, `inter-bold` · `roboto`, `roboto-bold` |
+| Narrow | `condensed`, `condensed-bold` · `oswald`, `oswald-bold` |
+| Display | `bebas` · `anton` · `michroma` |
+| Monospace | `mono`, `mono-bold` · `jetbrains`, `jetbrains-bold` · `sourcecode`, `sourcecode-bold` · `robotomono`, `robotomono-bold` · `firamono`, `firamono-bold` · `plexmono`, `plexmono-bold` · `inconsolata`, `inconsolata-bold` · `spacemono` · `sharetech` · `courierprime` |
+
+`bold: true` appends `-bold` to whatever family is set, and a family without a
+bold weight simply stays as it is. The display faces start at 20 px: below
+that they are unreadable, so no smaller sizes are built and the renderer
+resamples if a layout asks anyway.
+
+Every family draws the same characters — ASCII, Latin-1, Latin Extended-A and
+the punctuation and media signs the layouts use. Most faces stop short of
+that on their own, so `tools/mkfont.py` fills the gaps from DejaVu and Noto's
+symbol font while it rasterises. A monospaced family borrows only from
+monospaced sources and keeps one cell width throughout, so a column of
+figures still lines up when it contains a `⏵` or a `♪`.
 
 ### Widgets
 
@@ -428,7 +472,8 @@ names, for instance.
 ### Data fields
 
 Tokens are written `${...}` and work in text, in numeric fields like `value`,
-in colours and in conditions.
+in colours and in conditions. Fixed words may stand next to them, and
+[`{...}`](#groups) ties those words to the value so both disappear together.
 
 **Playback — `player.*`**
 
@@ -534,6 +579,57 @@ ${player.year|prefix: · }
 
 `prefix` and `suffix` are how you write separators that vanish when there is
 nothing to separate: `${player.year}${player.genre|prefix: · }`.
+
+### Groups
+
+Words, digits and punctuation may be written straight next to a token:
+
+```
+${player.artist} - ${player.title}
+```
+
+That much always worked. What braces add is that the text belongs to the
+value. `{...}` is a group: once every token inside it comes out empty, the
+whole group goes, text and all.
+
+```
+{${player.title} live}        Enjoy the Silence live   ·   nothing while stopped
+{Track ${player.track}}       Track 4                  ·   the word goes with the number
+${player.artist}{ · ${player.album}}                   ·   the dot needs an album
+```
+
+Without the braces the last line would leave a lonely ` · ` on the panel
+whenever the album is unknown. Where the text goes is up to you, so a caption
+reads the same whether it stands in front of the value or behind it:
+
+| Written | While playing | Nothing playing |
+|---|---|---|
+| `{${player.title} Test}` | `Enjoy the Silence Test` | *(empty)* |
+| `{Test ${player.title}}` | `Test Enjoy the Silence` | *(empty)* |
+
+Three rules, and that is all of them:
+
+1. Braces are a group **only when a `${...}` stands between them**. `{Info}`
+   is the word `Info` in braces, exactly as it always was, so nothing you
+   wrote before this existed reads differently now.
+2. A group is kept as soon as **one** token in it has a value, and dropped
+   when none has. A token that expands to nothing but spaces counts as empty.
+3. Groups nest: `{${player.album}{ (${player.year})}}` gives
+   `Violator (1990)`, or just `Violator` when the year is unknown.
+
+Filters and `$LOCALIZE[...]` work inside a group like anywhere else:
+
+```
+{$LOCALIZE[32403]: ${player.album|trunc:20}}
+```
+
+Groups also work in a condition, where one is true while it fills with
+something, and in every other field that takes a token — numbers, colours and
+image paths included.
+
+Next to a single token, `{...}` and the `prefix:`/`suffix:` filters do the
+same job; pick whichever reads better. The group is the one that can hold
+several tokens and put text on both sides.
 
 ### Translating fixed words
 

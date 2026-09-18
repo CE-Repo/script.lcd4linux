@@ -823,6 +823,60 @@ def test_fonts():
     check(all(umlauts.glyph(ord(ch)) is not None for ch in u"äöüßÄÖÜéèñ"),
           "accented characters have glyphs")
 
+    # Picking a different font must never cost a character.  Most faces stop
+    # somewhere in Latin Extended-A and none of them draws the media signs,
+    # so the rasteriser fills those in from DejaVu and Noto Symbols; if that
+    # ever breaks, a layout loses glyphs silently.
+    probe = u"ÄÖÜäöüß·°—€ŁłŒœ≈≤∞⏵⏸⏹♪♫✓✗■▲▶▼◀●★☆←↑→↓"
+    thin = []
+    for family in families:
+        font = fonts.get(family, 24)
+        for ch in probe:
+            glyph = font.glyph(ord(ch))
+            if glyph is None or not (glyph.width and glyph.height):
+                thin.append("%s:%s" % (family, ch))
+    check(not thin, "every family draws the whole character set (%s)"
+          % (thin[:8] or "all %d of them" % len(families),))
+
+    # A monospaced family is only worth having while every cell is the same
+    # width -- including the glyphs it had to borrow from somewhere else.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "mkfont", os.path.join(ROOT, "tools", "mkfont.py"))
+    try:
+        mkfont = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mkfont)
+    except ImportError:
+        mkfont = None            # Pillow or fontTools missing: build-time only
+    if mkfont is not None:
+        wobbly = []
+        for family in sorted(mkfont.MONOSPACED):
+            if family not in families:
+                continue
+            for size in (12, 24, 48):
+                font = fonts.get(family, size)
+                widths = {font.glyph(c).advance for c in mkfont.charset()
+                          if font.glyph(c) is not None}
+                if len(widths) != 1:
+                    wobbly.append("%s@%d:%s" % (family, size, sorted(widths)))
+        check(not wobbly, "every monospaced family keeps one cell width (%s)"
+              % (wobbly[:4] or "all %d of them" % len(mkfont.MONOSPACED),))
+        proportional = fonts.get("sans", 24)
+        spread = {proportional.glyph(c).advance for c in mkfont.charset()
+                  if proportional.glyph(c) is not None}
+        check(len(spread) > 1, "and the proportional ones stay proportional")
+
+    # A bundled face without its licence beside it may not be redistributed.
+    directory = os.path.join(ROOT, "resources", "fonts")
+    licences = [n for n in os.listdir(directory) if n.startswith("LICENSE-")]
+    check(len(licences) >= 17,
+          "every bundled face ships its licence (%d files)" % len(licences))
+
+    for family in ("inter", "condensed", "oswald", "bebas", "jetbrains",
+                   "sourcecode", "robotomono", "firamono", "plexmono",
+                   "inconsolata", "spacemono", "sharetech", "courierprime"):
+        check(family in families, "the %s family is bundled" % family)
+
 
 def test_images():
     print("images")
@@ -1424,6 +1478,71 @@ def test_tokens():
     check(tokens.evaluate("${player.percent} > 10", provider), "comparison")
     check(tokens.evaluate("audio+playing", provider), "and combination")
 
+    # -- {...} groups: the words go with the value they belong to ---------
+    class _Some(object):
+        """A provider that knows exactly the tokens it was given."""
+
+        def __init__(self, **values):
+            self.values = values
+
+        def value(self, name):
+            return self.values.get(name, "")
+
+        def condition(self, name):
+            return False
+
+    everything = _Some(**{"player.title": "Enjoy the Silence",
+                          "player.album": "Violator",
+                          "player.year": "1990",
+                          "player.track": "4"})
+    silence = _Some()
+    album_only = _Some(**{"player.album": "Violator"})
+
+    for template, full, empty in (
+            # words in front of a value and behind it
+            ("{${player.title} Test}", "Enjoy the Silence Test", ""),
+            ("{Test ${player.title}}", "Test Enjoy the Silence", ""),
+            ("{${player.title}, Test}", "Enjoy the Silence, Test", ""),
+            ("{Track ${player.track}}", "Track 4", ""),
+            # a separator that must not outlive what it separates
+            ("${player.title}{ · ${player.album}}",
+             "Enjoy the Silence · Violator", ""),
+            # filters and translations keep working inside a group
+            ("{${player.title|upper} (${player.year})}",
+             "ENJOY THE SILENCE (1990)", ""),
+            # braces without a token in them are plain characters
+            ("a {literal} brace", "a {literal} brace", "a {literal} brace"),
+            ("{{doubled}}", "{{doubled}}", "{{doubled}}"),
+            ("unbalanced { brace", "unbalanced { brace", "unbalanced { brace"),
+            # and a template without braces reads as it always did
+            ("${player.title} Test", "Enjoy the Silence Test", " Test")):
+        got_full = tokens.expand(template, everything)
+        got_empty = tokens.expand(template, silence)
+        check(got_full == full and got_empty == empty,
+              "%s -> %r / %r" % (template, got_full, got_empty))
+
+    nested = "{${player.album}{ (${player.year})}}"
+    check(tokens.expand(nested, everything) == "Violator (1990)",
+          "a nested group fills")
+    check(tokens.expand(nested, album_only) == "Violator",
+          "and the inner one drops on its own")
+    check(tokens.expand(nested, silence) == "", "both drop together")
+    check(tokens.expand("{x ${a} y}", _Some(a="   ")) == "",
+          "a value of nothing but spaces counts as empty")
+
+    check(tokens.evaluate("{${player.album} x}", everything),
+          "a group is a condition while it fills")
+    check(not tokens.evaluate("{${player.album} x}", silence),
+          "and false once it is empty")
+    check(tokens.number("{${player.year}}", everything) == 1990.0,
+          "a group reaches numeric fields")
+
+    # Nothing may hang or blow the stack on a mistyped string.
+    for junk in ("{" * 400, "}" * 400, "${" * 400, "{${a}" * 200,
+                 "{" * 40 + "${a}" + "}" * 40):
+        tokens.expand(junk, everything)
+    check(True, "unbalanced and deeply nested braces are survivable")
+
 
 def test_media_info():
     """Codec, HDR and resolution must reach the panel as names, not raw ids.
@@ -1873,6 +1992,101 @@ def test_web_editor():
     check(sorted(webschema.PALETTE) == sorted(webschema.WIDGET_FIELDS),
           "the palette lists every described widget")
 
+    # The ready made {...} groups are taught to users, so they have to be
+    # true: one that renders nothing would teach the syntax wrongly.
+    from lcd4linux import tokens as token_module
+    demo = DemoProvider(0, 97.0, "playing", "")
+    demo.begin_frame()
+    wrong = [snippet for snippet, _label, _de in webschema.GROUPS
+             if not token_module.expand(snippet, demo).strip()]
+    check(not wrong, "every group the picker offers renders something (%s)"
+          % (wrong or "all of them",))
+
+    # -- the picture has to follow the keyboard ---------------------------
+    # A field that only commits on "change" keeps its change invisible until
+    # the cursor is put somewhere else, which reads as a broken editor.
+    editor_source = _read_text(os.path.join(ROOT, "resources", "web",
+                                            "editor.js"))
+    build = editor_source.split("function buildField(", 1)[-1]
+    build = build.split("\nfunction ", 1)[0]
+    late = []
+    for branch in re.split(r"\n  \} else (?:if [^\n]*)?\{", build):
+        head = branch.strip().splitlines()[0]
+        typed = ("type: 'text'" in branch or "type: 'number'" in branch
+                 or "'textarea'" in branch)
+        if typed and "liveControl(" not in branch and "oninput" not in branch:
+            late.append(head)
+    check(not late, "every typed-in field commits while it is typed (%s)"
+          % (late or "all of them",))
+    check("function liveControl" in editor_source
+          and "oninput: (event) => read(event.target, true)" in editor_source,
+          "typing a value redraws the preview without leaving the field")
+    drag = editor_source.split("function beginDrag(", 1)[-1].split("\nfunction ", 1)[0]
+    check("apply();\n    schedulePreview(" in drag,
+          "dragging a box moves the preview before the button comes up")
+
+    # -- the selection is a set, and only one place may write it ----------
+    # A stray "S.sel = ..." would leave S.picks pointing at the old element,
+    # and every multi-element action reads S.picks.
+    writers = re.findall(r"^\s*S\.sel = ", editor_source, re.M)
+    check(len(writers) == 1,
+          "only setSelection() assigns the current element (%d writers)"
+          % len(writers))
+    for name in ("function setSelection", "function selectAll",
+                 "function copySelection", "function pasteClipboard",
+                 "function reorderWidgets", "function bindLayerDrag"):
+        check(name in editor_source, "the editor has %s()" % name[9:])
+    # Every element the selection covers has to be moved, not just the first.
+    for name in ("removeWidget", "duplicateWidget", "nudge", "align"):
+        body = editor_source.split("function %s(" % name, 1)[-1]
+        body = body.split("\nfunction ", 1)[0]
+        check("picked()" in body, "%s() works on the whole selection" % name)
+    # A property field writes to every element it was built for, and every
+    # caller has to hand it a list -- a bare object would be edited letter by
+    # letter, because a string is iterable too.
+    commit_body = editor_source.split("function commit(", 1)[-1]
+    commit_body = commit_body.split("\nfunction ", 1)[0]
+    check("targets.filter(" in commit_body and "changing.forEach(" in commit_body,
+          "one field writes its value into every selected element")
+    single = re.findall(r"fieldGroup\([^;]*?\)\);", editor_source, re.S)
+    loose = [call for call in single
+             if not re.search(r",\s*(\[|targets)", call.replace("\n", " "))]
+    check(not loose, "every field group is given a list of targets (%s)"
+          % (loose or "all of them",))
+    check("function sharedFields" in editor_source
+          and "t('mixed')" in editor_source,
+          "elements of different types offer the fields they share")
+    # The clipboard has to outlive the layout, so it cannot be a variable.
+    check("localStorage.getItem(key)" in editor_source
+          and "localStorage.setItem(key" in editor_source
+          and "readStore(CLIP_KEY" in editor_source,
+          "the clipboard survives a layout change and a reload")
+    # Rebuilding the list inside dragstart would cancel the drag.
+    dragstart = editor_source.split("row.addEventListener('dragstart'", 1)[-1]
+    dragstart = dragstart.split("});", 1)[0]
+    check("drawLayers" not in dragstart and "select(" not in dragstart,
+          "starting a layer drag does not rebuild the list under the cursor")
+
+    # A page travels between layouts too, and its clipboard is its own: a
+    # copied page must not throw away copied elements.
+    check("function duplicatePage" in editor_source
+          and "function pastePage" in editor_source,
+          "a page can be duplicated in place and pasted into another layout")
+    check("PAGE_CLIP_KEY" in editor_source
+          and "readStore(PAGE_CLIP_KEY" in editor_source,
+          "pages and elements keep separate clipboards")
+
+    page_source = _read_text(os.path.join(ROOT, "resources", "web",
+                                          "index.html"))
+    for button in ("btn-copy", "btn-cut", "btn-paste",
+                   "btn-page-copy", "btn-page-clip", "btn-page-paste"):
+        check('id="%s"' % button in page_source, "the page has #%s" % button)
+    # Every button the page carries has to be wired up, or it does nothing.
+    for match in re.finditer(r'<button id="([^"]+)"', page_source):
+        name = match.group(1)
+        check("$('%s')" % name in editor_source,
+              "#%s is wired to something" % name)
+
     # -- a layout the editor offers must be one the renderer accepts ------
     for kind, preset in sorted(webschema.NEW_WIDGET.items()):
         spec = webschema.blank_layout()
@@ -1951,6 +2165,10 @@ def test_web_editor():
               "the schema describes every widget")
         check("sans" in schema["fonts"] and "play" in schema["icons"],
               "fonts and icons come from the add-on itself")
+        check(schema["groups"] and all("${" in entry["snippet"]
+                                       for entry in schema["groups"]),
+              "the picker teaches {...} groups (%d examples)"
+              % len(schema["groups"]))
 
         code, _kind, body = request("/api/layouts")
         listed = json.loads(body)["layouts"]

@@ -50,12 +50,20 @@ An AX206 panel should light up immediately. For a Samsung frame, set
 * **Sends only what changed.** On the AX206 a ticking seconds hand costs a few
   hundred bytes instead of 300 kB per frame; on the Samsung, which accepts
   complete JPEGs only, just the changed block rows are re-encoded.
+* **30 bundled fonts** — text, narrow, display and seventeen monospaced
+  families, every one of them drawing the same characters, and every
+  monospaced one keeping a single cell width so figures line up.
 * **20 bundled layouts**, each in 480×320, 800×480 and 1024×600 plus portrait.
   You pick the name, the add-on picks the size that fits the attached panel.
 * **A layout editor in the browser** at `http://<box>:8050/` — drag elements
   around, with a preview drawn by the same renderer that feeds the display.
+  Pick several at once to recolour or realign them in one go, copy them into
+  another layout with `Ctrl+C` / `Ctrl+V`, and drag the layer list to reorder.
 * **Every Kodi InfoLabel** is available (`${info:MusicPlayer.Album}`), as is
   every Kodi condition (`Player.HasVideo`).
+* **Words that know when to leave.** `{Track ${player.track}}` writes the
+  caption only while there is a number, so nothing is left standing on the
+  panel once the value behind it is gone.
 * **Media details in plain words.** Kodi reports `hevc`, `truehd_atmos` and
   `8`; the display shows H.265, Dolby TrueHD Atmos and 7.1, along with the
   dynamic range (Dolby Vision, HDR10+, HDR10, HLG, SDR) and a resolution that

@@ -58,7 +58,10 @@ COMMON_FIELDS = [
 
 WIDGET_FIELDS = {
     "text": [
-        _field("text", "token", "Text", "Text", default="", multiline=True),
+        _field("text", "token", "Text", "Text", default="", multiline=True,
+               hint="{...} ties words to a value and drops both when it is empty",
+               hint_de="{...} bindet Wörter an einen Wert und lässt beide"
+                       " weg, wenn er leer ist"),
         _field("font", "font", "Font", "Schrift"),
         _field("size", "number", "Size", "Größe", min=6, max=200),
         _field("bold", "bool", "Bold", "Fett"),
@@ -372,6 +375,24 @@ FILTERS = [
     ("first:,", "First part", "Erster Teil"),
 ]
 
+#: Ready made ``{...}`` groups for the picker.  Everything in a group goes
+#: when its values do, which is how words and punctuation are tied to the
+#: field they belong to instead of being left standing on their own.
+GROUPS = [
+    ("{${player.title} live}",
+     "A word behind the value", "Ein Wort hinter dem Wert"),
+    ("{Track ${player.track}}",
+     "A word in front of it", "Ein Wort davor"),
+    ("{${player.artist} · ${player.album}}",
+     "Two values and their punctuation",
+     "Zwei Werte samt Satzzeichen"),
+    ("${player.album}{ (${player.year})}",
+     "An addition only while it is known",
+     "Ein Zusatz nur solange er bekannt ist"),
+    ("{${player.album}{ (${player.year})}}",
+     "Groups may sit inside groups", "Gruppen dürfen ineinander stehen"),
+]
+
 #: Ready made conditions for the drop down next to a condition field.
 CONDITIONS = [
     ("", "always", "immer"),
@@ -456,6 +477,8 @@ def describe(fonts=None):
                    for group in TOKEN_GROUPS],
         "filters": [{"filter": name, "label": label, "label_de": label_de}
                     for name, label, label_de in FILTERS],
+        "groups": [{"snippet": snippet, "label": label, "label_de": label_de}
+                   for snippet, label, label_de in GROUPS],
         "conditions": [{"value": value, "label": label, "label_de": label_de}
                        for value, label, label_de in CONDITIONS],
         "new": NEW_WIDGET,
