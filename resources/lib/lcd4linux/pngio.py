@@ -167,6 +167,11 @@ def decode(data):
     return width, height, rgba
 
 
+def _chunk(tag, payload):
+    out = struct.pack(">I", len(payload)) + tag + payload
+    return out + struct.pack(">I", zlib.crc32(tag + payload) & 0xFFFFFFFF)
+
+
 def encode_rgb(width, height, rgb):
     """Encode plain RGB bytes into a PNG file."""
     raw = bytearray()
@@ -174,17 +179,104 @@ def encode_rgb(width, height, rgb):
     for row in range(height):
         raw.append(0)
         raw.extend(rgb[row * stride:(row + 1) * stride])
-
-    def chunk(tag, payload):
-        out = struct.pack(">I", len(payload)) + tag + payload
-        return out + struct.pack(">I", zlib.crc32(tag + payload) & 0xFFFFFFFF)
-
     return b"".join((
         PNG_MAGIC,
-        chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)),
-        chunk(b"IDAT", zlib.compress(bytes(raw), 6)),
-        chunk(b"IEND", b""),
+        _chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0)),
+        _chunk(b"IDAT", zlib.compress(bytes(raw), 6)),
+        _chunk(b"IEND", b""),
     ))
+
+
+def quantize(rgb, colors=256):
+    """Reduce plain RGB bytes to a palette, returning ``(palette, indices)``.
+
+    Median cut: the colour cube is split along its longest axis, always
+    taking the box that covers the most pixels, until there are as many
+    boxes as colours wanted.  Each box becomes the average of the colours
+    in it, which is what the pixels that fell into it are mapped to.
+
+    An image that already fits keeps its colours exactly, and that is the
+    usual case for a layout preview - flat backgrounds, a handful of text
+    colours and one piece of artwork.
+    """
+    counts = {}
+    for index in range(0, len(rgb), 3):
+        key = (rgb[index], rgb[index + 1], rgb[index + 2])
+        counts[key] = counts.get(key, 0) + 1
+
+    boxes = [list(counts.items())]
+    while len(boxes) < colors:
+        splittable = [box for box in boxes if len(box) > 1]
+        if not splittable:
+            break
+        box = max(splittable, key=lambda entries: sum(n for _c, n in entries))
+        axis, widest = 0, -1
+        for candidate in range(3):
+            values = [colour[candidate] for colour, _n in box]
+            span = max(values) - min(values)
+            if span > widest:
+                axis, widest = candidate, span
+        box.sort(key=lambda entry: entry[0][axis])
+        half = sum(n for _c, n in box) // 2
+        seen, cut = 0, 1
+        for position, (_colour, n) in enumerate(box):
+            seen += n
+            if seen >= half:
+                cut = max(1, min(position + 1, len(box) - 1))
+                break
+        boxes.remove(box)
+        boxes.append(box[:cut])
+        boxes.append(box[cut:])
+
+    palette, lookup = [], {}
+    for index, box in enumerate(boxes):
+        weight = sum(n for _c, n in box) or 1
+        palette.append(tuple(sum(colour[axis] * n for colour, n in box)
+                             // weight for axis in range(3)))
+        for colour, _n in box:
+            lookup[colour] = index
+
+    indices = bytearray(len(rgb) // 3)
+    for pixel in range(len(indices)):
+        offset = pixel * 3
+        indices[pixel] = lookup[(rgb[offset], rgb[offset + 1],
+                                 rgb[offset + 2])]
+    return palette, indices
+
+
+def encode_indexed(width, height, palette, indices):
+    """Encode palette indices and their colour table into a PNG file."""
+    if len(palette) > 256:
+        raise ValueError("a palette PNG holds at most 256 colours")
+    raw = bytearray()
+    for row in range(height):
+        raw.append(0)
+        raw.extend(indices[row * width:(row + 1) * width])
+    table = bytearray()
+    for colour in palette:
+        table.extend(colour)
+    return b"".join((
+        PNG_MAGIC,
+        _chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 3, 0, 0, 0)),
+        _chunk(b"PLTE", bytes(table)),
+        _chunk(b"IDAT", zlib.compress(bytes(raw), 9)),
+        _chunk(b"IEND", b""),
+    ))
+
+
+def encode_rgb_compact(width, height, rgb, colors=256):
+    """Encode RGB bytes as small as a PNG gets without visible loss.
+
+    One byte per pixel instead of three, and the flat areas of a layout
+    compress better for it.  The plain RGB encoding is used anyway if it
+    turns out smaller, so this never costs size - only the time it takes to
+    reduce the colours, which is why it is kept for the pictures that are
+    written once and looked at many times.
+    """
+    palette, indices = quantize(rgb, colors)
+    compact = encode_indexed(width, height, palette, indices)
+    plain = encode_rgb(width, height, rgb)
+    return compact if len(compact) <= len(plain) else plain
 
 
 def encode_rgba(width, height, rgba):
@@ -193,14 +285,9 @@ def encode_rgba(width, height, rgba):
     for row in range(height):
         raw.append(0)
         raw.extend(rgba[row * stride:(row + 1) * stride])
-
-    def chunk(tag, payload):
-        out = struct.pack(">I", len(payload)) + tag + payload
-        return out + struct.pack(">I", zlib.crc32(tag + payload) & 0xFFFFFFFF)
-
     return b"".join((
         PNG_MAGIC,
-        chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)),
-        chunk(b"IDAT", zlib.compress(bytes(raw), 6)),
-        chunk(b"IEND", b""),
+        _chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)),
+        _chunk(b"IDAT", zlib.compress(bytes(raw), 6)),
+        _chunk(b"IEND", b""),
     ))

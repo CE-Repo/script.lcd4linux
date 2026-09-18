@@ -161,9 +161,10 @@ After editing, choose *Reload service* from the menu.
 Files are read as UTF-8 (a byte order mark is tolerated), and lines starting
 with `//` or `#` are skipped as comments.
 
-Your own layouts get a picture in the chooser too: rendered once when the list
-is first opened, cached in `addon_data/script.lcd4linux/thumbs/`, and re-made
-whenever you edit the file.
+Your own layouts get a picture in the chooser too: drawn in the background by
+the service when the list is first opened, cached in
+`addon_data/script.lcd4linux/thumbs/`, and drawn again whenever you edit the
+file. The bundled designs ship their picture and are never re-drawn.
 
 ### Sizes
 

@@ -67,8 +67,20 @@ def render(layout_path, out_path, font_directories=None, box=THUMB_BOX):
     directory = os.path.dirname(out_path)
     if directory and not os.path.isdir(directory):
         os.makedirs(directory)
-    with open(out_path, "wb") as handle:
-        handle.write(pngio.encode_rgb(width, height, rgb))
+    # Written beside the target and moved into place: the service renders
+    # these while the chooser is reading them, and half a PNG looks fresh
+    # enough to :func:`cached_is_fresh` to be handed to Kodi.
+    temporary = out_path + ".tmp"
+    try:
+        with open(temporary, "wb") as handle:
+            handle.write(pngio.encode_rgb_compact(width, height, rgb))
+        os.replace(temporary, out_path)
+    except Exception:
+        try:
+            os.remove(temporary)
+        except OSError:
+            pass
+        raise
     return out_path
 
 
@@ -82,6 +94,51 @@ def cached_is_fresh(name, layout_path):
         return False
 
 
+def cached_picture(name):
+    """The picture drawn for a layout earlier, or ``None`` if there is none."""
+    out_path = profile_path("thumbs", design_name(name) + ".png")
+    return out_path if os.path.isfile(out_path) else None
+
+
+def is_user_layout(layout_path, user_directory):
+    """Whether a layout file is one the user wrote themselves."""
+    if not user_directory or not layout_path:
+        return False
+    try:
+        return (os.path.abspath(os.path.dirname(layout_path))
+                == os.path.abspath(user_directory))
+    except (OSError, ValueError):
+        return False
+
+
+def picture(name, layout_path, user_directory):
+    """The picture to show for a layout, ``None`` if it has to be drawn.
+
+    Which of the two rules applies is decided by where the file lies, not
+    by what it is called.  A layout in the user's own folder is drawn from
+    that file, so its picture only holds while it is newer than the layout:
+    edit the layout and it is drawn again.  A ``default-1920x1080.json`` of
+    their own is theirs as well, and must not be shown with the bundled
+    ``default`` picture just because the name matches.
+
+    Everything that comes with the add-on is shown with the picture it
+    ships.  Those files only change when the add-on is updated, and the
+    picture is updated with them, so there is never anything to redraw -
+    which is the whole point of shipping them.
+    """
+    if is_user_layout(layout_path, user_directory):
+        if not cached_is_fresh(name, layout_path):
+            return None
+        return profile_path("thumbs", design_name(name) + ".png")
+    shipped = shipped_path(name)
+    if shipped is not None:
+        return shipped
+    # A bundled design with no picture of its own is a packaging slip, but
+    # whatever was drawn for it once is still right: it cannot change
+    # without an update, and an update brings its picture along.
+    return cached_picture(name)
+
+
 def cached_path(name, layout_path, font_directories=None):
     """A picture for a layout the add-on does not ship, rendered once."""
     out_path = profile_path("thumbs", design_name(name) + ".png")
@@ -92,11 +149,3 @@ def cached_path(name, layout_path, font_directories=None):
     except Exception as error:
         log("cannot render a preview for %s: %s" % (name, error))
         return None
-
-
-def path_for(name, layout_path, font_directories=None, render_missing=True):
-    """The picture to show for a layout, or ``None`` if there is none."""
-    path = shipped_path(name)
-    if path or not render_missing:
-        return path
-    return cached_path(name, layout_path, font_directories)

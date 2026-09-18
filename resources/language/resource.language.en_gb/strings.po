@@ -408,6 +408,10 @@ msgctxt "#32327"
 msgid "Rendering layout previews"
 msgstr ""
 
+msgctxt "#32328"
+msgid "Preparing layout previews"
+msgstr ""
+
 msgctxt "#32330"
 msgid "Service"
 msgstr ""

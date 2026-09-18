@@ -173,9 +173,14 @@ class Config(object):
         return ax206.parse_id_list(self._values["device_ids"])
 
     @property
+    def user_layout_directory(self):
+        """Where the user's own layouts live, as opposed to the bundled ones."""
+        return self._values["layout_dir"] or profile_path("layouts")
+
+    @property
     def layout_directories(self):
         """User layouts first so they can override the bundled ones."""
-        directories = [self._values["layout_dir"] or profile_path("layouts"),
+        directories = [self.user_layout_directory,
                        addon_path("resources", "layouts")]
         result = []
         for directory in directories:

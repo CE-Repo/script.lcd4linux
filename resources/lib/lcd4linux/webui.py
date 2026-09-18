@@ -45,10 +45,12 @@ from urllib.parse import parse_qs, quote, urlparse
 
 from . import display as display_module
 from . import layout as layout_module
+from . import layoutindex
 from . import pngio
+from . import tokens
 from . import webschema
 from .logger import debug, error, log
-from .settings import Config, addon_path, ensure_user_directories, profile_path
+from .settings import Config, addon_path, ensure_user_directories
 
 try:
     import xbmc  # type: ignore
@@ -139,8 +141,7 @@ def _same_secret(given, expected):
 
 def user_directory(config=None):
     """Where the editor saves: the user's layout folder."""
-    config = config or Config()
-    return config.get("layout_dir") or profile_path("layouts")
+    return (config or Config()).user_layout_directory
 
 
 def safe_name(name):
@@ -164,18 +165,22 @@ def list_layouts(config=None):
     config = config or Config()
     directories = config.layout_directories
     user_dir = os.path.abspath(directories[0]) if directories else ""
+    available = layout_module.discover(directories)
+    # The listing only needs the name, the size and the page count, and it
+    # is asked for on every visit to the editor: the cached index answers
+    # that without parsing sixty layout files again.
+    infos = layoutindex.read(available)
     entries = []
-    for name, path in sorted(layout_module.discover(directories).items()):
-        entry = {"file": name, "path": path, "name": name,
+    for name, path in sorted(available.items()):
+        info = infos.get(name) or {}
+        error_text = info.get("error", "")
+        entry = {"file": name, "path": path,
+                 "name": tokens.localize_text(info.get("name")) or name,
                  "user": os.path.abspath(os.path.dirname(path)) == user_dir,
-                 "size": None, "pages": 0, "error": ""}
-        try:
-            parsed = layout_module.Layout.load(path)
-            entry["name"] = parsed.name
-            entry["size"] = [parsed.width, parsed.height]
-            entry["pages"] = len(parsed.pages)
-        except Exception as err:
-            entry["error"] = str(err)
+                 "size": None, "pages": int(info.get("pages", 0)),
+                 "error": error_text}
+        if not error_text and "width" in info:
+            entry["size"] = [info["width"], info["height"]]
         entries.append(entry)
     return entries
 

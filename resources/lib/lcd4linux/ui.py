@@ -5,13 +5,16 @@ is forwarded to it with ``NotifyAll``; this module only deals with dialogs
 and settings.
 """
 
+import contextlib
 import json
 
 from . import ax206
 from . import layout as layout_module
+from . import layoutindex
 from . import spf
 from . import localize
 from . import thumbs
+from . import tokens
 from .logger import log
 from .settings import ADDON_ID, Config, profile_path
 
@@ -44,6 +47,45 @@ def _dialog():
     return xbmcgui.Dialog() if xbmcgui is not None else None
 
 
+def _service_status():
+    """What the service published about itself, empty when it is not up."""
+    if xbmcgui is None:
+        return ""
+    try:
+        return xbmcgui.Window(10000).getProperty("lcd4linux.status") or ""
+    except Exception:
+        return ""
+
+
+@contextlib.contextmanager
+def _busy():
+    """Kodi's spinner while a menu action collects what it needs.
+
+    Opening the layout chooser reads every layout file and looks for a
+    preview picture of each; that is fast once the index and the previews
+    are cached, but the first run after an update has nothing cached and
+    used to look like the button had not been pressed at all.
+    """
+    shown = False
+    if xbmc is not None:
+        try:
+            # Both calls wait: an asynchronous activation can still be on
+            # its way when the close is issued, and the spinner would then
+            # stay up over the dialog it was covering for.
+            xbmc.executebuiltin("ActivateWindow(busydialognocancel)", True)
+            shown = True
+        except Exception as error:
+            log("no busy dialog: %s" % error)
+    try:
+        yield
+    finally:
+        if shown:
+            try:
+                xbmc.executebuiltin("Dialog.Close(busydialognocancel)", True)
+            except Exception as error:
+                log("cannot close the busy dialog: %s" % error)
+
+
 def _toast(message, heading=None):
     dialog = _dialog()
     if dialog is None:
@@ -72,15 +114,10 @@ def _layout_designs(available):
     return entries
 
 
-def _layout_pictures(entries, available, config):
-    """The preview picture of every design, rendering the user's own once."""
-    pictures = [thumbs.shipped_path(name) for name, _variants in entries]
-    todo = [index for index, picture in enumerate(pictures) if picture is None]
-    slow = [index for index in todo
-            if not thumbs.cached_is_fresh(entries[index][0],
-                                          available[entries[index][0]])]
+def _render_pictures(pictures, todo, entries, available, config):
+    """Draw the missing previews here and now, behind a progress bar."""
     progress = None
-    if slow and xbmcgui is not None:
+    if xbmcgui is not None:
         try:
             progress = xbmcgui.DialogProgressBG()
             progress.create(localize.text(32000, "LCD4Linux"),
@@ -96,7 +133,39 @@ def _layout_pictures(entries, available, config):
                                              config.font_directories)
     if progress is not None:
         progress.close()
-    return pictures
+
+
+def _layout_pictures(entries, available, config):
+    """The preview picture of every design, and what is still being drawn.
+
+    The bundled designs are shown with the picture they ship and are never
+    drawn again; only the user's own layouts are, and those whenever the
+    file behind them changed (see :func:`~.thumbs.picture`).  So most of
+    the time this is twenty path lookups.
+
+    When something does have to be drawn it takes seconds per layout, which
+    is far too long to hold the dialog for: the running service is asked to
+    do it in the background and those entries open without a picture,
+    filled in the next time the chooser is opened.  Without a service there
+    is nobody to hand the work to, so it happens here as it always did.
+
+    Returns ``(pictures, pending)`` - one picture per entry, ``None`` where
+    there is none yet, and the names being drawn in the background.
+    """
+    user_directory = config.user_layout_directory
+    pictures, todo = [], []
+    for index, (name, _variants) in enumerate(entries):
+        pictures.append(thumbs.picture(name, available[name], user_directory))
+        if pictures[index] is None:
+            todo.append(index)
+    if not todo:
+        return pictures, []
+    missing = [entries[index][0] for index in todo]
+    if _service_status() and notify_service("render_thumbs",
+                                            {"names": missing}):
+        return pictures, missing
+    _render_pictures(pictures, todo, entries, available, config)
+    return pictures, []
 
 
 def _select_layout(dialog, heading, labels, details, pictures, current):
@@ -118,41 +187,43 @@ def _select_layout(dialog, heading, labels, details, pictures, current):
                          preselect=current)
 
 
-def choose_layout():
-    """Let the user pick one of the available layouts, shown as pictures."""
-    config = Config()
-    available = layout_module.discover(config.layout_directories)
-    if not available:
-        _toast(localize.text(32321, "No layout files found"))
-        return
-    dialog = _dialog()
-    if dialog is None:
-        return
-
-    loaded = {}
-    for name, path in available.items():
-        try:
-            loaded[name] = layout_module.Layout.load(path)
-        except Exception as error:
-            log("cannot read the layout %s: %s" % (name, error))
-
+def _layout_entries(available, config):
+    """The rows of the chooser: ``(entries, labels, details, current)``."""
+    infos = layoutindex.read(available)
     entries = _layout_designs(available)
     labels, details = [], []
     for name, variants in entries:
-        parsed = loaded.get(name)
-        labels.append(parsed.name if parsed is not None else name)
-        sizes = sorted(set("%dx%d" % (loaded[variant].width,
-                                      loaded[variant].height)
-                           for variant in variants if variant in loaded))
+        info = infos.get(name) or {}
+        labels.append(tokens.localize_text(info.get("name")) or name)
+        sizes = sorted(set("%dx%d" % (infos[variant]["width"],
+                                      infos[variant]["height"])
+                           for variant in variants
+                           if "width" in (infos.get(variant) or {})))
         details.append("%s   %s" % (name, ", ".join(sizes)) if sizes else name)
-
     current = 0
     for index, (name, variants) in enumerate(entries):
         if config.layout == name or config.layout in variants:
             current = index
             break
+    return entries, labels, details, current
 
-    pictures = _layout_pictures(entries, available, config)
+
+def choose_layout():
+    """Let the user pick one of the available layouts, shown as pictures."""
+    config = Config()
+    dialog = _dialog()
+    with _busy():
+        available = layout_module.discover(config.layout_directories)
+        if not available:
+            _toast(localize.text(32321, "No layout files found"))
+            return
+        if dialog is None:
+            return
+        entries, labels, details, current = _layout_entries(available, config)
+        pictures, pending = _layout_pictures(entries, available, config)
+
+    if pending:
+        _toast(localize.text(32328, "Preparing layout previews"))
     choice = _select_layout(dialog, localize.text(32320, "Choose layout"),
                             labels, details, pictures, current)
     if choice < 0:
@@ -165,12 +236,7 @@ def choose_layout():
 def show_status():
     """Report what the service found on the USB bus."""
     lines = []
-    status = ""
-    if xbmcgui is not None:
-        try:
-            status = xbmcgui.Window(10000).getProperty("lcd4linux.status")
-        except Exception:
-            status = ""
+    status = _service_status()
     config = Config()
     lines.append("%s: %s" % (localize.text(32330, "Service"),
                              status or localize.text(32331, "not running")))
