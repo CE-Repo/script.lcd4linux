@@ -823,6 +823,60 @@ def test_fonts():
     check(all(umlauts.glyph(ord(ch)) is not None for ch in u"äöüßÄÖÜéèñ"),
           "accented characters have glyphs")
 
+    # Picking a different font must never cost a character.  Most faces stop
+    # somewhere in Latin Extended-A and none of them draws the media signs,
+    # so the rasteriser fills those in from DejaVu and Noto Symbols; if that
+    # ever breaks, a layout loses glyphs silently.
+    probe = u"ÄÖÜäöüß·°—€ŁłŒœ≈≤∞⏵⏸⏹♪♫✓✗■▲▶▼◀●★☆←↑→↓"
+    thin = []
+    for family in families:
+        font = fonts.get(family, 24)
+        for ch in probe:
+            glyph = font.glyph(ord(ch))
+            if glyph is None or not (glyph.width and glyph.height):
+                thin.append("%s:%s" % (family, ch))
+    check(not thin, "every family draws the whole character set (%s)"
+          % (thin[:8] or "all %d of them" % len(families),))
+
+    # A monospaced family is only worth having while every cell is the same
+    # width -- including the glyphs it had to borrow from somewhere else.
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "mkfont", os.path.join(ROOT, "tools", "mkfont.py"))
+    try:
+        mkfont = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mkfont)
+    except ImportError:
+        mkfont = None            # Pillow or fontTools missing: build-time only
+    if mkfont is not None:
+        wobbly = []
+        for family in sorted(mkfont.MONOSPACED):
+            if family not in families:
+                continue
+            for size in (12, 24, 48):
+                font = fonts.get(family, size)
+                widths = {font.glyph(c).advance for c in mkfont.charset()
+                          if font.glyph(c) is not None}
+                if len(widths) != 1:
+                    wobbly.append("%s@%d:%s" % (family, size, sorted(widths)))
+        check(not wobbly, "every monospaced family keeps one cell width (%s)"
+              % (wobbly[:4] or "all %d of them" % len(mkfont.MONOSPACED),))
+        proportional = fonts.get("sans", 24)
+        spread = {proportional.glyph(c).advance for c in mkfont.charset()
+                  if proportional.glyph(c) is not None}
+        check(len(spread) > 1, "and the proportional ones stay proportional")
+
+    # A bundled face without its licence beside it may not be redistributed.
+    directory = os.path.join(ROOT, "resources", "fonts")
+    licences = [n for n in os.listdir(directory) if n.startswith("LICENSE-")]
+    check(len(licences) >= 17,
+          "every bundled face ships its licence (%d files)" % len(licences))
+
+    for family in ("inter", "condensed", "oswald", "bebas", "jetbrains",
+                   "sourcecode", "robotomono", "firamono", "plexmono",
+                   "inconsolata", "spacemono", "sharetech", "courierprime"):
+        check(family in families, "the %s family is bundled" % family)
+
 
 def test_images():
     print("images")

@@ -290,9 +290,28 @@ layout accent, or a name: `black`, `white`, `red`, `green`, `blue`, `cyan`,
 `lime`, `teal`, `brown`, `navy`, `gold`, `kodiblue`, `transparent`. Colours may
 contain tokens.
 
-**Fonts** are `sans`, `sans-bold`, `mono`, `mono-bold` at any pixel size; sizes
-that are not bundled are resampled from the nearest one. Extra `.l4f` fonts go
-in a `fonts` folder next to `layouts` (build them with `tools/mkfont.py`).
+**Fonts** work at any pixel size; a size that is not bundled is resampled from
+the nearest one. Extra `.l4f` fonts go in a `fonts` folder next to `layouts`
+(build them with `tools/mkfont.py`).
+
+| Kind | Families |
+|---|---|
+| Text | `sans`, `sans-bold` · `inter`, `inter-bold` · `roboto`, `roboto-bold` |
+| Narrow | `condensed`, `condensed-bold` · `oswald`, `oswald-bold` |
+| Display | `bebas` · `anton` · `michroma` |
+| Monospace | `mono`, `mono-bold` · `jetbrains`, `jetbrains-bold` · `sourcecode`, `sourcecode-bold` · `robotomono`, `robotomono-bold` · `firamono`, `firamono-bold` · `plexmono`, `plexmono-bold` · `inconsolata`, `inconsolata-bold` · `spacemono` · `sharetech` · `courierprime` |
+
+`bold: true` appends `-bold` to whatever family is set, and a family without a
+bold weight simply stays as it is. The display faces start at 20 px: below
+that they are unreadable, so no smaller sizes are built and the renderer
+resamples if a layout asks anyway.
+
+Every family draws the same characters — ASCII, Latin-1, Latin Extended-A and
+the punctuation and media signs the layouts use. Most faces stop short of
+that on their own, so `tools/mkfont.py` fills the gaps from DejaVu and Noto's
+symbol font while it rasterises. A monospaced family borrows only from
+monospaced sources and keeps one cell width throughout, so a column of
+figures still lines up when it contains a `⏵` or a `♪`.
 
 ### Widgets
 
