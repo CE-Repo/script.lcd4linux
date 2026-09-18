@@ -877,6 +877,35 @@ def test_fonts():
                    "inconsolata", "spacemono", "sharetech", "courierprime"):
         check(family in families, "the %s family is bundled" % family)
 
+    # -- the samples the editor's font dialog shows -----------------------
+    # A browser cannot draw a bitmap font, so the add-on rasterises a line
+    # of it into a coverage map and sends that as a picture.
+    from lcd4linux import bmfont
+    sample = fonts.get("sans", 24)
+    width, height, mask = bmfont.text_mask(sample, "Hamburgefons 123")
+    check(width >= sample.measure("Hamburgefons 123")
+          and height >= sample.ascent + sample.descent,
+          "a font sample is as big as the text it draws (%dx%d)"
+          % (width, height))
+    check(len(mask) == width * height and max(mask) == 255 and min(mask) == 0,
+          "and covers some of its pixels fully and some not at all")
+    empty_width, empty_height, empty = bmfont.text_mask(sample, "")
+    check(not any(empty) and len(empty) == empty_width * empty_height,
+          "empty text draws an empty sample")
+    # Every family has to survive being asked for a sample: a face missing
+    # a glyph used to be found only once a layout showed it.
+    broken = []
+    for family in families:
+        try:
+            got = bmfont.text_mask(fonts.get(family, 20),
+                                   u"Hamburgefons 123 ÄÖÜ")
+            if not any(got[2]):
+                broken.append(family)
+        except Exception as error:               # noqa: BLE001 - reported
+            broken.append("%s (%s)" % (family, error))
+    check(not broken, "every bundled family draws a sample (%s)"
+          % (broken or "all %d of them" % len(families),))
+
 
 def test_images():
     print("images")
@@ -2223,6 +2252,38 @@ def test_web_editor():
           % (unknown or "none",))
     check(sorted(webschema.PALETTE) == sorted(webschema.WIDGET_FIELDS),
           "the palette lists every described widget")
+
+    # -- the font dialog needs a picture per family -----------------------
+    editor = webui.WebEditor(Config())
+    described = editor.schema()
+    families = dict((entry["name"], entry) for entry in described["fontinfo"])
+    check(sorted(families) == sorted(described["fonts"]),
+          "the schema describes every family it offers")
+    check(families["sans"]["sizes"] and families["sans"]["bold"]
+          and not families["sans-bold"]["bold"],
+          "and says which sizes it ships and where a bold cut exists")
+    png = editor.font_sample({"font": "bebas", "size": "28",
+                              "text": "Hamburgefons"})
+    check(png[:8] == b"\x89PNG\r\n\x1a\n", "a font sample comes back as a PNG")
+    width, height = _png_size(png)
+    check(width > 60 and 20 < height < 60,
+          "sized to the line it drew (%dx%d)" % (width, height))
+    check(png[25] == 6, "with an alpha channel, so it sits on any background")
+    bold = editor.font_sample({"font": "sans", "size": "28", "bold": "1",
+                              "text": "Hamburgefons"})
+    check(_png_size(bold) != _png_size(
+        editor.font_sample({"font": "sans", "size": "28",
+                            "text": "Hamburgefons"})),
+          "asking for bold draws the bold cut")
+    # Whatever the browser sends, the sample stays a sample.
+    huge = editor.font_sample({"font": "sans", "size": "999",
+                               "text": "x" * 400})
+    check(_png_size(huge)[0] <= editor.SAMPLE_WIDTH
+          and _png_size(huge)[1] < 200,
+          "an absurd request is cut down to a line (%dx%d)" % _png_size(huge))
+    check(editor.font_sample({"font": "no-such-family"})[:8]
+          == b"\x89PNG\r\n\x1a\n",
+          "an unknown family falls back the way the renderer does")
 
     # The ready made {...} groups are taught to users, so they have to be
     # true: one that renders nothing would teach the syntax wrongly.

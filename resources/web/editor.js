@@ -82,6 +82,14 @@ const TEXTS = {
     icondownloadoff: 'Herunterladen ist in den Einstellungen abgeschaltet.',
     iconlicence: 'Font Awesome Free · Symbole unter CC BY 4.0',
     iconbuiltinhint: 'Immer verfügbar, ohne Netz und ohne Cache.',
+    fonttitle: 'Schrift wählen', fontsearch: 'Schrift suchen',
+    fontpick: 'Schriften vergleichen', fontsample: 'Probetext',
+    fontsize: 'Probegröße', fontbold: 'Fett',
+    fontfound: '%s Schriften', fontnone: 'Keine Schrift gefunden',
+    fontsizes: 'Größen: %s', fontscaled: 'andere Größen werden skaliert',
+    fontsampledefault: 'Hamburgefons 123 ÄÖÜ',
+    fonthint: 'Die Proben zeichnet das Add-on mit derselben Schrift, die'
+      + ' später auf dem Display steht.',
   },
   en: {
     kit: 'Layout kit', open: 'Open', new: 'New', save: 'Save',
@@ -156,6 +164,14 @@ const TEXTS = {
     icondownloadoff: 'Downloading is switched off in the settings.',
     iconlicence: 'Font Awesome Free · icons under CC BY 4.0',
     iconbuiltinhint: 'Always there, with no network and no cache.',
+    fonttitle: 'Choose a font', fontsearch: 'Search fonts',
+    fontpick: 'Compare the fonts', fontsample: 'Sample text',
+    fontsize: 'Sample size', fontbold: 'Bold',
+    fontfound: '%s fonts', fontnone: 'No font found',
+    fontsizes: 'Sizes: %s', fontscaled: 'other sizes are scaled',
+    fontsampledefault: 'Hamburgefons 123 ÄÖÜ',
+    fonthint: 'The samples are drawn by the add-on with the very font that'
+      + ' will end up on the display.',
   },
 };
 
@@ -1268,6 +1284,9 @@ function commit(targets, key, value, live) {
   });
   drawLayers();
   drawCanvas();
+  // The font sample is drawn at the element's own size, weight and colour,
+  // so those have to redraw it - the panel itself is not rebuilt.
+  if (['size', 'bold', 'text'].includes(key)) refreshFontPreviews();
   schedulePreview(live ? LIVE_PREVIEW : STEP_PREVIEW);
 }
 
@@ -1316,15 +1335,36 @@ function buildField(field, targets) {
         drawIconPreview(preview, '');
       },
     }));
-  } else if (field.type === 'select' || field.type === 'font') {
-    const options = field.type === 'select'
-      ? field.options.map((option) => ({ value: option.value, text: label(option) }))
-      : S.schema.fonts.map((name) => ({ value: name, text: name }));
+  } else if (field.type === 'font') {
+    // The families are bitmap fonts, so the list can only give their
+    // names; what they look like has to be drawn by the add-on, which is
+    // what the sample under the row and the dialog behind "Aa" show.
+    const picked = () => (select.value || fontFallback(targets));
+    const select = el('select', {
+      onchange: (event) => { setter(event.target.value); update(); },
+    }, [el('option', { value: '', text: '—', selected: value === undefined })]
+      .concat(S.schema.fonts.map((name) => el('option', {
+        value: name, text: name, selected: String(value) === name,
+      }))));
+    const sample = el('img', { class: 'font-sample', alt: '' });
+    const update = () => { sample.src = fontSampleURL(picked(), fontSample(targets)); };
+    control.append(select, el('button', {
+      class: 'icon-btn', title: t('fontpick'), text: 'Aa',
+      onclick: () => openFontPicker(picked(), targets, (name) => {
+        select.value = name;
+        setter(name);
+        update();
+      }),
+    }));
+    row.appendChild(sample);
+    fontPreviews.push({ node: sample, update });
+    update();
+  } else if (field.type === 'select') {
     control.appendChild(el('select', {
       onchange: (event) => setter(event.target.value),
     }, [el('option', { value: '', text: '—', selected: value === undefined })]
-      .concat(options.map((option) => el('option', {
-        value: option.value, text: option.text,
+      .concat(field.options.map((option) => el('option', {
+        value: option.value, text: label(option),
         selected: String(value) === option.value,
       })))));
   } else if (field.type === 'color') {
@@ -1521,6 +1561,132 @@ function openTokenPicker(input, onInsert) {
       el('h3', { class: 'muted', text: t('groups') }),
       el('p', { class: 'hint', text: t('groupshint') }), snippets),
     [el('button', { text: t('cancel'), onclick: closeModal })]);
+}
+
+/* ---------------------------------------------------------- font dialog */
+
+/* Sizes the dialog offers for comparing; the element's own size is added
+ * to them, so it is always in the list. */
+const FONT_SIZES = [12, 16, 20, 24, 32, 48];
+
+/* The samples on the property panel, refreshed when the size, the weight
+ * or the colour they were drawn with changes. */
+let fontPreviews = [];
+
+function refreshFontPreviews() {
+  fontPreviews = fontPreviews.filter((entry) => entry.node.isConnected);
+  fontPreviews.forEach((entry) => entry.update());
+}
+
+const fontFallback = (targets) =>
+  ((targets && targets[0] && targets[0].font)
+    || (S.doc && S.doc.defaults && S.doc.defaults.font) || 'sans');
+
+/* Below this a typeface cannot be told from another, so the dialog opens
+ * at least this big however small the element is.  Its own size is in the
+ * list too, for checking whether the text still reads at 12 pixels. */
+const FONT_COMPARE = 20;
+
+/* How the element being edited would draw the sample: its own size, its
+ * weight and, when it is a literal, its own text.  The colour is not
+ * carried over - a dim grey caption is right on the panel but unreadable
+ * as a sample, and the canvas preview shows the real colour anyway. */
+function fontSample(targets) {
+  const target = (targets && targets[0]) || {};
+  const defaults = (S.doc && S.doc.defaults) || {};
+  const size = Number(target.size || defaults.size || 18) || 18;
+  let text = String(target.text === undefined ? '' : target.text).trim();
+  if (!text || text.includes('${') || text.includes('$LOCALIZE')
+      || text.length > 40) text = '';
+  return {
+    size: Math.max(6, Math.min(96, Math.round(size))),
+    bold: !!target.bold, text,
+  };
+}
+
+function fontSampleURL(family, options) {
+  const query = new URLSearchParams({
+    font: family || 'sans', size: String(options.size),
+  });
+  if (options.bold) query.set('bold', '1');
+  if (options.text) query.set('text', options.text);
+  return `/api/fontsample?${query}`;
+}
+
+function openFontPicker(current, targets, onPick) {
+  const options = fontSample(targets);
+  const families = S.schema.fontinfo
+    || (S.schema.fonts || []).map((name) => ({ name, sizes: [], bold: false }));
+  const list = el('div', { class: 'font-list' });
+  const counter = el('span', { class: 'icon-count' });
+  const search = el('input', {
+    type: 'search', class: 'icon-search', placeholder: t('fontsearch'),
+    spellcheck: 'false',
+  });
+  const text = el('input', {
+    type: 'text', class: 'font-text', spellcheck: 'false',
+    placeholder: t('fontsampledefault'), value: options.text,
+  });
+  const sizes = [...new Set([...FONT_SIZES, options.size])].sort((a, b) => a - b);
+  const opening = Math.max(options.size, FONT_COMPARE);
+  const size = el('select', {}, sizes.map((value) => el('option', {
+    value: String(value), text: `${value} px`, selected: value === opening,
+  })));
+  const bold = el('input', { type: 'checkbox', checked: options.bold });
+
+  function draw() {
+    const shown = {
+      size: Number(size.value) || opening,
+      bold: bold.checked,
+      text: text.value.trim(),
+    };
+    const query = search.value.trim().toLowerCase();
+    const matching = families.filter((entry) => entry.name.includes(query));
+    list.textContent = '';
+    matching.forEach((entry) => {
+      const meta = [];
+      if (entry.sizes.length) meta.push(t('fontsizes', entry.sizes.join(', ')));
+      if (entry.name.endsWith('-bold')) meta.push(t('fontbold'));
+      // A family is only drawn bold when it has a bold cut; asking for one
+      // that does not exist would silently show the regular weight.
+      const wanted = Object.assign({}, shown,
+                                    { bold: shown.bold && entry.bold });
+      list.appendChild(el('button', {
+        class: 'font-row' + (entry.name === current ? ' active' : ''),
+        title: entry.name,
+        onclick: () => { onPick(entry.name); closeModal(); },
+      },
+        el('img', {
+          class: 'font-sample', alt: '', loading: 'lazy',
+          src: fontSampleURL(entry.name, wanted),
+        }),
+        el('span', { class: 'font-name', text: entry.name }),
+        el('span', { class: 'font-meta', text: meta.join(' · ') })));
+    });
+    counter.textContent = t('fontfound', matching.length);
+    if (!matching.length) {
+      list.appendChild(el('p', { class: 'hint', text: t('fontnone') }));
+    }
+  }
+
+  let typing = null;
+  const later = () => { clearTimeout(typing); typing = setTimeout(draw, 200); };
+  search.addEventListener('input', later);
+  text.addEventListener('input', later);
+  size.addEventListener('change', draw);
+  bold.addEventListener('change', draw);
+
+  openModal(t('fonttitle'),
+    el('div', { class: 'font-picker' },
+      el('div', { class: 'icon-bar' }, search,
+        el('label', { class: 'font-opt' }, t('fontsample'), text),
+        el('label', { class: 'font-opt' }, t('fontsize'), size),
+        el('label', { class: 'font-opt' }, t('fontbold'), bold)),
+      list,
+      el('p', { class: 'hint', text: t('fonthint') })),
+    [counter, el('button', { text: t('cancel'), onclick: closeModal })]);
+  draw();
+  search.focus();
 }
 
 /* ---------------------------------------------------------- icon dialog */

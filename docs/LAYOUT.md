@@ -120,6 +120,12 @@ included, and loads nothing from the internet.
 * **Icons**: the *Symbol* field opens a dialog with a search box over the
   built-in shapes and the whole Font Awesome Free set; what you pick is
   cached on the box, so it draws again without a network connection.
+* **Fonts**: under the *Font* row sits a sample drawn in the family that is
+  selected, at the element's size and weight. The **Aa** button next to it
+  opens a dialog that shows all 30 bundled families one under the other, so
+  they can be compared before choosing — with a search box, your own sample
+  text and a size to compare at. The samples are rendered by the add-on
+  itself: the families are bitmap fonts, which no browser can draw.
 * **Move and resize** with the mouse, snapping to the grid. `Alt` disables
   snapping, `Shift` constrains direction, arrow keys nudge by a pixel and with
   `Shift` by ten.

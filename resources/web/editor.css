@@ -319,6 +319,47 @@ h2 {
 
 .sizes { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 14px; }
 
+/* ---------------------------------------------------------- font picker */
+
+/* The sample the add-on draws; a bitmap font has no size the browser could
+   scale to, so it is shown at the pixel size it was rendered at and only
+   shrunk when the panel is too narrow for it. */
+.font-sample {
+  grid-column: 2; display: block; max-width: 100%; height: auto;
+  margin: 3px 0 2px; image-rendering: pixelated;
+}
+
+.font-picker { display: flex; flex-direction: column; gap: 10px; }
+.font-picker .icon-bar { align-items: flex-end; }
+.font-opt {
+  display: flex; flex-direction: column; gap: 2px;
+  font-size: 11px; color: var(--muted);
+}
+.font-opt input[type=text] { width: 190px; }
+.font-opt input[type=checkbox] { align-self: flex-start; height: 24px; }
+.font-text { min-width: 140px; }
+
+.font-list {
+  display: flex; flex-direction: column; gap: 4px;
+  max-height: 54vh; overflow: auto;
+}
+.font-row {
+  display: grid; grid-template-columns: 1fr auto; align-items: center;
+  gap: 2px 10px; background: var(--panel-2); padding: 7px 10px;
+  text-align: left;
+}
+.font-row.active { border-color: var(--accent); }
+.font-row .font-sample {
+  grid-column: 1; grid-row: 1; margin: 0; justify-self: start;
+}
+.font-row .font-name {
+  grid-column: 1; grid-row: 2; font-size: 11.5px; color: var(--accent);
+}
+.font-row .font-meta {
+  grid-column: 2; grid-row: 1 / span 2; font-size: 11px; color: var(--muted);
+  text-align: right;
+}
+
 /* ---------------------------------------------------------- icon picker */
 
 /* The button in front of the icon field: the symbol as it will be drawn,

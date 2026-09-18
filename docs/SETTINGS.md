@@ -120,6 +120,11 @@ and `%(name)s`, for a mirror on the local network.
 | Reachable from | `the whole network`, or `this box only` for a browser on the box itself |
 | Password | empty means no prompt; otherwise any user name plus this password |
 
+The editor draws its own font samples through `GET /api/fontsample`, which
+renders a line of text with the bundled bitmap fonts and answers with a PNG.
+It is part of the editor, so it follows the same password and the same
+`Reachable from` setting.
+
 ## Behaviour
 
 Frame rate while playing and while idle, smooth image scaling, Kodi

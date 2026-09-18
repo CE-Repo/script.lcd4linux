@@ -52,7 +52,9 @@ An AX206 panel should light up immediately. For a Samsung frame, set
   complete JPEGs only, just the changed block rows are re-encoded.
 * **30 bundled fonts** — text, narrow, display and seventeen monospaced
   families, every one of them drawing the same characters, and every
-  monospaced one keeping a single cell width so figures line up.
+  monospaced one keeping a single cell width so figures line up. The editor
+  shows them all side by side as real samples, so a font can be compared
+  before it is picked.
 * **20 bundled layouts**, each in 480×320, 800×480 and 1024×600 plus portrait.
   You pick the name, the add-on picks the size that fits the attached panel.
 * **A layout editor in the browser** at `http://<box>:8050/` — drag elements

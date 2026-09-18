@@ -21,6 +21,7 @@ API
 ``GET  /api/layouts``    every layout the add-on can see
 ``GET  /api/layout``     one layout: ``?file=default.json``
 ``GET  /api/icons``      search Font Awesome: ``?q=heart&style=solid``
+``GET  /api/fontsample`` a line of text drawn in one bundled font, as a PNG
 ``POST /api/icons``      cache upkeep: prefetch or clear
 ``POST /api/layout``     save ``{"file": ..., "spec": {...}}``
 ``POST /api/delete``     remove a layout from the user folder
@@ -45,6 +46,7 @@ from html import escape
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, quote, urlparse
 
+from . import bmfont
 from . import display as display_module
 from . import faicons
 from . import layout as layout_module
@@ -53,6 +55,7 @@ from . import pngio
 from . import tokens
 from . import webschema
 from . import widgets as widget_module
+from .canvas import parse_color
 from .logger import debug, error, log
 from .settings import Config, addon_path, ensure_user_directories
 
@@ -479,6 +482,8 @@ class Handler(BaseHTTPRequestHandler):
                                         self.editor.config))
         elif path == "/api/icons":
             self._send_json(self.editor.icons(query))
+        elif path == "/api/fontsample":
+            self._send(200, self.editor.font_sample(query), "image/png")
         elif path == "/api/blank":
             size = query.get("size", "480x320").lower().split("x")
             width = int(size[0]) if size[0].isdigit() else 480
@@ -751,6 +756,48 @@ class WebEditor(object):
     #: How many icons one request may ask for.  A dialog page is a few
     #: dozen; more than this is a scraper, not a person browsing.
     ICON_LIMIT = 240
+
+    #: What a font sample may ask for.  The editor shows one line per
+    #: family, so this only has to cover a line.
+    SAMPLE_CHARS = 64
+    SAMPLE_WIDTH = 1200
+
+    def font_sample(self, query):
+        """A PNG of one line of text in one of the bundled fonts.
+
+        The families are bitmap fonts, so a browser cannot show what they
+        look like - it gets a picture drawn by the same font renderer that
+        feeds the panel, with a real alpha channel so it sits on whatever
+        the editor puts behind it.
+        """
+        family = str(query.get("font", "") or "sans").strip()[:48]
+        if str(query.get("bold", "")) in ("1", "true", "yes") \
+                and not family.endswith("-bold"):
+            family += "-bold"
+        size = _clamp(query.get("size"), 22, 6, 96)
+        text = str(query.get("text", "") or "")[:self.SAMPLE_CHARS]
+        if not text.strip():
+            text = "Hamburgefons 123"
+        color = parse_color(query.get("color") or "", (230, 235, 245, 255))
+        font = self.preview.fonts.get(family, size)
+        width, height, mask = bmfont.text_mask(font, text)
+        if width > self.SAMPLE_WIDTH:
+            # Too long to be a sample; cut it where the renderer would.
+            text = font.ellipsize(text, self.SAMPLE_WIDTH)
+            width, height, mask = bmfont.text_mask(font, text)
+        red, green, blue = color[0], color[1], color[2]
+        alpha = color[3] if len(color) > 3 else 255
+        pixels = bytearray(width * height * 4)
+        for index, coverage in enumerate(mask):
+            if not coverage:
+                continue
+            base = index * 4
+            pixels[base] = red
+            pixels[base + 1] = green
+            pixels[base + 2] = blue
+            pixels[base + 3] = (coverage if alpha >= 255
+                                else coverage * alpha // 255)
+        return bytes(pngio.encode_rgba(width, height, pixels))
 
     def icons(self, query):
         """Search the Font Awesome catalogue, or fetch named outlines.

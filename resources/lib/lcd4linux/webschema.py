@@ -486,6 +486,21 @@ def describe_icons():
     }
 
 
+def describe_fonts(fonts=None):
+    """Every bundled family with the pixel sizes it ships in.
+
+    The editor cannot draw a bitmap font itself, so its font dialog asks
+    ``/api/fontsample`` for a picture per family; this is the list it walks
+    and what it prints beside each sample.
+    """
+    if fonts is None:
+        return [{"name": "sans", "sizes": [], "bold": False}]
+    available = fonts.available()
+    return [{"name": name, "sizes": sorted(available[name]),
+             "bold": ("%s-bold" % name) in available}
+            for name in sorted(available)]
+
+
 def describe(fonts=None):
     """The whole catalogue, as the editor fetches it from ``/api/schema``."""
     families = sorted(fonts.families()) if fonts is not None else ["sans", "mono"]
@@ -502,6 +517,7 @@ def describe(fonts=None):
         "defaults": DEFAULT_FIELDS,
         "sizes": SIZES,
         "fonts": families,
+        "fontinfo": describe_fonts(fonts),
         "icons": sorted(widget_module.ICONS),
         "faicons": describe_icons(),
         "tokens": [{"id": group["id"], "label": group["label"],
