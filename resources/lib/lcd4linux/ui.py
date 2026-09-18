@@ -138,28 +138,26 @@ def _render_pictures(pictures, todo, entries, available, config):
 def _layout_pictures(entries, available, config):
     """The preview picture of every design, and what is still being drawn.
 
-    The bundled designs ship a picture and the user's own are rendered once
-    and then cached, so most of the time this is twenty path lookups.  When
-    something does have to be rendered it takes seconds per layout, which is
-    far too long to hold the dialog for: the running service is asked to do
-    it in the background and those entries open without a picture, filled in
-    the next time the chooser is opened.  Without a service there is nobody
-    to hand the work to, so it happens here as it always did.
+    The bundled designs are shown with the picture they ship and are never
+    drawn again; only the user's own layouts are, and those whenever the
+    file behind them changed (see :func:`~.thumbs.picture`).  So most of
+    the time this is twenty path lookups.
+
+    When something does have to be drawn it takes seconds per layout, which
+    is far too long to hold the dialog for: the running service is asked to
+    do it in the background and those entries open without a picture,
+    filled in the next time the chooser is opened.  Without a service there
+    is nobody to hand the work to, so it happens here as it always did.
 
     Returns ``(pictures, pending)`` - one picture per entry, ``None`` where
-    there is none yet, and the names being rendered in the background.
+    there is none yet, and the names being drawn in the background.
     """
-    pictures = [thumbs.shipped_path(name) for name, _variants in entries]
-    todo = []
-    for index, picture in enumerate(pictures):
-        if picture is not None:
-            continue
-        name = entries[index][0]
-        picture = thumbs.cached_picture(name, available[name])
-        if picture is None:
+    user_directory = config.user_layout_directory
+    pictures, todo = [], []
+    for index, (name, _variants) in enumerate(entries):
+        pictures.append(thumbs.picture(name, available[name], user_directory))
+        if pictures[index] is None:
             todo.append(index)
-        else:
-            pictures[index] = picture
     if not todo:
         return pictures, []
     missing = [entries[index][0] for index in todo]

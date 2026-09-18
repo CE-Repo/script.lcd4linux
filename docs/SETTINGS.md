@@ -59,11 +59,20 @@ buttons *Preview current layout*, *Show test pattern*, *Display status* and
 *Reload service*.
 
 *Choose layout…* shows a preview image per design without closing the
-settings. Bundled images ship as `resources/thumbs/<design>.png`; layouts from
-your own folder are rendered once on first use and cached in
-`<addon data>/thumbs/`. The three sizes of one design (`default.json`,
-`default-800x480.json`, `default-1024x600.json`) appear as a single entry,
-because loading picks the right one anyway.
+settings. Bundled images ship as `resources/thumbs/<design>.png` and are used
+as they are — they only change when the add-on is updated. Layouts from your
+own folder are drawn from the file, cached in `<addon data>/thumbs/`, and
+drawn again whichever time you edit them. Which rule applies is decided by the
+folder a layout lies in, not by its name.
+
+Drawing a preview takes seconds, so the dialog does not wait for it: the
+running service does it in the background and the entry shows up without a
+picture until then. With the service stopped the chooser draws it itself,
+behind a progress bar.
+
+The three sizes of one design (`default.json`, `default-800x480.json`,
+`default-1024x600.json`) appear as a single entry, because loading picks the
+right one anyway.
 
 ## Layout → Web editor
 

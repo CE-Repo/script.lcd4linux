@@ -1051,6 +1051,7 @@ def test_layout_chooser():
     # done while the dialog is kept closed.
     own = tempfile.mkdtemp()
     shutil.copyfile(available["minimal.json"], os.path.join(own, "mine.json"))
+    config = Config(overrides={"layout": "vinyl.json", "layout_dir": own})
     mixed = discover([directory, own])
     mixed_entries = ui._layout_designs(mixed)
     sent = []
@@ -1091,6 +1092,132 @@ def test_layout_chooser():
         forget()
 
 
+def test_preview_ownership():
+    """Only the user's own layouts are drawn again when they change."""
+    print("preview ownership")
+    import tempfile
+    import time as _time
+    from lcd4linux import thumbs
+
+    bundled = os.path.join(ROOT, "resources", "layouts")
+    own = tempfile.mkdtemp()
+    mine = os.path.join(own, "mine.json")
+    shutil.copyfile(os.path.join(bundled, "minimal.json"), mine)
+    # Named after a bundled design on purpose: a picture is picked by where
+    # the file lies, not by what it is called.
+    lookalike = os.path.join(own, "default-1920x1080.json")
+    shutil.copyfile(os.path.join(bundled, "minimal.json"), lookalike)
+
+    shipped = thumbs.picture("default.json",
+                             os.path.join(bundled, "default.json"), own)
+    check(shipped == thumbs.shipped_path("default.json"),
+          "a bundled design is shown with the picture it ships")
+
+    check(thumbs.picture("default-1920x1080.json", lookalike, own) is None,
+          "the user's own layout does not borrow the bundled picture of "
+          "the design it is named after")
+    check(thumbs.picture("mine.json", mine, own) is None,
+          "a layout of theirs that was never drawn has no picture yet")
+
+    drawn = thumbs.cached_path("mine.json", mine,
+                               [os.path.join(ROOT, "resources", "fonts")])
+    check(drawn and thumbs.picture("mine.json", mine, own) == drawn,
+          "once drawn it is shown from the cache")
+
+    # Freshness is what makes an edit show up.
+    _time.sleep(0.01)
+    os.utime(mine, None)
+    check(thumbs.picture("mine.json", mine, own) is None,
+          "editing it drops the picture, so the chooser draws it again")
+
+    # The bundled ones are never re-read that way, whatever their mtime.
+    os.utime(os.path.join(bundled, "default.json"), None)
+    check(thumbs.picture("default.json",
+                         os.path.join(bundled, "default.json"), own) == shipped,
+          "a bundled design keeps its picture even with a newer file")
+
+    check(not thumbs.is_user_layout(os.path.join(bundled, "default.json"), own)
+          and thumbs.is_user_layout(mine, own),
+          "ownership follows the folder the layout lies in")
+    check(not thumbs.is_user_layout(mine, ""),
+          "with no user folder configured nothing counts as the user's")
+
+
+def test_preview_encoding():
+    """Previews are stored as small as a PNG gets without visible loss."""
+    print("preview encoding")
+    from lcd4linux import pngio
+
+    bulky = []
+    stored_total = plain_total = 0
+    for name in sorted(os.listdir(os.path.join(ROOT, "resources", "thumbs"))):
+        if not name.endswith(".png"):
+            continue
+        path = os.path.join(ROOT, "resources", "thumbs", name)
+        with open(path, "rb") as handle:
+            stored = handle.read()
+        width, height, rgba = pngio.decode(stored)
+        rgb = bytearray(width * height * 3)
+        rgb[0::3] = rgba[0::4]
+        rgb[1::3] = rgba[1::4]
+        rgb[2::3] = rgba[2::4]
+        plain = pngio.encode_rgb(width, height, rgb)
+        stored_total += len(stored)
+        plain_total += len(plain)
+        # Colour type 3 is the palette form; anything else was shipped
+        # without going through the compact encoder.
+        if stored[25] != 3 or len(stored) >= len(plain):
+            bulky.append(name)
+
+    check(not bulky, "every shipped preview is stored in its palette form "
+                     "(%s)" % (bulky or "all 20",))
+    check(stored_total < plain_total,
+          "which saves %d%% over plain RGB (%d -> %d bytes for the set)"
+          % (100 - 100 * stored_total // plain_total, plain_total,
+             stored_total))
+
+    # What that costs is measured against the render itself, not against a
+    # picture that has already been through the palette once.
+    from lcd4linux.kodidata import DemoProvider
+    from lcd4linux.layout import Layout, Renderer
+    from lcd4linux.images import ImageCache
+
+    fonts = FontCache([os.path.join(ROOT, "resources", "fonts")])
+    media = os.path.join(ROOT, "resources", "media")
+    worst = 0.0
+    for design in ("portrait", "cover-full", "default"):
+        provider = DemoProvider(0, 97.0, "playing",
+                                os.path.join(media, "demo-cover.jpg"),
+                                os.path.join(media, "demo-fanart.jpg"))
+        layout = Layout.load(os.path.join(ROOT, "resources", "layouts",
+                                          design + ".json"))
+        canvas = Renderer(layout, provider, fonts, ImageCache()).render()
+        rgb = canvas.to_rgb888()
+        back = pngio.decode(pngio.encode_rgb_compact(canvas.width,
+                                                     canvas.height, rgb))[2]
+        error = sum(abs(back[4 * i + channel] - rgb[3 * i + channel])
+                    for i in range(canvas.width * canvas.height)
+                    for channel in range(3)) / float(canvas.width
+                                                     * canvas.height * 3)
+        worst = max(worst, error)
+    check(worst < 1.0,
+          "and costs at most %.2f of 255 per channel against the render, "
+          "which does not show" % worst)
+
+    # A picture that already fits a palette has to survive untouched.
+    width, height = 8, 4
+    rgb = bytearray()
+    for index in range(width * height):
+        rgb.extend((index * 7 % 256, index * 3 % 256, 40))
+    palette, indices = pngio.quantize(rgb, 256)
+    restored = pngio.decode(pngio.encode_indexed(width, height, palette,
+                                                 indices))[2]
+    exact = all(restored[4 * i + channel] == rgb[3 * i + channel]
+                for i in range(width * height) for channel in range(3))
+    check(len(palette) == width * height and exact,
+          "an image that fits the palette keeps every colour exactly")
+
+
 def test_preview_worker():
     """The service draws the previews the chooser asked it for."""
     print("preview worker")
@@ -1115,8 +1242,7 @@ def test_preview_worker():
     if worker is not None:
         worker.join(120)
         check(not worker.is_alive(), "which finishes on its own")
-    check(thumbs.cached_picture("worker.json",
-                                os.path.join(own, "worker.json")),
+    check(thumbs.cached_picture("worker.json"),
           "the preview the chooser was missing is now cached")
     check(not os.path.exists(thumbs.profile_path("thumbs", "../escape.png")),
           "a name that is not a layout the add-on offers is ignored")
@@ -1998,6 +2124,7 @@ def main():
                  test_samsung_spf, test_late_display, test_brightness,
                  test_localisation,
                  test_settings_xml, test_layout_index, test_layout_chooser,
+                 test_preview_ownership, test_preview_encoding,
                  test_preview_worker,
                  test_power_hooks, test_rotation, test_web_editor,
                  test_network_display,
