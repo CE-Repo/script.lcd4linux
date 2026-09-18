@@ -23,14 +23,7 @@ import re
 import threading
 import time
 
-try:
-    from urllib.error import HTTPError
-    from urllib.request import Request, urlopen
-except ImportError:  # pragma: no cover - Python 2 safety net
-    from urllib2 import HTTPError, Request, urlopen  # type: ignore
-
 from .logger import log, debug
-from .settings import addon_path, profile_path
 
 #: The Font Awesome Free release the bundled index describes.  Change it in
 #: one place and rerun ``tools/mkicons.py``.
@@ -77,7 +70,11 @@ _VIEWBOX = re.compile(r'viewBox\s*=\s*"([^"]*)"')
 _PATH_DATA = re.compile(r'<path\b[^>]*\sd\s*=\s*"([^"]+)"', re.S)
 _EVENODD = re.compile(r'fill-rule\s*=\s*"\s*evenodd\s*"')
 
-INDEX_PATH = addon_path("resources", "icons", "fontawesome.json")
+#: Where the bundled index sits, worked out on first use.  Importing
+#: :mod:`lcd4linux.settings` costs the USB driver behind it, and the
+#: renderer imports this module whether or not it ever draws one of these
+#: icons.
+_index_path = None
 
 _lock = threading.Lock()
 _catalogue = None
@@ -95,6 +92,28 @@ _stopping = False
 _downloads = True
 _download_url = DOWNLOAD_URL
 _cache_root = None
+_http = None
+_state_cache = None
+
+
+def http():
+    """``(Request, urlopen, HTTPError)``, imported on first use.
+
+    The renderer imports this module to draw every frame but only ever
+    downloads on a cache miss, and :mod:`urllib.request` drags
+    :mod:`http.client`, :mod:`email` and :mod:`ssl` in behind it - 20 ms of
+    start-up on a desktop and a good deal more on a box whose add-ons live
+    on an SD card.  So it is loaded when something is actually fetched.
+    """
+    global _http
+    if _http is None:
+        try:
+            from urllib.error import HTTPError
+            from urllib.request import Request, urlopen
+        except ImportError:  # pragma: no cover - Python 2 safety net
+            from urllib2 import HTTPError, Request, urlopen  # type: ignore
+        _http = (Request, urlopen, HTTPError)
+    return _http
 
 
 # ---------------------------------------------------------------------------
@@ -120,10 +139,20 @@ def downloads_enabled():
     return bool(_downloads)
 
 
+def index_path():
+    """The bundled catalogue file."""
+    global _index_path
+    if _index_path is None:
+        from .settings import addon_path
+        _index_path = addon_path("resources", "icons", "fontawesome.json")
+    return _index_path
+
+
 def cache_dir(*parts):
     """The directory cached outlines live in."""
     if _cache_root:
         return os.path.join(_cache_root, *parts)
+    from .settings import profile_path
     return profile_path("icons", *parts)
 
 
@@ -141,6 +170,7 @@ class Catalogue(object):
         self.aliases = dict(data.get("aliases") or {})
         self.entries = {}
         self.order = []
+        self._counts = None
         for entry in data.get("icons") or ():
             if not entry:
                 continue
@@ -165,11 +195,13 @@ class Catalogue(object):
 
     def counts(self):
         """How many icons each style holds."""
-        found = dict((style, 0) for style in self.styles)
-        for styles, _, _ in self.entries.values():
-            for style in styles:
-                found[style] = found.get(style, 0) + 1
-        return found
+        if self._counts is None:
+            found = dict((style, 0) for style in self.styles)
+            for styles, _, _ in self.entries.values():
+                for style in styles:
+                    found[style] = found.get(style, 0) + 1
+            self._counts = found
+        return self._counts
 
     def canonical(self, name):
         """Resolve an alias (a name from an older release) to today's name."""
@@ -199,16 +231,16 @@ class Catalogue(object):
         name first, then the label, then the search words Font Awesome ships
         with the icon.
         """
-        words = [word for word in re.split(r"[\s,]+", str(query or "").lower())
-                 if word]
+        words = [(word, " " + word) for word
+                 in re.split(r"[\s,]+", str(query or "").lower()) if word]
         found = []
         for name in self.order:
             styles, label, terms = self.entries[name]
             if style and style not in styles:
                 continue
             score = 0
-            for word in words:
-                rank = _rank(word, name, label, terms)
+            for word, spaced in words:
+                rank = _rank(word, name, label, terms, spaced)
                 if rank is None:
                     score = None
                     break
@@ -226,8 +258,14 @@ class Catalogue(object):
         return total, [(name, best, label) for _, name, best, label in window]
 
 
-def _rank(word, name, label, terms):
-    """How well one search word fits an icon; ``None`` when it does not."""
+def _rank(word, name, label, terms, spaced):
+    """How well one search word fits an icon; ``None`` when it does not.
+
+    Called once per word per icon - two thousand times for every keystroke
+    in the dialog - so it is plain string work.  ``spaced`` is ``" " +
+    word`` handed in ready made, which is what turns "does any search term
+    start with this word" into one substring search.
+    """
     if name == word:
         return 0
     if name.startswith(word):
@@ -239,7 +277,10 @@ def _rank(word, name, label, terms):
         return 3
     if word in lowered:
         return 4
-    if re.search(r"(?:^|[\s-])%s" % re.escape(word), terms):
+    # The index stores the terms as single words joined by spaces, so a
+    # term beginning with the word is either the first one or preceded by
+    # a space.
+    if terms.startswith(word) or spaced in terms:
         return 5
     if word in terms:
         return 6
@@ -253,11 +294,12 @@ def catalogue():
         if _catalogue is not None:
             return _catalogue
     data = {}
+    path = index_path()
     try:
-        with open(INDEX_PATH, "r", encoding="utf-8") as handle:
+        with open(path, "r", encoding="utf-8") as handle:
             data = json.load(handle)
     except (IOError, OSError) as error:
-        log("no Font Awesome index at %s (%s)" % (INDEX_PATH, error))
+        log("no Font Awesome index at %s (%s)" % (path, error))
     except ValueError as error:
         log("cannot read the Font Awesome index: %s" % error)
     loaded = Catalogue(data)
@@ -426,6 +468,7 @@ def read_cached(style, name):
 
 def write_cached(outline):
     """Store an outline so it is there the next time, network or not."""
+    global _state_cache
     path = cached_file(outline.style, outline.name)
     directory = os.path.dirname(path)
     try:
@@ -442,6 +485,7 @@ def write_cached(outline):
         if os.path.exists(path):
             os.remove(path)
         os.rename(temporary, path)
+        _state_cache = None
         return True
     except (IOError, OSError) as error:
         log("cannot cache icon %s: %s" % (outline.key, error))
@@ -463,6 +507,7 @@ def download(style, name):
         # where it came from.
         return None
     url = _download_url % {"version": VERSION, "style": style, "name": name}
+    Request, urlopen, HTTPError = http()
     try:
         request = Request(url, headers={
             "User-Agent": "script.lcd4linux (Kodi add-on)",
@@ -527,6 +572,7 @@ def fetch_style(style, progress=None):
     if not _downloads or not sprites_available():
         return 0, 0
     url = SPRITE_URL % {"version": VERSION, "style": style}
+    Request, urlopen, _ = http()
     try:
         request = Request(url, headers={
             "User-Agent": "script.lcd4linux (Kodi add-on)",
@@ -711,8 +757,18 @@ def drain(timeout=30.0):
 # cache maintenance
 # ---------------------------------------------------------------------------
 
-def cache_state():
-    """``{count, bytes, directory, version}`` describing the icon cache."""
+def cache_state(max_age=2.0):
+    """``{count, bytes, directory, version}`` describing the icon cache.
+
+    Counting means a stat per cached file - two thousand of them once the
+    whole set is there - and the editor asks for it with every search, so
+    the answer is held for a moment.  Writing to or emptying the cache
+    drops it again, and ``max_age=0`` forces a fresh count.
+    """
+    global _state_cache
+    snapshot = _state_cache
+    if snapshot is not None and max_age and time.time() - snapshot[0] < max_age:
+        return dict(snapshot[1])
     root = cache_dir()
     count = 0
     size = 0
@@ -731,10 +787,12 @@ def cache_state():
             except (IOError, OSError):
                 pass
     book = catalogue()
-    return {"count": count, "bytes": size, "directory": root,
-            "version": VERSION, "total": book.count,
-            "variants": sum(book.counts().values()),
-            "downloads": bool(_downloads)}
+    found = {"count": count, "bytes": size, "directory": root,
+             "version": VERSION, "total": book.count,
+             "variants": sum(book.counts().values()),
+             "downloads": bool(_downloads)}
+    _state_cache = (time.time(), found)
+    return dict(found)
 
 
 def clear_cache():
@@ -751,6 +809,8 @@ def clear_cache():
             if entry.endswith(".json") or entry.endswith(".tmp"):
                 _remove(os.path.join(directory, entry))
                 removed += 1
+    global _state_cache
+    _state_cache = None
     with _lock:
         _outlines.clear()
         _misses.clear()

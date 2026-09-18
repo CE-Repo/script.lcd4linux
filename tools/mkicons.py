@@ -172,7 +172,7 @@ def main(argv=None):
                         help="Font Awesome Free release to index")
     parser.add_argument("--metadata",
                         help="read icons.yml from this file instead of the CDN")
-    parser.add_argument("--output", default=faicons.INDEX_PATH,
+    parser.add_argument("--output", default=faicons.index_path(),
                         help="where to write the index")
     parser.add_argument("--indent", type=int, default=0,
                         help="pretty print the JSON with this indent")

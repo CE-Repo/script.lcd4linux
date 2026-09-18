@@ -1993,6 +1993,7 @@ def test_icons():
     print("icons")
     import json
     import shutil
+    import subprocess
     import tempfile
     from lcd4linux import faicons, images, svgpath, webschema, widgets
     from lcd4linux.settings import Config
@@ -2064,6 +2065,29 @@ def test_icons():
               "%r names the outlined heart" % spelling)
     check(faicons.split_name("facebook")[1] == "facebook",
           "a name starting with 'fa' is not mistaken for a prefix")
+    # The search words Font Awesome ships are what makes a name findable
+    # without knowing it; this is the path that does not touch the name.
+    check("0" in [name for name, _, _ in book.search("nada", limit=5)[1]],
+          "an icon is found by a word only its search terms hold")
+    check(not book.search("nada", limit=5)[1][0][0].startswith("nada"),
+          "and that word does not have to appear in the name")
+
+    # The renderer imports this module for every frame but only downloads
+    # on a cache miss.  urllib drags http.client, email and ssl in with it
+    # and settings drags the USB driver, so neither may be loaded just by
+    # importing the widgets - it is start-up time on the box, every boot.
+    if getattr(sys, "executable", ""):
+        probe = subprocess.run(
+            [sys.executable, "-c",
+             "import sys; sys.path.insert(0, %r);"
+             " from lcd4linux import widgets;"
+             " print([n for n in ('urllib.request', 'ssl', 'http.client',"
+             " 'lcd4linux.settings') if n in sys.modules])"
+             % os.path.join(ROOT, "resources", "lib")],
+            capture_output=True, text=True)
+        check(probe.stdout.strip() == "[]",
+              "importing the renderer stays light (%s)"
+              % (probe.stdout.strip() or probe.stderr.strip()[-80:],))
 
     # -- reading an SVG and a sprite sheet -------------------------------
     outline = faicons.parse_svg(
