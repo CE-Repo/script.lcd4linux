@@ -1873,6 +1873,29 @@ def test_web_editor():
     check(sorted(webschema.PALETTE) == sorted(webschema.WIDGET_FIELDS),
           "the palette lists every described widget")
 
+    # -- the picture has to follow the keyboard ---------------------------
+    # A field that only commits on "change" keeps its change invisible until
+    # the cursor is put somewhere else, which reads as a broken editor.
+    editor_source = _read_text(os.path.join(ROOT, "resources", "web",
+                                            "editor.js"))
+    build = editor_source.split("function buildField(", 1)[-1]
+    build = build.split("\nfunction ", 1)[0]
+    late = []
+    for branch in re.split(r"\n  \} else (?:if [^\n]*)?\{", build):
+        head = branch.strip().splitlines()[0]
+        typed = ("type: 'text'" in branch or "type: 'number'" in branch
+                 or "'textarea'" in branch)
+        if typed and "liveControl(" not in branch and "oninput" not in branch:
+            late.append(head)
+    check(not late, "every typed-in field commits while it is typed (%s)"
+          % (late or "all of them",))
+    check("function liveControl" in editor_source
+          and "oninput: (event) => read(event.target, true)" in editor_source,
+          "typing a value redraws the preview without leaving the field")
+    drag = editor_source.split("function beginDrag(", 1)[-1].split("\nfunction ", 1)[0]
+    check("apply();\n    schedulePreview(" in drag,
+          "dragging a box moves the preview before the button comes up")
+
     # -- a layout the editor offers must be one the renderer accepts ------
     for kind, preset in sorted(webschema.NEW_WIDGET.items()):
         spec = webschema.blank_layout()

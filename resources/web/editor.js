@@ -266,6 +266,12 @@ function widgetTitle(spec, index) {
 
 let previewTimer = null;
 
+/* Waiting for a field to be left before the picture moves feels broken, so
+ * live edits redraw after the shortest pause that still folds a burst of
+ * keystrokes into a single render. */
+const LIVE_PREVIEW = 120;
+const STEP_PREVIEW = 60;
+
 function schedulePreview(delay = 260) {
   clearTimeout(previewTimer);
   previewTimer = setTimeout(renderPreview, delay);
@@ -445,10 +451,24 @@ function beginDrag(event, index) {
   let moved = false;
   let box = Object.assign({}, start);
 
+  /* Writes the dragged box back into the layout, so the rendered preview can
+   * follow the mouse instead of waiting for the button to come up. */
+  function apply() {
+    spec.x = box.x;
+    spec.y = box.y;
+    if (dir || spec.w !== undefined || spec.width !== undefined) {
+      delete spec.width;
+      delete spec.height;
+      spec.w = box.w;
+      spec.h = box.h;
+    }
+  }
+
   function move(motion) {
     let dx = Math.round((motion.clientX - originX) / zoom);
     let dy = Math.round((motion.clientY - originY) / zoom);
     if (!moved && Math.abs(dx) + Math.abs(dy) < 2) return;
+    if (!moved) snapshot();  // one undo step for the whole drag
     moved = true;
     box = Object.assign({}, start);
     if (!dir) {
@@ -480,6 +500,8 @@ function beginDrag(event, index) {
       `${spec.type || 'text'} · ${box.x},${box.y} ${box.w}×${box.h}`;
     showGuides(box);
     $('hover-info').textContent = `x ${box.x}  y ${box.y}  ${box.w} × ${box.h}`;
+    apply();
+    schedulePreview(LIVE_PREVIEW);
   }
 
   function finish() {
@@ -487,18 +509,10 @@ function beginDrag(event, index) {
     window.removeEventListener('pointerup', finish);
     $('guides').textContent = '';
     if (!moved) return;
-    snapshot();
-    spec.x = box.x;
-    spec.y = box.y;
-    if (dir || spec.w !== undefined || spec.width !== undefined) {
-      delete spec.width;
-      delete spec.height;
-      spec.w = box.w;
-      spec.h = box.h;
-    }
+    apply();
     drawLayers();
     drawInspector('widget');
-    schedulePreview(80);
+    schedulePreview(STEP_PREVIEW);
   }
 
   window.addEventListener('pointermove', move);
@@ -612,12 +626,49 @@ function align(mode) {
   schedulePreview(80);
 }
 
+/* --------------------------------------------------------- live editing */
+
+/* Text controls commit on every keystroke, so the preview follows the
+ * keyboard instead of waiting for the field to be left.  A snapshot per
+ * keystroke would bury the undo stack, so the first keystroke of a run takes
+ * one and the rest of the run rides on it; leaving the field, touching
+ * another one or a short pause closes the run. */
+const RUN_IDLE = 900;
+
+let editRun = null;
+let editRunTimer = null;
+
+/* True when the caller still owes this change an undo snapshot. */
+function startEdit(target, key, live) {
+  clearTimeout(editRunTimer);
+  if (!live) { editRun = null; return true; }
+  editRunTimer = setTimeout(endEdit, RUN_IDLE);
+  if (editRun && editRun.target === target && editRun.key === key) return false;
+  editRun = { target, key };
+  return true;
+}
+
+function endEdit() {
+  clearTimeout(editRunTimer);
+  editRun = null;
+}
+
+/* Both events on one control: `input` moves the layout right away, `change`
+ * (the field being left) only closes the undo step. */
+function liveControl(read) {
+  return {
+    oninput: (event) => read(event.target, true),
+    onchange: (event) => { read(event.target, false); endEdit(); },
+  };
+}
+
 /* ----------------------------------------------------------- inspector */
 
 let inspectorTab = 'widget';
 
 function drawInspector(tab) {
   if (tab) inspectorTab = tab;
+  endEdit();  // the controls of the running edit are about to be replaced
   document.querySelectorAll('#inspector-tabs button').forEach((button) => {
     button.classList.toggle('active', button.dataset.tab === inspectorTab);
   });
@@ -682,20 +733,25 @@ function drawPageInspector(panel) {
 
 function drawLayoutInspector(panel) {
   const [width, height] = canvasSize();
+
+  /* The other side of the size is read when the key is pressed, not when the
+   * field was built: a live edit leaves the inspector standing, so the value
+   * captured here would be a stale one by the second field. */
+  const sizeField = (name, current, apply) => {
+    const input = el('input', Object.assign({
+      type: 'number', value: current, min: 16, max: 4096,
+    }, liveControl((node, live) => apply(parseInt(node.value, 10), live))));
+    return el('div', { class: 'field' },
+      el('label', { text: t(name) }),
+      el('div', { class: 'control' }, input));
+  };
+
   const sizeGroup = el('div', { class: 'group' },
     el('h3', { text: t('size') }),
-    el('div', { class: 'field' },
-      el('label', { text: t('width') }),
-      el('div', { class: 'control' }, el('input', {
-        type: 'number', value: width, min: 16, max: 4096,
-        onchange: (event) => setSize(parseInt(event.target.value, 10), height),
-      }))),
-    el('div', { class: 'field' },
-      el('label', { text: t('height') }),
-      el('div', { class: 'control' }, el('input', {
-        type: 'number', value: height, min: 16, max: 4096,
-        onchange: (event) => setSize(width, parseInt(event.target.value, 10)),
-      }))),
+    sizeField('width', width,
+              (value, live) => setSize(value, canvasSize()[1], live)),
+    sizeField('height', height,
+              (value, live) => setSize(canvasSize()[0], value, live)),
     el('div', { class: 'sizes' }, S.schema.sizes.map((entry) => el('button', {
       text: entry.label,
       onclick: () => setSize(entry.size[0], entry.size[1]),
@@ -707,12 +763,26 @@ function drawLayoutInspector(panel) {
   panel.appendChild(fieldGroup(t('defaults'), S.schema.defaults, S.doc.defaults));
 }
 
-function setSize(width, height) {
+function setSize(width, height, live) {
   if (!width || !height) return;
-  snapshot();
-  S.doc.size = [Math.max(16, Math.min(4096, width)),
+  // A size still being typed ("4" on the way to "480") would be clamped to
+  // the smallest display and jump the canvas about, so live edits wait for a
+  // number that makes sense.
+  if (live && (width < 16 || height < 16 || width > 4096 || height > 4096)) return;
+  const size = [Math.max(16, Math.min(4096, width)),
                 Math.max(16, Math.min(4096, height))];
-  drawAll();
+  const current = canvasSize();
+  // Leaving the field repeats the size the keystrokes already applied, and
+  // rebuilding the inspector then would pull the next field out from under
+  // the click that is landing on it.
+  if (size[0] === current[0] && size[1] === current[1]) return;
+  if (startEdit(S.doc, 'size', live)) snapshot();
+  S.doc.size = size;
+  if (!live) { drawAll(); return; }
+  // Redrawing the inspector would pull the field out from under the cursor.
+  markDirty(true);
+  drawCanvas();
+  schedulePreview(LIVE_PREVIEW);
 }
 
 function fieldGroup(title, fields, target) {
@@ -721,13 +791,17 @@ function fieldGroup(title, fields, target) {
   return group;
 }
 
-function commit(target, key, value) {
-  snapshot();
-  if (value === '' || value === undefined || value === null) delete target[key];
+function commit(target, key, value, live) {
+  const blank = value === '' || value === undefined || value === null;
+  // Leaving a field repeats the value its keystrokes already applied; redoing
+  // the work would cost another render for nothing.
+  if (blank ? !(key in target) : target[key] === value) return;
+  if (startEdit(target, key, live)) snapshot();
+  if (blank) delete target[key];
   else target[key] = value;
   drawLayers();
   drawCanvas();
-  schedulePreview();
+  schedulePreview(live ? LIVE_PREVIEW : STEP_PREVIEW);
 }
 
 function buildField(field, target) {
@@ -736,7 +810,7 @@ function buildField(field, target) {
   const row = el('div', { class: 'field' + (field.multiline ? ' wide' : '') },
     el('label', { text: label(field) }), control);
 
-  const setter = (raw) => commit(target, field.key, raw);
+  const setter = (raw, live) => commit(target, field.key, raw, live);
 
   if (field.type === 'bool') {
     control.appendChild(el('input', {
@@ -756,42 +830,41 @@ function buildField(field, target) {
         selected: String(value) === option.value,
       })))));
   } else if (field.type === 'color') {
-    const text = el('input', {
+    const text = el('input', Object.assign({
       type: 'text', value: value === undefined ? '' : value,
       placeholder: '#rrggbb', spellcheck: 'false',
-      onchange: (event) => setter(event.target.value.trim()),
-    });
+    }, liveControl((node, live) => setter(node.value.trim(), live))));
     const picker = el('input', {
       type: 'color', value: toHexColor(value),
-      oninput: (event) => { text.value = event.target.value; },
-      onchange: (event) => setter(event.target.value),
+      // Dragging in the colour wheel paints the preview as it goes.
+      oninput: (event) => {
+        text.value = event.target.value;
+        setter(event.target.value, true);
+      },
+      onchange: (event) => { setter(event.target.value, false); endEdit(); },
     });
     control.append(text, picker, el('button', {
       class: 'icon-btn', title: t('clear'), text: '✕',
-      onclick: () => setter(''),
+      onclick: () => { text.value = ''; setter(''); },
     }));
   } else if (field.type === 'token') {
+    const wiring = liveControl((node, live) => setter(node.value, live));
     const input = field.multiline
-      ? el('textarea', {
-        spellcheck: 'false',
-        onchange: (event) => setter(event.target.value),
-      })
-      : el('input', {
+      ? el('textarea', Object.assign({ spellcheck: 'false' }, wiring))
+      : el('input', Object.assign({
         type: 'text', spellcheck: 'false',
         value: value === undefined ? '' : value,
-        onchange: (event) => setter(event.target.value),
-      });
+      }, wiring));
     if (field.multiline) input.value = value === undefined ? '' : value;
     control.append(input, el('button', {
       class: 'icon-btn', title: t('tokentitle'), text: '${}',
       onclick: () => openTokenPicker(input, () => setter(input.value)),
     }));
   } else if (field.type === 'condition') {
-    const input = el('input', {
+    const input = el('input', Object.assign({
       type: 'text', spellcheck: 'false',
       value: value === undefined ? '' : value,
-      onchange: (event) => setter(event.target.value.trim()),
-    });
+    }, liveControl((node, live) => setter(node.value.trim(), live))));
     const presets = el('select', {
       onchange: (event) => {
         input.value = event.target.value;
@@ -804,24 +877,22 @@ function buildField(field, target) {
       }))));
     control.append(input, presets);
   } else if (field.type === 'number') {
-    control.appendChild(el('input', {
+    control.appendChild(el('input', Object.assign({
       type: 'number',
       value: value === undefined ? '' : value,
       min: field.min, max: field.max, step: field.step || 1,
-      onchange: (event) => setter(event.target.value === ''
-        ? '' : Number(event.target.value)),
-    }));
+    }, liveControl((node, live) =>
+      setter(node.value === '' ? '' : Number(node.value), live)))));
   } else {  // text and length
-    control.appendChild(el('input', {
+    control.appendChild(el('input', Object.assign({
       type: 'text', spellcheck: 'false',
       value: value === undefined ? '' : value,
-      onchange: (event) => {
-        const raw = event.target.value.trim();
-        const asNumber = Number(raw);
-        setter(field.type === 'length' && raw !== '' && !Number.isNaN(asNumber)
-          ? asNumber : raw);
-      },
-    }));
+    }, liveControl((node, live) => {
+      const raw = node.value.trim();
+      const asNumber = Number(raw);
+      setter(field.type === 'length' && raw !== '' && !Number.isNaN(asNumber)
+        ? asNumber : raw, live);
+    }))));
   }
 
   const note = hint(field);

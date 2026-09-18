@@ -122,7 +122,10 @@ included, and loads nothing from the internet.
   filters, inserted at the cursor.
 * **Preview**: the add-on renders each change itself, so you see exactly what
   the panel will show — switchable between music, video, paused, idle and, on
-  the box, live data.
+  the box, live data. It follows the keyboard: a value is on the picture while
+  it is still being typed, and a box is dragged with the preview underneath
+  it, so nothing has to be clicked away first. Undo steps back over a whole
+  word or a whole drag, not over single keystrokes.
 * **Save** writes to your layout folder; *To the display* applies it at once.
 * Undo/redo (`Ctrl+Z` / `Ctrl+Y`), duplicate (`Ctrl+D`), save (`Ctrl+S`),
   delete (`Del`), alignment buttons, and a JSON view for the finishing touches.
