@@ -254,6 +254,39 @@ class Renderer(object):
         return context.color(text)
 
 
+def read_info(path):
+    """Name, size and page count of a layout, without building it.
+
+    The chooser and the web editor list every layout the add-on can see, but
+    all they show is those three fields.  Going through :meth:`Layout.load`
+    for that parses the JSON *and* constructs every page and widget object,
+    which is most of the work and none of the benefit; on a set top box with
+    sixty layout files it is what kept the dialog closed for a while.
+
+    The name is returned as it stands in the file, ``$LOCALIZE[...]`` and
+    all: it is cached, and the translation has to follow Kodi's language
+    rather than the language the cache was written in.
+    """
+    with open(path, "r", encoding="utf-8-sig") as handle:
+        spec = _parse_json(handle.read(), path)
+    if not isinstance(spec, dict):
+        raise ValueError("%s: a layout must be a JSON object" % path)
+    size = spec.get("size") or DEFAULT_SIZE
+    try:
+        width, height = int(size[0]), int(size[1])
+    except (TypeError, ValueError, IndexError):
+        width, height = DEFAULT_SIZE
+    name = spec.get("name") or os.path.splitext(os.path.basename(path))[0]
+    pages = spec.get("pages") or []
+    # Shape checked here so a listing still reports the layout that only
+    # falls apart once it is built; the widgets are nobody's business.
+    if not isinstance(pages, list) or not all(isinstance(page, dict)
+                                              for page in pages):
+        raise ValueError("%s: 'pages' must be a list of objects" % path)
+    return {"name": name, "width": width, "height": height,
+            "pages": len(pages)}
+
+
 def discover(directories):
     """Find layout files, later directories overriding earlier ones."""
     found = {}

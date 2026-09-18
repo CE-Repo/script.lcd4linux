@@ -7,6 +7,7 @@ changes, notifications).
 
 import os
 import subprocess
+import threading
 import time
 
 from . import ax206
@@ -14,6 +15,7 @@ from . import display as display_module
 from .errors import DisplayError
 from . import layout as layout_module
 from . import localize
+from . import thumbs
 from .bmfont import FontCache
 from .images import ImageCache
 from .kodidata import make_provider
@@ -58,7 +60,7 @@ STARTUP_RETRY_SECONDS = 3.0
 
 #: Commands accepted through ``NotifyAll(script.lcd4linux, <command>)``.
 CONTROL_COMMANDS = ("reload", "next_page", "test_pattern", "message",
-                    "brightness_up", "brightness_down")
+                    "brightness_up", "brightness_down", "render_thumbs")
 
 #: Kodi events that are mirrored on the panel, mapped to
 #: ``(string id, English fallback)``.
@@ -131,6 +133,9 @@ class Service(object):
         self._test_until = 0.0
         self._start_command_done = False
         self._first_frame_logged = False
+        self._thumb_lock = threading.Lock()
+        self._thumb_queue = []
+        self._thumb_worker = None
 
     # -- helpers ----------------------------------------------------------
     @staticmethod
@@ -218,6 +223,15 @@ class Service(object):
             self._step_brightness(1)
         elif command == "brightness_down":
             self._step_brightness(-1)
+        elif command == "render_thumbs":
+            names = []
+            try:
+                import json
+                payload = json.loads(data) if data else {}
+                names = [str(entry) for entry in (payload.get("names") or [])]
+            except Exception:
+                pass
+            self.render_previews(names)
         elif command == "message":
             heading = message = ""
             try:
@@ -229,6 +243,51 @@ class Service(object):
                 pass
             if heading or message:
                 self.show_message(heading, message)
+
+    # -- layout previews --------------------------------------------------
+    def render_previews(self, names):
+        """Draw the layout previews the chooser is missing, off its thread.
+
+        Rendering one layout costs seconds of pure Python, so the chooser
+        hands the work over here instead of keeping its dialog closed for
+        it.  A worker thread does it while the panel keeps updating; the
+        pictures show up the next time the chooser is opened.
+        """
+        if not names:
+            return
+        with self._thumb_lock:
+            for name in names:
+                if name not in self._thumb_queue:
+                    self._thumb_queue.append(name)
+            if self._thumb_worker is not None and self._thumb_worker.is_alive():
+                return
+            self._thumb_worker = threading.Thread(target=self._render_previews,
+                                                  name="lcd4linux-thumbs")
+            self._thumb_worker.daemon = True
+            self._thumb_worker.start()
+
+    def _render_previews(self):
+        while not self._stop:
+            with self._thumb_lock:
+                names, self._thumb_queue = self._thumb_queue, []
+                if not names:
+                    self._thumb_worker = None
+                    return
+            # Only names the add-on actually offers are drawn: the command
+            # comes in over JSONRPC, so what it carries is not to be turned
+            # into a path.
+            available = layout_module.discover(self.config.layout_directories)
+            for name in names:
+                if self._stop:
+                    break
+                path = available.get(name)
+                if path is None:
+                    debug("no layout called %s to render a preview for" % name)
+                    continue
+                log("rendering the preview of %s" % name)
+                thumbs.cached_path(name, path, self.config.font_directories)
+        with self._thumb_lock:
+            self._thumb_worker = None
 
     def show_message(self, heading, message, seconds=None):
         """Put a banner on the panel (used by the script entry point too)."""

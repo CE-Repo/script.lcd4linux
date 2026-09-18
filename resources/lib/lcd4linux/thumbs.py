@@ -67,8 +67,20 @@ def render(layout_path, out_path, font_directories=None, box=THUMB_BOX):
     directory = os.path.dirname(out_path)
     if directory and not os.path.isdir(directory):
         os.makedirs(directory)
-    with open(out_path, "wb") as handle:
-        handle.write(pngio.encode_rgb(width, height, rgb))
+    # Written beside the target and moved into place: the service renders
+    # these while the chooser is reading them, and half a PNG looks fresh
+    # enough to :func:`cached_is_fresh` to be handed to Kodi.
+    temporary = out_path + ".tmp"
+    try:
+        with open(temporary, "wb") as handle:
+            handle.write(pngio.encode_rgb(width, height, rgb))
+        os.replace(temporary, out_path)
+    except Exception:
+        try:
+            os.remove(temporary)
+        except OSError:
+            pass
+        raise
     return out_path
 
 
@@ -80,6 +92,17 @@ def cached_is_fresh(name, layout_path):
                 and os.path.getmtime(out_path) >= os.path.getmtime(layout_path))
     except OSError:
         return False
+
+
+def cached_picture(name, layout_path):
+    """The already rendered picture of a layout, or ``None`` if there is none.
+
+    Unlike :func:`cached_path` this never renders: the chooser uses it to
+    find out what it can show straight away and what still has to be drawn.
+    """
+    if not cached_is_fresh(name, layout_path):
+        return None
+    return profile_path("thumbs", design_name(name) + ".png")
 
 
 def cached_path(name, layout_path, font_directories=None):

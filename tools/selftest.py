@@ -10,6 +10,7 @@ add-on ships with.
 
 import os
 import re
+import shutil
 import struct
 import sys
 import time
@@ -891,6 +892,65 @@ def test_encoding():
         Layout.load(path)
 
 
+def test_layout_index():
+    """The chooser and the editor list layouts from a cached index."""
+    print("layout index")
+    import tempfile
+    from lcd4linux import layout as layout_module
+    from lcd4linux import layoutindex, tokens
+    from lcd4linux.layout import Layout, discover, read_info
+
+    directory = os.path.join(ROOT, "resources", "layouts")
+    available = discover([directory])
+
+    mismatched = []
+    for name, path in sorted(available.items()):
+        full, info = Layout.load(path), read_info(path)
+        if (tokens.localize_text(info["name"]) != full.name
+                or (info["width"], info["height"]) != full.size
+                or info["pages"] != len(full.pages)):
+            mismatched.append(name)
+    check(not mismatched,
+          "reading a layout's name and size without building it agrees with "
+          "the full load (%s)" % (mismatched or "all %d" % len(available),))
+
+    # The index is what keeps the dialog from parsing every file again.
+    parsed = []
+    original = layout_module.read_info
+    layoutindex.forget()
+    try:
+        layout_module.read_info = lambda path: (parsed.append(path),
+                                                original(path))[1]
+        first = layoutindex.read(available)
+        cold = len(parsed)
+        del parsed[:]
+        second = layoutindex.read(available)
+        check(cold == len(available) and not parsed,
+              "the first listing reads %d layouts, the next one none" % cold)
+        check(first == second, "and both answer the same")
+
+        os.utime(available["minimal.json"], None)
+        del parsed[:]
+        layoutindex.read(available)
+        check(parsed == [available["minimal.json"]],
+              "an edited layout is re-read, the untouched ones are not")
+
+        broken = os.path.join(tempfile.mkdtemp(), "broken.json")
+        with open(broken, "w") as handle:
+            handle.write("{ this is not json")
+        mixed = dict(available, **{"broken.json": broken})
+        del parsed[:]
+        entries = layoutindex.read(mixed)
+        check(entries["broken.json"].get("error") and len(parsed) == 1,
+              "a layout that cannot be read is reported, not raised")
+        del parsed[:]
+        layoutindex.read(mixed)
+        check(not parsed, "and the failure is cached like any other entry")
+    finally:
+        layout_module.read_info = original
+        layoutindex.forget()
+
+
 def test_layout_chooser():
     """The layout picker offers one entry per design, each with a picture."""
     print("layout chooser")
@@ -973,6 +1033,97 @@ def test_layout_chooser():
               "without the GUI the chooser falls back to plain labels")
     finally:
         ui.xbmcgui = original
+
+    # The rows come out of the cached index, not out of sixty full loads.
+    from lcd4linux.layoutindex import forget
+    from lcd4linux.settings import Config
+    forget()
+    config = Config(overrides={"layout": "vinyl.json"})
+    rows, labels, row_details, current = ui._layout_entries(available, config)
+    check(len(labels) == len(rows) and all(labels),
+          "every row is labelled with the layout's own name")
+    check(rows[current][0] == "vinyl.json",
+          "the layout in the settings is the preselected row")
+    check(any("480x320" in detail for detail in row_details),
+          "the row detail carries the sizes the design is drawn for")
+
+    # Rendering is slow, so it is handed to the service instead of being
+    # done while the dialog is kept closed.
+    own = tempfile.mkdtemp()
+    shutil.copyfile(available["minimal.json"], os.path.join(own, "mine.json"))
+    mixed = discover([directory, own])
+    mixed_entries = ui._layout_designs(mixed)
+    sent = []
+    status = [""]
+    original_notify, original_status = ui.notify_service, ui._service_status
+    try:
+        ui.notify_service = lambda command, payload=None: (
+            sent.append((command, payload)), True)[1]
+        ui._service_status = lambda: status[0]
+
+        status[0] = "running"
+        shipped, pending = ui._layout_pictures(entries, available, config)
+        check(not pending and not sent,
+              "with every preview in place nothing is rendered or queued")
+        check(all(picture for picture in shipped),
+              "and every bundled design comes with its shipped picture")
+
+        pictures, pending = ui._layout_pictures(mixed_entries, mixed, config)
+        check(pending == ["mine.json"] and sent
+              and sent[-1] == ("render_thumbs", {"names": ["mine.json"]}),
+              "a layout without a preview is queued with the service")
+        index = [name for name, _variants in mixed_entries].index("mine.json")
+        check(pictures[index] is None,
+              "and the dialog opens straight away, that row without a picture")
+
+        status[0] = ""
+        del sent[:]
+        pictures, pending = ui._layout_pictures(mixed_entries, mixed, config)
+        check(not sent and not pending and pictures[index],
+              "without a service the chooser renders it itself")
+        del sent[:]
+        status[0] = "running"
+        _pictures, pending = ui._layout_pictures(mixed_entries, mixed, config)
+        check(not pending and not sent,
+              "once rendered the picture is cached, not queued again")
+    finally:
+        ui.notify_service, ui._service_status = original_notify, original_status
+        forget()
+
+
+def test_preview_worker():
+    """The service draws the previews the chooser asked it for."""
+    print("preview worker")
+    import json
+    import tempfile
+    from lcd4linux import thumbs
+    from lcd4linux.service import Service
+
+    own = tempfile.mkdtemp()
+    shutil.copyfile(os.path.join(ROOT, "resources", "layouts", "minimal.json"),
+                    os.path.join(own, "worker.json"))
+    bus = install_fake_spf("monitor")
+    bus.device = FakeSPFDevice(bus)
+    service = Service(overrides={"output_mode": "usb", "display_type": "spf",
+                                 "layout_dir": own})
+
+    service._handle_command("render_thumbs",
+                            json.dumps({"names": ["worker.json",
+                                                  "../escape.json"]}))
+    worker = service._thumb_worker
+    check(worker is not None, "the command starts a worker off the frame loop")
+    if worker is not None:
+        worker.join(120)
+        check(not worker.is_alive(), "which finishes on its own")
+    check(thumbs.cached_picture("worker.json",
+                                os.path.join(own, "worker.json")),
+          "the preview the chooser was missing is now cached")
+    check(not os.path.exists(thumbs.profile_path("thumbs", "../escape.png")),
+          "a name that is not a layout the add-on offers is ignored")
+
+    service._handle_command("render_thumbs", json.dumps({"names": []}))
+    check(service._thumb_worker is None or not service._thumb_worker.is_alive(),
+          "an empty request starts nothing")
 
 
 def test_settings_xml():
@@ -1846,7 +1997,8 @@ def main():
                  test_jpeg_encoder, test_protocol, test_target_from_settings,
                  test_samsung_spf, test_late_display, test_brightness,
                  test_localisation,
-                 test_settings_xml, test_layout_chooser,
+                 test_settings_xml, test_layout_index, test_layout_chooser,
+                 test_preview_worker,
                  test_power_hooks, test_rotation, test_web_editor,
                  test_network_display,
                  test_layouts):
