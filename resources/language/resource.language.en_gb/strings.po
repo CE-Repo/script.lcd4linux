@@ -84,28 +84,12 @@ msgctxt "#32104"
 msgid "Disabled"
 msgstr ""
 
-msgctxt "#32105"
-msgid "USB device IDs"
-msgstr ""
-
-msgctxt "#32106"
-msgid "Vendor:product IDs to look for, separated by commas. The AX206 panels use 1908:0102."
-msgstr ""
-
 msgctxt "#32107"
 msgid "Display number"
 msgstr ""
 
 msgctxt "#32108"
 msgid "Which panel to use when several are connected."
-msgstr ""
-
-msgctxt "#32109"
-msgid "Reset USB device when connecting"
-msgstr ""
-
-msgctxt "#32110"
-msgid "Helps if the panel was left in a bad state by another program."
 msgstr ""
 
 msgctxt "#32111"
@@ -148,22 +132,6 @@ msgctxt "#32120"
 msgid "Mirror horizontally"
 msgstr ""
 
-msgctxt "#32121"
-msgid "Pixel byte order"
-msgstr ""
-
-msgctxt "#32122"
-msgid "Change this if colours look wrong (for example red and blue swapped or a garbled picture)."
-msgstr ""
-
-msgctxt "#32123"
-msgid "High byte first (default)"
-msgstr ""
-
-msgctxt "#32124"
-msgid "Low byte first"
-msgstr ""
-
 msgctxt "#32125"
 msgid "Override display size"
 msgstr ""
@@ -178,18 +146,6 @@ msgstr ""
 
 msgctxt "#32128"
 msgid "Height"
-msgstr ""
-
-msgctxt "#32130"
-msgid "Brightness"
-msgstr ""
-
-msgctxt "#32131"
-msgid "0 switches the backlight off, 7 is the brightest setting."
-msgstr ""
-
-msgctxt "#32133"
-msgid "Idle brightness"
 msgstr ""
 
 msgctxt "#32138"
@@ -488,10 +444,6 @@ msgctxt "#32331"
 msgid "not running"
 msgstr ""
 
-msgctxt "#32332"
-msgid "No AX206 display detected"
-msgstr ""
-
 msgctxt "#32333"
 msgid "USB error"
 msgstr ""
@@ -506,22 +458,6 @@ msgstr ""
 
 msgctxt "#32027"
 msgid "Samsung photo frame"
-msgstr ""
-
-msgctxt "#32170"
-msgid "Display type"
-msgstr ""
-
-msgctxt "#32171"
-msgid "Which panel is connected. The AX206 type is the 3.5\" 480x320 LCD sold as an AIDA64 display; Samsung SPF frames are the 7\" and larger photo frames."
-msgstr ""
-
-msgctxt "#32172"
-msgid "AX206 USB LCD (AIDA64 type)"
-msgstr ""
-
-msgctxt "#32173"
-msgid "Samsung SPF photo frame"
 msgstr ""
 
 msgctxt "#32174"
@@ -593,15 +529,11 @@ msgid "Brightness (software)"
 msgstr ""
 
 msgctxt "#32189"
-msgid "Samsung frames have no backlight control over USB, so the picture is darkened in software before it is sent. 100% leaves it untouched."
+msgid "Neither a Samsung frame nor a browser has a backlight that can be controlled, so the picture is darkened in software before it is sent. 100% leaves it untouched."
 msgstr ""
 
 msgctxt "#32190"
 msgid "Idle brightness (software)"
-msgstr ""
-
-msgctxt "#32191"
-msgid "Backlight level while nothing is playing."
 msgstr ""
 
 msgctxt "#32192"
@@ -706,6 +638,74 @@ msgstr ""
 
 msgctxt "#32346"
 msgid "The web editor is switched off"
+msgstr ""
+
+msgctxt "#32347"
+msgid "Glyph rendering"
+msgstr ""
+
+msgctxt "#32250"
+msgid "Font cache"
+msgstr ""
+
+msgctxt "#32251"
+msgid "Downloading fonts is switched off"
+msgstr ""
+
+msgctxt "#32252"
+msgid "Cached fonts"
+msgstr ""
+
+msgctxt "#32253"
+msgid "Download the fonts the layouts use"
+msgstr ""
+
+msgctxt "#32254"
+msgid "Empty the font cache"
+msgstr ""
+
+msgctxt "#32255"
+msgid "%d fonts removed"
+msgstr ""
+
+msgctxt "#32256"
+msgid "No layout uses a downloadable font"
+msgstr ""
+
+msgctxt "#32257"
+msgid "Downloading fonts"
+msgstr ""
+
+msgctxt "#32258"
+msgid "%d fonts cached"
+msgstr ""
+
+msgctxt "#32259"
+msgid "No font could be downloaded"
+msgstr ""
+
+msgctxt "#32260"
+msgid "Download fonts from Google Fonts"
+msgstr ""
+
+msgctxt "#32261"
+msgid "Off means only the bundled families and whatever is already cached are drawn (default on)."
+msgstr ""
+
+msgctxt "#32262"
+msgid "Manage the font cache..."
+msgstr ""
+
+msgctxt "#32263"
+msgid "Download the fonts your layouts use, or give the space back."
+msgstr ""
+
+msgctxt "#32264"
+msgid "Font source"
+msgstr ""
+
+msgctxt "#32265"
+msgid "Where faces come from; empty uses the Google Fonts API (expert level)."
 msgstr ""
 
 msgctxt "#32400"

@@ -4,8 +4,7 @@ engine needs.
 The buffer is an ``array('H')`` of 16 bit pixels which lets whole spans be
 filled or copied with one C level slice assignment - important because this
 runs in Kodi's interpreter on a low power ARM board.  Native byte order is
-assumed to be little endian (every board Kodi runs on is), which is exactly
-what the AX206 expects on the wire.
+assumed to be little endian (every board Kodi runs on is).
 """
 
 import sys
@@ -544,10 +543,6 @@ class Canvas(object):
                 col = y
                 dst[col:col + height * width:height] = row
         return out
-
-    def to_bytes(self):
-        """Native little endian RGB565 bytes, ready for the AX206."""
-        return self.buf.tobytes()
 
     def to_rgb888(self):
         """Expand to plain RGB bytes (used by the PNG preview writer).

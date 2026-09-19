@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Self test for script.lcd4linux.
 
-Exercises the whole pipeline without hardware: a simulated AX206 panel
-records the USB traffic and the checks below verify the command blocks, the
-partial screen updates and the layout renderer.  It runs on the target box
-too (``python3 tools/selftest.py`` on CoreELEC) and only uses modules the
-add-on ships with.
+Exercises the whole pipeline without hardware: a simulated Samsung SPF
+frame records the USB traffic and the checks below verify the mode switch,
+the JPEG encoder and the layout renderer.  It runs on the target box too
+(``python3 tools/selftest.py`` on CoreELEC) and only uses modules the add-on
+ships with.
 """
 
 import os
@@ -13,21 +13,21 @@ import re
 import shutil
 import struct
 import sys
+import tempfile
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "resources", "lib"))
 
-from lcd4linux import ax206, jpegio, usbdev             # noqa: E402
+from lcd4linux import jpegio, usbdev                    # noqa: E402
 from lcd4linux.bmfont import FontCache                  # noqa: E402
 from lcd4linux.canvas import Canvas, parse_color, unpack565        # noqa: E402
-from lcd4linux.display import AX206Target               # noqa: E402
 from lcd4linux.images import ImageCache                 # noqa: E402
 from lcd4linux.kodidata import DemoProvider             # noqa: E402
 from lcd4linux.layout import Layout, Renderer, discover  # noqa: E402
 
-PANEL_WIDTH = 480
-PANEL_HEIGHT = 320
+PANEL_WIDTH = 800
+PANEL_HEIGHT = 480
 
 failures = []
 
@@ -40,203 +40,38 @@ def check(condition, message):
 
 
 # ---------------------------------------------------------------------------
-# a simulated AX206
-# ---------------------------------------------------------------------------
-
-class FakeDevice(object):
-    """Speaks just enough Bulk-Only-Transport to answer the driver."""
-
-    def __init__(self):
-        self.info = usbdev.DeviceInfo(0x1908, 0x0102, 1, 4, product_name="fake")
-        self.commands = []
-        self.blits = []
-        self.brightness = []
-        self.opens = 0
-        self.bytes_sent = 0
-        self._pending_data_in = 0
-        self._expect_data_out = 0
-        self._last_command = None
-
-    # -- device interface --------------------------------------------------
-    def claim(self):
-        self.opens += 1
-
-    def close(self):
-        pass
-
-    def reset(self):
-        pass
-
-    def clear_halt(self, endpoint):
-        pass
-
-    def bulk_endpoints(self):
-        return 0x81, 0x01
-
-    def write(self, endpoint, data, timeout=0):
-        if self._expect_data_out:
-            self.bytes_sent += len(data)
-            if self._last_command and self._last_command[6] == ax206.USBCMD_BLIT:
-                self.blits.append((self._last_command, len(data)))
-            self._expect_data_out = 0
-            return len(data)
-
-        assert len(data) == 31, "CBW must be 31 bytes, got %d" % len(data)
-        assert data[0:4] == b"USBC", "bad CBW signature"
-        length = struct.unpack_from("<I", data, 8)[0]
-        assert data[14] == 16, "command length must be 16"
-        command = bytearray(data[15:31])
-        assert command[0] == 0xCD, "vendor command must start with 0xcd"
-        self.commands.append(command)
-        self._last_command = command
-
-        if command[5] == 2:                       # get dimensions
-            self._pending_data_in = length
-        elif command[6] == ax206.USBCMD_SETPROPERTY:
-            self.brightness.append(command[9])
-        elif command[6] == ax206.USBCMD_BLIT:
-            self._expect_data_out = length
-        return len(data)
-
-    def read(self, endpoint, length, timeout=0):
-        if self._pending_data_in:
-            self._pending_data_in = 0
-            return struct.pack("<HHB", PANEL_WIDTH, PANEL_HEIGHT, 16)
-        return b"USBS" + struct.pack("<I", ax206.CBW_TAG) + struct.pack("<I", 0) + b"\x00"
-
-
-class FakeContext(object):
-    def __init__(self):
-        self.device = FakeDevice()
-
-    def find(self, matches):
-        return None, 1, [(object(), self.device.info)]
-
-    def release_list(self, devices):
-        pass
-
-    def close(self):
-        pass
-
-
-def install_fake_usb():
-    context = FakeContext()
-    usbdev.Context = lambda: context
-    usbdev.open_device = lambda ctx, dev, info, interface=0: context.device
-    return context
-
-
-# ---------------------------------------------------------------------------
 # tests
 # ---------------------------------------------------------------------------
 
-def test_protocol():
-    print("AX206 protocol")
-    context = install_fake_usb()
-    device = context.device
-    target = AX206Target(rotation=0)
-    target.open()
-    check((target.width, target.height) == (PANEL_WIDTH, PANEL_HEIGHT),
-          "panel size read back as %dx%d" % (target.width, target.height))
-    check(device.commands[0][5] == 2, "first command asks for the dimensions")
-
-    target.set_brightness(5)
-    check(device.brightness[-1] == 5, "brightness command carries the level")
-    check(device.commands[-1][6] == ax206.USBCMD_SETPROPERTY
-          and device.commands[-1][7] == ax206.PROPERTY_BRIGHTNESS,
-          "brightness uses SETPROPERTY/PROPERTY_BRIGHTNESS")
-
-    canvas = Canvas(PANEL_WIDTH, PANEL_HEIGHT)
-    canvas.clear(parse_color("#000000"))
-    target.present(canvas, force=True)
-    command, size = device.blits[-1]
-    check(size == PANEL_WIDTH * PANEL_HEIGHT * 2,
-          "full frame sends %d bytes" % size)
-    check((command[7] | command[8] << 8, command[9] | command[10] << 8) == (0, 0),
-          "full frame starts at 0,0")
-    check((command[11] | command[12] << 8, command[13] | command[14] << 8)
-          == (PANEL_WIDTH - 1, PANEL_HEIGHT - 1),
-          "full frame ends at the last pixel (inclusive)")
-
-    canvas.fill_rect(100, 60, 40, 20, parse_color("#ff0000"))
-    target.present(canvas)
-    command, size = device.blits[-1]
-    x0 = command[7] | command[8] << 8
-    y0 = command[9] | command[10] << 8
-    x1 = (command[11] | command[12] << 8) + 1
-    y1 = (command[13] | command[14] << 8) + 1
-    check((x0, y0, x1, y1) == (100, 60, 140, 80),
-          "partial update covers exactly the changed rectangle %s"
-          % ((x0, y0, x1, y1),))
-    check(size == 40 * 20 * 2, "partial update sends %d bytes instead of %d"
-          % (size, PANEL_WIDTH * PANEL_HEIGHT * 2))
-
-    before = len(device.blits)
-    target.present(canvas)
-    check(len(device.blits) == before, "an unchanged frame sends nothing")
-
-    payload_first_pixel = None
-    canvas.fill_rect(0, 0, 1, 1, parse_color("#ff0000"))
-    original_write = device.write
-
-    captured = {}
-
-    def capture(endpoint, data, timeout=0):
-        if device._expect_data_out:
-            captured["data"] = bytes(data[:2])
-        return original_write(endpoint, data, timeout)
-
-    device.write = capture
-    target.present(canvas)
-    device.write = original_write
-    payload_first_pixel = captured.get("data")
-    check(payload_first_pixel == b"\xf8\x00",
-          "red is sent high byte first (%s)"
-          % (payload_first_pixel.hex() if payload_first_pixel else "none"))
-
-    target.close()
-
-
 def test_target_from_settings():
-    """The path the service actually uses: Config -> make_target -> panel."""
+    """The path the service actually uses: Config -> make_target -> display."""
     print("settings to display")
     from lcd4linux import display as display_module
     from lcd4linux.settings import Config
 
-    context = install_fake_usb()
-    config = Config({"output_mode": "usb", "device_ids": "1908:0102"})
-    target = display_module.make_target(config)
-    check(isinstance(target, display_module.AX206Target), "USB mode builds an AX206 target")
-    check(target.device.device_ids == ((0x1908, 0x0102),),
-          "device IDs reach the driver parsed: %s" % (target.device.device_ids,))
-    target.open()
-    check((target.width, target.height) == (PANEL_WIDTH, PANEL_HEIGHT),
-          "panel opens through the settings path")
-    target.close()
-
-    config = Config({"output_mode": "usb", "device_ids": "1908:0102, 1908:3318"})
-    target = display_module.make_target(config)
-    check(target.device.device_ids == ((0x1908, 0x0102), (0x1908, 0x3318)),
-          "several device IDs are accepted")
-
     config = Config({"output_mode": "none"})
     check(isinstance(display_module.make_target(config), display_module.NullTarget),
           "disabled mode builds a null target")
-    assert context is not None
 
-    # The same path for a Samsung frame.
+    config = Config({"output_mode": "network", "width": 640, "height": 400})
+    target = display_module.make_target(config)
+    check(isinstance(target, display_module.NetworkTarget),
+          "network mode builds a network target")
+    check((target.width, target.height) == (640, 400),
+          "the configured size is the truth in network mode")
+
     bus = install_fake_spf("monitor")
     bus.device = FakeSPFDevice(bus)
-    config = Config({"output_mode": "usb", "display_type": "spf",
-                     "jpeg_quality": 70, "jpeg_subsample": True})
+    config = Config({"output_mode": "usb", "jpeg_quality": 70,
+                     "jpeg_subsample": True})
     target = display_module.make_target(config)
     check(isinstance(target, display_module.SPFTarget),
-          "SPF mode builds a Samsung target")
+          "USB mode builds a Samsung target")
     check(target.quality == 70, "JPEG quality reaches the encoder: %d" % target.quality)
     target.open()
-    check((target.width, target.height) == (800, 480),
+    check((target.width, target.height) == (PANEL_WIDTH, PANEL_HEIGHT),
           "Samsung frame opens through the settings path")
-    canvas = Canvas(800, 480, parse_color("#000000"))
+    canvas = Canvas(PANEL_WIDTH, PANEL_HEIGHT, parse_color("#000000"))
     target.present(canvas, force=True)
     check(len(bus.device.frames) == 1, "a frame reaches the fake Samsung")
     target.close()
@@ -425,7 +260,7 @@ def test_late_display():
     from lcd4linux.service import Service, STARTUP_RETRY_SECONDS
 
     bus = install_fake_spf("absent")
-    service = Service(overrides={"output_mode": "usb", "display_type": "spf",
+    service = Service(overrides={"output_mode": "usb",
                                  "width": 480, "height": 320,
                                  "layout": "default.json",
                                  "retry_seconds": 60, "startup_grace": 180,
@@ -473,7 +308,7 @@ def test_late_display():
     # A display that is still missing when the grace period is over is
     # reported once and then retried at the configured interval.
     bus2 = install_fake_spf("absent")
-    late = Service(overrides={"output_mode": "usb", "display_type": "spf",
+    late = Service(overrides={"output_mode": "usb",
                               "retry_seconds": 45, "startup_grace": 0,
                               "web_enabled": False})
     late.setup()
@@ -517,7 +352,7 @@ def test_jpeg_encoder():
 
 
 def test_brightness():
-    """Backlight on the AX206 and software dimming on a Samsung frame."""
+    """Software dimming, and the settings path that drives it."""
     print("brightness")
     from lcd4linux import display as display_module
     from lcd4linux.jpegenc import JpegEncoder
@@ -533,65 +368,62 @@ def test_brightness():
         def value(self, key):
             return self.state if key == "player.state" else u""
 
-    # -- the AX206 backlight ------------------------------------------------
-    context = install_fake_usb()
-    device = context.device
-    service = Service(overrides={"output_mode": "usb", "display_type": "ax206",
-                                 "brightness": 6, "dim_brightness": 2,
+    # -- idle dimming through the service -----------------------------------
+    bus = install_fake_spf("monitor")
+    bus.device = FakeSPFDevice(bus)
+    service = Service(overrides={"output_mode": "usb",
+                                 "spf_brightness": 80, "spf_dim_brightness": 30,
                                  "dim_on_idle": True})
     service.provider = FakeProvider("playing")
     service.setup()
-    check(device.brightness[-1] == 6,
-          "the configured level reaches the panel when it is opened")
+    check(service._brightness == 80,
+          "the configured level reaches the display when it is opened")
 
     service._update_idle()
     service._apply_brightness()
-    check(not service._idle and device.brightness[-1] == 6,
+    check(not service._idle and service._brightness == 80,
           "playback keeps the normal level")
 
     service.provider = FakeProvider("stopped")
     service._update_idle()
     service._apply_brightness()
-    check(service._idle and device.brightness[-1] == 2,
+    check(service._idle and service._brightness == 30,
           "nothing playing dims to the idle level")
 
     service.provider = FakeProvider("paused")
     service._update_idle()
     service._apply_brightness()
-    check(device.brightness[-1] == 6, "a pause counts as playing, not as idle")
+    check(service._brightness == 80, "a pause counts as playing, not as idle")
 
-    # A level the panel rejected must not be remembered as applied.
-    sent = len(device.brightness)
-    service.target.set_brightness = lambda level: False
-    service.config.set("brightness", 3)
+    # A level the display rejected must not be remembered as applied.
+    service.target.set_brightness = lambda percent: False
+    service.config.set("spf_brightness", 55)
     service._apply_brightness(force=True)
     check(service._brightness is None,
           "a rejected level is not cached, so the next frame tries again")
-    service.target.set_brightness = display_module.AX206Target.set_brightness.__get__(
+    service.target.set_brightness = display_module.SPFTarget.set_brightness.__get__(
         service.target)
     service._apply_brightness()
-    check(len(device.brightness) > sent and device.brightness[-1] == 3,
-          "the retry sends the level the user chose")
+    check(service._brightness == 55, "the retry applies the level the user chose")
 
     # Changing the brightness must not tear the USB connection down.  Kodi
     # is not around here, so the overrides stand in for the stored settings.
-    opens = device.opens
-    service._overrides["brightness"] = 1
+    opened = service.target
+    service._overrides["spf_brightness"] = 40
     service.refresh_settings()
-    check(device.opens == opens,
-          "a brightness change keeps the panel open (%d open(s))" % device.opens)
-    check(device.brightness[-1] == 1,
-          "and the new level is sent right away")
+    check(service.target is opened,
+          "a brightness change keeps the display open")
+    check(service._brightness == 40, "and the new level is applied right away")
     check(not service._reload_requested,
           "a brightness change does not queue a reload")
 
     service._overrides["rotation"] = 90
     service.refresh_settings()
     check(service._reload_requested,
-          "a change that needs the panel rebuilt still reloads")
+          "a change that needs the display rebuilt still reloads")
     service.shutdown()
 
-    # -- software dimming on a Samsung frame --------------------------------
+    # -- the software gain itself -------------------------------------------
     grey = Canvas(64, 64, parse_color("#808080"))
 
     def mean_luma(jpeg):
@@ -613,11 +445,8 @@ def test_brightness():
 
     bus = install_fake_spf("monitor")
     bus.device = FakeSPFDevice(bus)
-    config = Config({"output_mode": "usb", "display_type": "spf",
-                     "spf_brightness": 60})
+    config = Config({"output_mode": "usb", "spf_brightness": 60})
     target = display_module.make_target(config)
-    check(target.brightness_unit == "percent",
-          "a Samsung frame is driven in percent, not in backlight steps")
     target.open()
     target.set_brightness(50)
     check(target.encoder.gain == 128,
@@ -712,7 +541,7 @@ def test_power_hooks():
     bus.device = FakeSPFDevice(bus)
 
     service = Service(overrides={
-        "output_mode": "usb", "display_type": "spf",
+        "output_mode": "usb",
         "start_command": "touch '%s'" % started,
         "stop_command": "touch '%s'" % stopped,
     })
@@ -732,8 +561,11 @@ def test_power_hooks():
 
 def test_rotation():
     print("rotation")
-    context = install_fake_usb()
-    target = AX206Target(rotation=90)
+    from lcd4linux.display import SPFTarget
+
+    bus = install_fake_spf("monitor")
+    bus.device = FakeSPFDevice(bus)
+    target = SPFTarget(rotation=90)
     target.open()
     logical = target.logical_size
     check(logical == (PANEL_HEIGHT, PANEL_WIDTH),
@@ -741,8 +573,13 @@ def test_rotation():
     canvas = Canvas(logical[0], logical[1])
     canvas.fill_rect(0, 0, 10, 10, parse_color("#00ff00"))
     target.present(canvas, force=True)
-    check(context.device.blits[-1][1] == PANEL_WIDTH * PANEL_HEIGHT * 2,
-          "rotated frame still has the panel's pixel count")
+    # The frame carries the JPEG between the 12 byte header and the trailer.
+    frame = bus.device.frames[-1]
+    declared = struct.unpack_from("<I", frame, 4)[0]
+    width, height, _pixels = jpegio.decode(frame[12:declared - 2], 64)
+    check((width * 8, height * 8) == (PANEL_WIDTH, PANEL_HEIGHT),
+          "the rotated frame goes out at the display's own %dx%d"
+          % (width * 8, height * 8))
     target.close()
 
 
@@ -810,77 +647,169 @@ def test_layouts():
         check(ok, "%s renders every page (slowest %.0f ms)" % (name, slowest * 1000))
 
 
+def _mkfonts():
+    """The build tool, for the character set and the family list it defines."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "mkfonts", os.path.join(ROOT, "tools", "mkfonts.py"))
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except ImportError:
+        return None              # fontTools missing: it is build-time only
+    return module
+
+
+def test_rasteriser():
+    """Both glyph backends, against the faces the add-on ships."""
+    print("glyph rasteriser")
+    from lcd4linux import ttfont
+
+    path = os.path.join(ROOT, "resources", "fonts", "sans.ttf")
+    probe = u"Hg0 ÄößŁœ ⏸★♪ …—°"
+
+    backends = []
+    try:
+        backends.append(("FreeType", ttfont.FreeTypeBackend(path, 20)))
+    except ttfont.FontError as error:
+        print("  [note] FreeType unavailable here (%s)" % error)
+    backends.append(("built-in", ttfont.PythonBackend(path, 20)))
+    check(len(backends) == 2, "both backends can open a face (%s)"
+          % ", ".join(name for name, _ in backends))
+
+    for name, face in backends:
+        missing = [ch for ch in probe
+                   if ch != " " and face.render(ord(ch)) is None]
+        check(not missing, "%s draws the whole probe (%s)"
+              % (name, "".join(missing) or "nothing missing"))
+        check(face.ascent > 0 and face.descent >= 0 and face.height > 0,
+              "%s reports metrics %d/%d/%d"
+              % (name, face.ascent, face.descent, face.height))
+        # Measuring must not depend on rasterising: a fresh face has to
+        # answer an advance before anything has been drawn.
+        fresh = type(face)(path, 20)
+        check(fresh.advance(ord("M")) > 0,
+              "%s answers an advance without rendering" % name)
+        fresh.close()
+
+    if len(backends) == 2:
+        # The two need not agree pixel for pixel - one hints, the other does
+        # not - but a layout laid out by one and drawn by the other would
+        # come apart, so the advances have to match.
+        (_, free), (_, pure) = backends
+        drift = [ch for ch in probe if ch != " "
+                 and abs((free.advance(ord(ch)) or 0)
+                         - (pure.advance(ord(ch)) or 0)) > 1]
+        check(not drift, "the backends agree on advances (%s)"
+              % ("".join(drift) or "every character"))
+        boxes = []
+        for ch in probe:
+            if ch == " ":
+                continue
+            a, b = free.render(ord(ch)), pure.render(ord(ch))
+            if abs(a[0] - b[0]) > 2 or abs(a[1] - b[1]) > 2:
+                boxes.append(ch)
+        check(not boxes, "and on glyph sizes to within two pixels, which is "
+                         "what hinting moves (%s)"
+              % ("".join(boxes) or "every character"))
+
+    for _name, face in backends:
+        face.close()
+
+    # A face the reader cannot handle has to say so rather than crash.
+    bogus = os.path.join(ROOT, "icon.png")
+    try:
+        ttfont.PythonBackend(bogus, 20)
+        check(False, "a non-font is rejected")
+    except ttfont.FontError:
+        check(True, "a non-font is rejected with FontError")
+
+
 def test_fonts():
     print("fonts")
-    fonts = FontCache([os.path.join(ROOT, "resources", "fonts")])
+    from lcd4linux import bmfont
+    from lcd4linux.bmfont import FontCache
+
+    directory = os.path.join(ROOT, "resources", "fonts")
+    fonts = FontCache([directory])
     families = fonts.families()
-    check("sans" in families and "mono" in families,
-          "families available: %s" % ", ".join(families))
+    check(sorted(families) == sorted(bmfont.FAMILIES),
+          "the four shipped families are found: %s" % ", ".join(families))
+
     font = fonts.get("sans-bold", 24)
     check(font.measure("Hello") > 0, "text measures %d px" % font.measure("Hello"))
-    check(fonts.get("sans", 27).size == 27, "unbundled sizes are resampled")
+
+    # Every size is its own size now; nothing is resampled from a neighbour.
+    for size in (13, 17, 22, 41, 137):
+        check(fonts.get("sans", size).size == size,
+              "%d px is rendered at %d px" % (size, size))
+    check(fonts.get("sans", 22).measure("Hamburgefons")
+          > fonts.get("sans", 21).measure("Hamburgefons"),
+          "and one pixel more really is wider")
+
     umlauts = fonts.get("sans", 16)
     check(all(umlauts.glyph(ord(ch)) is not None for ch in u"äöüßÄÖÜéèñ"),
           "accented characters have glyphs")
 
-    # Picking a different font must never cost a character.  Most faces stop
-    # somewhere in Latin Extended-A and none of them draws the media signs,
-    # so the rasteriser fills those in from DejaVu and Noto Symbols; if that
+    # Picking a different font must never cost a character.  DejaVu stops
+    # short of the media signs, so the build tool grafts those on; if that
     # ever breaks, a layout loses glyphs silently.
     probe = u"ÄÖÜäöüß·°—€ŁłŒœ≈≤∞⏵⏸⏹♪♫✓✗■▲▶▼◀●★☆←↑→↓"
     thin = []
     for family in families:
-        font = fonts.get(family, 24)
+        face = fonts.get(family, 24)
         for ch in probe:
-            glyph = font.glyph(ord(ch))
+            glyph = face.glyph(ord(ch))
             if glyph is None or not (glyph.width and glyph.height):
                 thin.append("%s:%s" % (family, ch))
     check(not thin, "every family draws the whole character set (%s)"
           % (thin[:8] or "all %d of them" % len(families),))
 
-    # A monospaced family is only worth having while every cell is the same
-    # width -- including the glyphs it had to borrow from somewhere else.
-    import importlib.util
-    spec = importlib.util.spec_from_file_location(
-        "mkfont", os.path.join(ROOT, "tools", "mkfont.py"))
-    try:
-        mkfont = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mkfont)
-    except ImportError:
-        mkfont = None            # Pillow or fontTools missing: build-time only
-    if mkfont is not None:
+    # A character no face carries must come back as something drawable
+    # rather than as None, or the renderer would trip over it.
+    exotic = fonts.get("sans", 20).glyph(0x4E2D)      # a Han character
+    check(exotic is not None, "an unknown character falls back to a glyph")
+
+    mkfonts = _mkfonts()
+    if mkfonts is not None:
+        # A monospaced family is only worth having while every cell is the
+        # same width -- including the glyphs it had to borrow elsewhere.
         wobbly = []
-        for family in sorted(mkfont.MONOSPACED):
-            if family not in families:
-                continue
+        for family in ("mono", "mono-bold"):
             for size in (12, 24, 48):
-                font = fonts.get(family, size)
-                widths = {font.glyph(c).advance for c in mkfont.charset()
-                          if font.glyph(c) is not None}
+                face = fonts.get(family, size)
+                widths = {face.glyph(c).advance for c in mkfonts.charset()
+                          if face.glyph(c) is not None}
                 if len(widths) != 1:
                     wobbly.append("%s@%d:%s" % (family, size, sorted(widths)))
-        check(not wobbly, "every monospaced family keeps one cell width (%s)"
-              % (wobbly[:4] or "all %d of them" % len(mkfont.MONOSPACED),))
+        check(not wobbly, "the monospaced families keep one cell width (%s)"
+              % (wobbly[:4] or "both of them",))
         proportional = fonts.get("sans", 24)
-        spread = {proportional.glyph(c).advance for c in mkfont.charset()
+        spread = {proportional.glyph(c).advance for c in mkfonts.charset()
                   if proportional.glyph(c) is not None}
         check(len(spread) > 1, "and the proportional ones stay proportional")
+        check(sorted(mkfonts.FAMILIES) == sorted(bmfont.FAMILIES),
+              "the build tool and the add-on agree on which families ship")
 
     # A bundled face without its licence beside it may not be redistributed.
-    directory = os.path.join(ROOT, "resources", "fonts")
     licences = [n for n in os.listdir(directory) if n.startswith("LICENSE-")]
-    check(len(licences) >= 17,
-          "every bundled face ships its licence (%d files)" % len(licences))
+    check(len(licences) >= 2,
+          "every bundled face ships its licence (%s)" % ", ".join(sorted(licences)))
+    faces = [n for n in os.listdir(directory) if n.endswith(".ttf")]
+    check(len(faces) == len(bmfont.FAMILIES),
+          "%d faces on disk, nothing left over" % len(faces))
 
-    for family in ("inter", "condensed", "oswald", "bebas", "jetbrains",
-                   "sourcecode", "robotomono", "firamono", "plexmono",
-                   "inconsolata", "spacemono", "sharetech", "courierprime"):
-        check(family in families, "the %s family is bundled" % family)
+    # An unknown family must land somewhere sensible instead of failing.
+    check(fonts.get("oswald-bold", 20).measure("x") > 0,
+          "an unknown family falls back to a shipped one")
+
+    # The bitmap format the add-on used to ship still loads, so a font
+    # someone built earlier keeps working in their own fonts folder.
+    check(hasattr(bmfont.Font, "load"), "the .l4f reader is still there")
 
     # -- the samples the editor's font dialog shows -----------------------
-    # A browser cannot draw a bitmap font, so the add-on rasterises a line
+    # A browser cannot draw the face itself, so the add-on rasterises a line
     # of it into a coverage map and sends that as a picture.
-    from lcd4linux import bmfont
     sample = fonts.get("sans", 24)
     width, height, mask = bmfont.text_mask(sample, "Hamburgefons 123")
     check(width >= sample.measure("Hamburgefons 123")
@@ -892,8 +821,6 @@ def test_fonts():
     empty_width, empty_height, empty = bmfont.text_mask(sample, "")
     check(not any(empty) and len(empty) == empty_width * empty_height,
           "empty text draws an empty sample")
-    # Every family has to survive being asked for a sample: a face missing
-    # a glyph used to be found only once a layout showed it.
     broken = []
     for family in families:
         try:
@@ -1366,7 +1293,7 @@ def test_preview_worker():
                     os.path.join(own, "worker.json"))
     bus = install_fake_spf("monitor")
     bus.device = FakeSPFDevice(bus)
-    service = Service(overrides={"output_mode": "usb", "display_type": "spf",
+    service = Service(overrides={"output_mode": "usb",
                                  "layout_dir": own})
 
     service._handle_command("render_thumbs",
@@ -1434,11 +1361,10 @@ def test_settings_xml():
           "the Samsung model list matches the driver (%d frames)"
           % len(spf.MODELS))
 
-    # Options that only one display type understands must be hidden for the
-    # other one, otherwise the dialog offers AX206 settings for a Samsung
-    # frame and the other way round.  The JPEG encoder and the software
-    # dimming are shared with the network display, so those follow both; the
-    # AX206 backlight levels are meaningless in a browser.
+    # A network display is not on the USB bus, so the settings that pick a
+    # frame off it have nothing to say there and must be hidden.  Everything
+    # else - the JPEG encoder, the software dimming - is shared between the
+    # Samsung frame and the browser and stays visible throughout.
     def visible_conditions(setting):
         """``(setting, operator, value)`` of every visibility condition.
 
@@ -1461,25 +1387,16 @@ def test_settings_xml():
                               dependency.text))
         return found
 
-    ax206_only = [("display_type", "is", "ax206"),
-                  ("output_mode", "!is", "network")]
-    spf_or_network = [("display_type", "is", "spf"),
-                      ("output_mode", "is", "network")]
     expected = {
-        "device_ids": [("display_type", "is", "ax206")],
-        "byte_order": [("display_type", "is", "ax206")],
-        "reset_on_open": [("display_type", "is", "ax206")],
-        "spf_model": [("display_type", "is", "spf")],
-        "brightness": ax206_only,
-        "dim_brightness": ax206_only,
-        "jpeg_quality": spf_or_network,
-        "jpeg_subsample": spf_or_network,
-        "spf_brightness": spf_or_network,
-        "spf_dim_brightness": spf_or_network,
+        "spf_model": [("output_mode", "!is", "network")],
+        "jpeg_quality": [],
+        "jpeg_subsample": [],
+        "spf_brightness": [],
+        "spf_dim_brightness": [],
     }
     for key, conditions in sorted(expected.items()):
         check(visible_conditions(settings[key]) == conditions,
-              "%s is shown for the right display types" % key)
+              "%s is shown for the right output modes" % key)
 
     # The size is what the network display renders at, so it must not be
     # locked away behind "override the display size".
@@ -2062,17 +1979,25 @@ def test_background_loader():
         return sum(abs(a[i] - b[i]) for i in range(len(a))) / float(len(a))
 
     # What it has to end up looking like, and what one frame cost back when
-    # the pictures were decoded in the middle of it.
-    started = time.time()
-    reference = build(ImageCache(limit=32)).render(0.0)
+    # the pictures were decoded in the middle of it.  The reference renderer
+    # is kept so it can be drawn again at the same instant as the frame it
+    # is compared against: default.json scrolls its title, so two renders a
+    # few seconds apart differ however well the pictures loaded.
+    reference_renderer = build(ImageCache(limit=32))
+    epoch = time.time()
+    started = epoch
+    reference_renderer.render(epoch)
     inline_cost = time.time() - started
 
     images.decode_bytes = watched
     cache = ImageCache(limit=32, background=True)
     try:
         renderer = build(cache)
+        # Both renderers have to see the text for the first time at the same
+        # instant, or their marquees run out of phase and no amount of
+        # loading will make the frames match.
         started = time.time()
-        renderer.render(started)
+        renderer.render(epoch)
         slowest = time.time() - started
 
         deadline = time.time() + 60
@@ -2084,10 +2009,13 @@ def test_background_loader():
             canvas = renderer.render(frame_started)
             slowest = max(slowest, time.time() - frame_started)
             frames += 1
-            delta = difference(canvas, reference)
+            # Same instant for both, so only the pictures can differ.  The
+            # reference cache is warm by now, so this costs a redraw.
+            delta = difference(canvas, reference_renderer.render(frame_started))
             if delta < 1.0:
                 break
 
+        reference = reference_renderer.canvas
         check(not inline, "nothing is decoded on the render thread (%d decodes)"
               % len(inline))
         check(delta < 1.0,
@@ -2394,6 +2322,209 @@ def test_huffman_table():
           "codes longer than %d bits stay out of the table" % _PEEK)
 
 
+def test_gfonts():
+    """Google Fonts: the bundled index, the cache and the fallback.
+
+    Nothing here touches the network - the download is replaced by a stub
+    that copies a bundled face - because the whole point of the cache is
+    that the box works without one.
+    """
+    print("google fonts")
+    from lcd4linux import gfonts
+    from lcd4linux.bmfont import FontCache
+    from lcd4linux.settings import Config
+    from lcd4linux.webui import WebEditor
+
+    # -- the bundled index -------------------------------------------------
+    book = gfonts.catalogue()
+    check(book.count > 1000, "the index lists %d families" % book.count)
+    check(len(book.entries) == book.count,
+          "and no family is in it twice (%d names, %d rows)"
+          % (len(book.entries), book.count))
+    thin = [entry["name"] for entry in book.entries.values()
+            if not entry["weights"]][:4]
+    check(not thin, "every family says which weights it has (%s)"
+          % (thin or "all of them",))
+    kinds = {entry["category"] for entry in book.entries.values()}
+    check("Monospace" in kinds and "Sans Serif" in kinds,
+          "the kinds are named: %s" % ", ".join(sorted(kinds)))
+
+    total, rows = book.search("mono", "Monospace", 0, 5)
+    check(total > 10 and len(rows) == 5,
+          "searching 'mono' in Monospace gives %d, paged to %d"
+          % (total, len(rows)))
+    _total, second = book.search("mono", "Monospace", 5, 5)
+    check(rows[0]["name"] != second[0]["name"], "and the next page differs")
+    check(book.search("", None, 0, 3)[1][0]["name"] in
+          [entry["name"] for entry in book.search("", None, 0, 20)[1][:3]],
+          "the order is stable between pages")
+
+    # -- names -------------------------------------------------------------
+    check(gfonts.resolve("Roboto Mono") == ("Roboto Mono", 400),
+          "a plain family resolves at the regular weight")
+    check(gfonts.resolve("Roboto Mono-bold") == ("Roboto Mono", 700),
+          "and -bold at 700, which is what bold: true appends")
+    check(gfonts.resolve("roboto mono") == ("Roboto Mono", 400),
+          "the spelling in a layout need not match the catalogue's case")
+    check(gfonts.resolve("sans") == (None, 0)
+          and gfonts.resolve("Definitely Not A Font") == (None, 0),
+          "a name the catalogue does not have resolves to nothing")
+    # Bebas Neue has only one weight, so -bold has to land on it rather
+    # than ask for a 700 that does not exist.
+    if book.get("Bebas Neue"):
+        check(gfonts.resolve("Bebas Neue-bold")[1] in book.get("Bebas Neue")["weights"],
+              "a bold nobody cut falls to a weight the family really has")
+    check("/" not in gfonts.slug("Roboto Mono", 700)
+          and gfonts.slug("Roboto Mono", 700) == "RobotoMono-700.ttf",
+          "the cache file name is safe: %s" % gfonts.slug("Roboto Mono", 700))
+    # used_by and the download queue write a cut as "family-700", so that
+    # spelling has to resolve as well as "-bold" does, or a bold face would
+    # be queued and never fetched.
+    check(gfonts.resolve("Roboto Mono-700") == ("Roboto Mono", 700),
+          "a numeric weight suffix resolves too")
+    check(gfonts.name_for("Roboto Mono", 400) == "Roboto Mono"
+          and gfonts.name_for("Roboto Mono", 700) == "Roboto Mono-700",
+          "and is what name_for writes")
+
+    # -- the cache, against a stub ----------------------------------------
+    directory = tempfile.mkdtemp(prefix="lcd4linux-gfonts-")
+    face = os.path.join(ROOT, "resources", "fonts", "mono.ttf")
+    real_download = gfonts.download
+    calls = []
+    try:
+        gfonts.configure(cache=directory, downloads=True)
+        gfonts.clear_cache()
+
+        def fake_download(text):
+            calls.append(text)
+            family, weight = gfonts.resolve(text)
+            if not family or family == "Bungee":
+                return None      # stands in for one the server will not give
+            with open(face, "rb") as handle:
+                data = handle.read()
+            path = gfonts.cached_path(family, weight)
+            gfonts._write(path, data)
+            gfonts.generation += 1
+            return path
+
+        gfonts.download = fake_download
+
+        check(gfonts.lookup("Roboto Mono") is None, "the cache starts empty")
+        got = gfonts.download("Roboto Mono")
+        check(got and os.path.isfile(got), "a fetched face lands in the cache")
+        check(gfonts.lookup("Roboto Mono") == got,
+              "and is found again without another call")
+        check(gfonts.cached_families() == ["Roboto Mono"],
+              "the cache knows which families it holds (%s)"
+              % gfonts.cached_families())
+        state = gfonts.cache_state(max_age=0)
+        check(state["count"] == 1 and state["bytes"] > 0,
+              "and reports %d file(s), %d bytes" % (state["count"],
+                                                    state["bytes"]))
+
+        # -- what the renderer sees -------------------------------------
+        fonts = FontCache([os.path.join(ROOT, "resources", "fonts")])
+        drawn = fonts.get("Roboto Mono", 20)
+        check(drawn.name == "Roboto Mono",
+              "a cached family is drawn with its own face (%s)" % drawn.name)
+
+        # A family that is not cached must not block the frame: it draws in
+        # a stand-in of the same kind and swaps over once the face lands.
+        del calls[:]
+        fonts = FontCache([os.path.join(ROOT, "resources", "fonts")])
+        gfonts.download = lambda text: None      # queue, never finish
+        waiting = fonts.get("Space Mono", 20)
+        check(waiting.name == "mono",
+              "an uncached monospaced family stands in as mono (%s)"
+              % waiting.name)
+        proportional = fonts.get("Playfair Display", 20)
+        check(proportional.name == "sans",
+              "and a proportional one as sans (%s)" % proportional.name)
+        check(fonts.get("Space Mono", 20) is waiting,
+              "the stand-in is kept while nothing has changed")
+
+        gfonts.download = fake_download
+        gfonts.download("Space Mono")
+        check(fonts.get("Space Mono", 20).name == "Space Mono",
+              "and gives way to the real face once it has landed")
+        check(fonts.get("Playfair Display", 20).name == "sans",
+              "while a family still waiting keeps its stand-in")
+
+        # -- with downloads off -------------------------------------------
+        gfonts.configure(downloads=False)
+        del calls[:]
+        fonts = FontCache([os.path.join(ROOT, "resources", "fonts")])
+        check(fonts.get("Fira Code", 20).name == "mono",
+              "nothing is fetched when downloads are off")
+        check(not calls, "and nothing was even asked for (%s)" % (calls,))
+        check(fonts.get("Roboto Mono", 20).name == "Roboto Mono",
+              "but what is already cached still draws")
+        gfonts.configure(downloads=True)
+
+        # -- request() never waits ----------------------------------------
+        gfonts.download = lambda text: None
+        gfonts.clear_cache()
+        started = time.time()
+        answer = gfonts.request("Fira Code")
+        check(answer is None and time.time() - started < 0.5,
+              "request() answers at once and queues the work (%.3f s)"
+              % (time.time() - started))
+        gfonts.stop()
+
+        # -- what a layout asks for ---------------------------------------
+        spec = {
+            "defaults": {"font": "sans"},
+            "pages": [{"widgets": [
+                {"type": "text", "font": "Roboto Mono"},
+                {"type": "text", "font": "Roboto Mono", "bold": True},
+                {"type": "text", "font": "sans-bold"},
+                {"type": "text", "font": "${player.title}"},
+                {"type": "text", "font": "Not A Real Family"},
+            ]}],
+        }
+        wanted = gfonts.used_by(spec, ("sans", "sans-bold", "mono",
+                                       "mono-bold"))
+        check(wanted == ["Roboto Mono", "Roboto Mono-700"],
+              "a layout names exactly the faces worth fetching (%s)" % (wanted,))
+
+        # -- the editor's endpoint ----------------------------------------
+        editor = WebEditor(Config({"web_enabled": False}))
+        answer = editor.fonts({"q": "mono", "kind": "Monospace", "limit": "5"})
+        check(answer["total"] > 5 and len(answer["fonts"]) == 5,
+              "the dialog gets a page of %d out of %d"
+              % (len(answer["fonts"]), answer["total"]))
+        first = answer["fonts"][0]
+        check(set(first) >= {"name", "category", "weights", "cached", "bundled"},
+              "every row says what the dialog needs (%s)"
+              % ", ".join(sorted(first)))
+        check(set(answer["bundled"]) == {"sans", "sans-bold", "mono",
+                                         "mono-bold"},
+              "and the bundled families come along (%s)"
+              % ", ".join(sorted(answer["bundled"])))
+
+        # -- a bold cut has to survive the whole round trip ---------------
+        gfonts.download = fake_download
+        gfonts.clear_cache()
+        cached, fetched, failed = gfonts.prefetch(wanted)
+        check(fetched == 2 and not failed,
+              "both cuts a layout named are fetched (%d cached, %d fetched, "
+              "%d failed)" % (cached, fetched, failed))
+        check(gfonts.lookup("Roboto Mono-bold"),
+              "including the bold one, found again under its -bold name")
+        check(gfonts.prefetch(wanted)[0] == 2,
+              "and a second pass finds both already there")
+
+        removed = gfonts.clear_cache()
+        check(removed >= 2 and gfonts.cache_state(max_age=0)["count"] == 0,
+              "emptying the cache removes %d file(s)" % removed)
+    finally:
+        gfonts.download = real_download
+        gfonts.stop()
+        gfonts.configure(downloads=False,
+                         cache=tempfile.mkdtemp(prefix="lcd4linux-gfonts-"))
+        shutil.rmtree(directory, ignore_errors=True)
+
+
 def test_icons():
     """Font Awesome: the bundled index, the cache and the renderer.
 
@@ -2693,9 +2824,10 @@ def test_web_editor():
     families = dict((entry["name"], entry) for entry in described["fontinfo"])
     check(sorted(families) == sorted(described["fonts"]),
           "the schema describes every family it offers")
-    check(families["sans"]["sizes"] and families["sans"]["bold"]
-          and not families["sans-bold"]["bold"],
-          "and says which sizes it ships and where a bold cut exists")
+    check(families["sans"]["scalable"] and not families["sans"]["sizes"],
+          "and marks a real face as drawing any size")
+    check(families["sans"]["bold"] and not families["sans-bold"]["bold"],
+          "and says where a bold cut exists")
     png = editor.font_sample({"font": "bebas", "size": "28",
                               "text": "Hamburgefons"})
     check(png[:8] == b"\x89PNG\r\n\x1a\n", "a font sample comes back as a PNG")
@@ -2949,6 +3081,26 @@ def test_web_editor():
         check(blank["size"] == [800, 480], "a blank layout is offered")
         webui.validate(blank)
 
+        # Both halves of the font endpoint, over HTTP: a GET route pasted
+        # into the POST handler answers every unit test just fine and still
+        # 404s the dialog, so this asks the server itself.
+        code, _kind, body = request("/api/fonts?q=mono&limit=3")
+        found = json.loads(body) if code == 200 else {}
+        check(code == 200 and len(found.get("fonts", [])) == 3
+              and found.get("total", 0) > 3,
+              "GET /api/fonts pages the catalogue (%s, %d of %s)"
+              % (code, len(found.get("fonts", [])), found.get("total")))
+        check(set(found.get("bundled") or ()) >= {"sans", "mono"},
+              "and names the bundled families too (%s)"
+              % (found.get("bundled"),))
+        code, _kind, body = request("/api/fonts", {"action": "state"})
+        state = json.loads(body) if code == 200 else {}
+        check(code == 200 and "cache" in state,
+              "POST /api/fonts reports the cache (%s)" % code)
+        code, _kind, body = request("/api/fonts", {"action": "clear"})
+        check(code == 200 and json.loads(body).get("ok"),
+              "and empties it (%s)" % code)
+
         code, _kind, _body = request("/api/command", {"command": "rm -rf"})
         check(code == 400, "an unknown command is refused")
     finally:
@@ -3114,20 +3266,29 @@ def _png_size(data):
 
 def main():
     print("script.lcd4linux self test\n")
-    for test in (test_encoding, test_fonts, test_images, test_tokens,
+    # Nothing in here may reach the network.  A layout naming a family that
+    # is only in the Google catalogue would otherwise start a download, so
+    # the whole run is pinned to an empty cache with fetching switched off;
+    # the font test turns it back on against a stub.
+    from lcd4linux import gfonts
+    gfonts.configure(downloads=False,
+                     cache=tempfile.mkdtemp(prefix="lcd4linux-gfonts-"))
+    for test in (test_encoding, test_rasteriser, test_fonts, test_images,
+                 test_tokens,
                  test_media_info, test_dolby_vision,
                  test_pixel_conversion, test_frame_cache, test_image_cache,
                  test_decode_size, test_background_loader,
                  test_kodi_texture, test_picture_cache, test_rough_first,
                  test_huffman_table,
-                 test_jpeg_encoder, test_protocol, test_target_from_settings,
+                 test_jpeg_encoder, test_target_from_settings,
                  test_samsung_spf, test_late_display, test_brightness,
                  test_localisation,
                  test_settings_xml, test_layout_precedence,
                  test_layout_index, test_layout_chooser,
                  test_preview_ownership, test_preview_encoding,
                  test_preview_worker,
-                 test_power_hooks, test_rotation, test_icons, test_web_editor,
+                 test_power_hooks, test_rotation, test_gfonts, test_icons,
+                 test_web_editor,
                  test_network_display,
                  test_layouts):
         test()

@@ -4,17 +4,6 @@
 
     <category id="display" label="32010">
       <group id="1" label="32020">
-        <setting id="display_type" type="string" label="32170" help="32171">
-          <level>0</level>
-          <default>ax206</default>
-          <constraints>
-            <options>
-              <option label="32172">ax206</option>
-              <option label="32173">spf</option>
-            </options>
-          </constraints>
-          <control type="list" format="string"/>
-        </setting>
         <setting id="output_mode" type="string" label="32100" help="32101">
           <level>0</level>
           <default>usb</default>
@@ -27,14 +16,6 @@
             </options>
           </constraints>
           <control type="list" format="string"/>
-        </setting>
-        <setting id="device_ids" type="string" label="32105" help="32106">
-          <level>2</level>
-          <default>1908:0102</default>
-          <dependencies>
-            <dependency type="visible" setting="display_type" operator="is">ax206</dependency>
-          </dependencies>
-          <control type="edit" format="string"/>
         </setting>
         <setting id="spf_model" type="string" label="32174" help="32175">
           <level>1</level>
@@ -62,7 +43,7 @@
             </options>
           </constraints>
           <dependencies>
-            <dependency type="visible" setting="display_type" operator="is">spf</dependency>
+            <dependency type="visible" setting="output_mode" operator="!is">network</dependency>
           </dependencies>
           <control type="list" format="string"/>
         </setting>
@@ -76,17 +57,9 @@
           </constraints>
           <control type="spinner" format="integer"/>
         </setting>
-        <setting id="reset_on_open" type="boolean" label="32109" help="32110">
-          <level>2</level>
-          <default>false</default>
-          <dependencies>
-            <dependency type="visible" setting="display_type" operator="is">ax206</dependency>
-          </dependencies>
-          <control type="toggle"/>
-        </setting>
         <setting id="usb_timeout" type="integer" label="32111">
           <level>3</level>
-          <default>3000</default>
+          <default>5000</default>
           <constraints>
             <minimum>500</minimum>
             <step>500</step>
@@ -141,20 +114,6 @@
           <default>false</default>
           <control type="toggle"/>
         </setting>
-        <setting id="byte_order" type="string" label="32121" help="32122">
-          <level>2</level>
-          <default>big</default>
-          <constraints>
-            <options>
-              <option label="32123">big</option>
-              <option label="32124">little</option>
-            </options>
-          </constraints>
-          <dependencies>
-            <dependency type="visible" setting="display_type" operator="is">ax206</dependency>
-          </dependencies>
-          <control type="list" format="string"/>
-        </setting>
         <setting id="force_size" type="boolean" label="32125" help="32126">
           <level>2</level>
           <default>false</default>
@@ -162,7 +121,7 @@
         </setting>
         <setting id="width" type="integer" label="32127">
           <level>1</level>
-          <default>480</default>
+          <default>800</default>
           <constraints>
             <minimum>64</minimum>
             <step>8</step>
@@ -182,7 +141,7 @@
         </setting>
         <setting id="height" type="integer" label="32128">
           <level>1</level>
-          <default>320</default>
+          <default>480</default>
           <constraints>
             <minimum>64</minimum>
             <step>8</step>
@@ -211,14 +170,6 @@
             <step>5</step>
             <maximum>100</maximum>
           </constraints>
-          <dependencies>
-            <dependency type="visible">
-              <or>
-                <condition setting="display_type" operator="is">spf</condition>
-                <condition setting="output_mode" operator="is">network</condition>
-              </or>
-            </dependency>
-          </dependencies>
           <control type="slider" format="integer">
             <popup>true</popup>
           </control>
@@ -226,39 +177,11 @@
         <setting id="jpeg_subsample" type="boolean" label="32178" help="32179">
           <level>1</level>
           <default>true</default>
-          <dependencies>
-            <dependency type="visible">
-              <or>
-                <condition setting="display_type" operator="is">spf</condition>
-                <condition setting="output_mode" operator="is">network</condition>
-              </or>
-            </dependency>
-          </dependencies>
           <control type="toggle"/>
         </setting>
       </group>
 
       <group id="3" label="32022">
-        <setting id="brightness" type="integer" label="32130" help="32131">
-          <level>0</level>
-          <default>7</default>
-          <constraints>
-            <minimum>0</minimum>
-            <step>1</step>
-            <maximum>7</maximum>
-          </constraints>
-          <dependencies>
-            <dependency type="visible">
-              <and>
-                <condition setting="display_type" operator="is">ax206</condition>
-                <condition setting="output_mode" operator="!is">network</condition>
-              </and>
-            </dependency>
-          </dependencies>
-          <control type="slider" format="integer">
-            <popup>true</popup>
-          </control>
-        </setting>
         <setting id="spf_brightness" type="integer" label="32188" help="32189">
           <level>0</level>
           <default>100</default>
@@ -267,41 +190,12 @@
             <step>5</step>
             <maximum>100</maximum>
           </constraints>
-          <dependencies>
-            <dependency type="visible">
-              <or>
-                <condition setting="display_type" operator="is">spf</condition>
-                <condition setting="output_mode" operator="is">network</condition>
-              </or>
-            </dependency>
-          </dependencies>
           <control type="slider" format="percentage"/>
         </setting>
         <setting id="dim_on_idle" type="boolean" label="32186" help="32187">
           <level>0</level>
           <default>true</default>
           <control type="toggle"/>
-        </setting>
-        <setting id="dim_brightness" type="integer" label="32133" help="32191">
-          <level>0</level>
-          <default>1</default>
-          <constraints>
-            <minimum>0</minimum>
-            <step>1</step>
-            <maximum>7</maximum>
-          </constraints>
-          <dependencies>
-            <dependency type="visible">
-              <and>
-                <condition setting="display_type" operator="is">ax206</condition>
-                <condition setting="output_mode" operator="!is">network</condition>
-              </and>
-            </dependency>
-            <dependency type="enable" setting="dim_on_idle" operator="is">true</dependency>
-          </dependencies>
-          <control type="slider" format="integer">
-            <popup>true</popup>
-          </control>
         </setting>
         <setting id="spf_dim_brightness" type="integer" label="32190" help="32192">
           <level>0</level>
@@ -312,12 +206,6 @@
             <maximum>100</maximum>
           </constraints>
           <dependencies>
-            <dependency type="visible">
-              <or>
-                <condition setting="display_type" operator="is">spf</condition>
-                <condition setting="output_mode" operator="is">network</condition>
-              </or>
-            </dependency>
             <dependency type="enable" setting="dim_on_idle" operator="is">true</dependency>
           </dependencies>
           <control type="slider" format="percentage"/>
@@ -387,6 +275,31 @@
           </control>
         </setting>
         <setting id="icon_source" type="string" label="32245" help="32246">
+          <level>3</level>
+          <default></default>
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string"/>
+        </setting>
+      </group>
+
+      <group id="5" label="32250">
+        <setting id="font_download" type="boolean" label="32260" help="32261">
+          <level>0</level>
+          <default>true</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="action_fontcache" type="action" label="32262" help="32263">
+          <level>0</level>
+          <data>RunScript(script.lcd4linux,fonts)</data>
+          <!-- Downloading can take a moment and reports back with a
+               progress bar, so the settings stay open behind it. -->
+          <control type="button" format="action">
+            <close>false</close>
+          </control>
+        </setting>
+        <setting id="font_source" type="string" label="32264" help="32265">
           <level>3</level>
           <default></default>
           <constraints>

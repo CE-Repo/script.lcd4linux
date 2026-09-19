@@ -1,7 +1,7 @@
 """A baseline JPEG encoder in pure Python.
 
-The Samsung SPF frames only accept complete JPEG images, so unlike the AX206
-there is no way to send just the pixels that changed.  Encoding a whole
+The Samsung SPF frames only accept complete JPEG images, so there is no way
+to send just the pixels that changed.  Encoding a whole
 800x480 frame in the Kodi interpreter would be far too slow, so this encoder
 uses three tricks:
 

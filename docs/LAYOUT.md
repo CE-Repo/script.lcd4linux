@@ -205,9 +205,9 @@ file. The bundled designs ship their picture and are never re-drawn.
 `size` must match the display. The add-on looks for a matching variant
 alongside the file you selected:
 
-| Panel | File name |
+| Display | File name |
 |---|---|
-| AX206 480×320 | `mine.json` |
+| 480×320 | `mine.json` |
 | SPF 800×480 | `mine-800x480.json` |
 | SPF 1024×600 | `mine-1024x600.json` |
 
@@ -299,28 +299,50 @@ layout accent, or a name: `black`, `white`, `red`, `green`, `blue`, `cyan`,
 `lime`, `teal`, `brown`, `navy`, `gold`, `kodiblue`, `transparent`. Colours may
 contain tokens.
 
-**Fonts** work at any pixel size; a size that is not bundled is resampled from
-the nearest one. Extra `.l4f` fonts go in a `fonts` folder next to `layouts`
-(build them with `tools/mkfont.py`).
+**Fonts** are outlines rasterised at whatever pixel size a layout asks for,
+so every size is its own — nothing is resampled from a neighbour.
 
 | Kind | Families |
 |---|---|
-| Text | `sans`, `sans-bold` · `inter`, `inter-bold` · `roboto`, `roboto-bold` |
-| Narrow | `condensed`, `condensed-bold` · `oswald`, `oswald-bold` |
-| Display | `bebas` · `anton` · `michroma` |
-| Monospace | `mono`, `mono-bold` · `jetbrains`, `jetbrains-bold` · `sourcecode`, `sourcecode-bold` · `robotomono`, `robotomono-bold` · `firamono`, `firamono-bold` · `plexmono`, `plexmono-bold` · `inconsolata`, `inconsolata-bold` · `spacemono` · `sharetech` · `courierprime` |
+| Text | `sans`, `sans-bold` |
+| Monospace | `mono`, `mono-bold` |
 
-`bold: true` appends `-bold` to whatever family is set, and a family without a
-bold weight simply stays as it is. The display faces start at 20 px: below
-that they are unreadable, so no smaller sizes are built and the renderer
-resamples if a layout asks anyway.
+**Any Google Fonts family** can be named as well — `"font": "Roboto Mono"`,
+spelled the way [fonts.google.com](https://fonts.google.com/) spells it, case
+insensitive. The add-on carries the index of all 1825 Latin families, so the
+editor's font dialog searches them without a network; the face itself is
+downloaded the first time something draws with it and kept in
+`<addon data>/gfonts/`. While it is on its way the text is drawn in a
+stand-in of the same kind — a monospaced family stands in as `mono` — and the
+real face takes over a frame or two later.
 
-Every family draws the same characters — ASCII, Latin-1, Latin Extended-A and
-the punctuation and media signs the layouts use. Most faces stop short of
-that on their own, so `tools/mkfont.py` fills the gaps from DejaVu and Noto's
-symbol font while it rasterises. A monospaced family borrows only from
-monospaced sources and keeps one cell width throughout, so a column of
-figures still lines up when it contains a `⏵` or a `♪`.
+`bold: true` appends `-bold` to whatever family is set. A bundled family
+without a bold cut simply stays as it is; for a Google one it asks for weight
+700, or the nearest weight that family really has. A specific weight can be
+named directly: `"font": "Inter-300"`.
+
+Drop your own `.ttf` or `.otf` into a `fonts` folder next to `layouts` and it
+becomes a family under its file name: `oswald.ttf` is `"font": "oswald"`. A
+face there wins over a bundled one and over the catalogue. The `.l4f` bitmap
+fonts older versions shipped are still read if you have any.
+
+An unknown family falls back to its own base weight first and then to `sans`,
+so a layout never fails to draw.
+
+The four bundled families draw the same characters — ASCII, Latin-1, Latin Extended-A
+and the punctuation and media signs the layouts use. DejaVu stops short of
+`⏵ ⏸ ⏹`, so `tools/mkfonts.py` grafts those on from Noto's symbol font when it
+builds the bundled faces, scaled into the cell for the monospaced ones so a
+column of figures still lines up.
+
+A downloaded face carries the Latin subset, which is the same character set;
+its licence is fetched alongside it into the cache. *Settings → Layout → Font
+cache* fetches everything the layouts use in one go, for a box that is about
+to lose its internet connection, and empties the cache again.
+
+Glyphs are drawn by FreeType where the box has it — every Kodi does, it draws
+its own interface with it — and by a built-in rasteriser otherwise. *Display
+status* in the menu says which one is in use.
 
 ### Widgets
 
@@ -767,5 +789,5 @@ it can find.
 python3 tools/preview.py --layout mine.json --page 0 --out test.png
 ```
 
-The *test pattern* in the menu verifies resolution, rotation and byte order:
-the red frame must touch all four edges and the grey wedge must be smooth.
+The *test pattern* in the menu verifies resolution and rotation: the red
+frame must touch all four edges and the grey wedge must be smooth.

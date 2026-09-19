@@ -1,9 +1,8 @@
 """Image loading, scaling and caching for the layout engine.
 
 Everything works with plain RGBA ``bytearray`` buffers.  Decoding is done by
-the bundled pure-Python PNG/JPEG readers; if Pillow happens to be installed
-(for example through ``script.module.pillow``) it is used instead because it
-is considerably faster.
+the bundled pure-Python PNG/JPEG readers, so nothing outside the add-on has
+to be installed.
 """
 
 import errno
@@ -23,11 +22,6 @@ except ImportError:  # pragma: no cover - Python 2 safety net
 from . import pngio
 from . import jpegio
 from .logger import debug, debug_enabled, log
-
-try:
-    from PIL import Image as _PILImage  # type: ignore
-except Exception:
-    _PILImage = None
 
 try:
     import xbmcvfs  # type: ignore
@@ -353,17 +347,6 @@ def decode_bytes(data, max_size=None):
     """Decode PNG or JPEG bytes into an :class:`Image`."""
     if not data:
         raise ValueError("empty image data")
-    if _PILImage is not None:
-        try:
-            import io
-            with _PILImage.open(io.BytesIO(data)) as handle:
-                if max_size:
-                    handle.draft("RGB", (max_size, max_size))
-                converted = handle.convert("RGBA")
-                return Image(converted.width, converted.height,
-                             bytearray(converted.tobytes()))
-        except Exception as error:
-            log("Pillow failed to decode image (%s), using builtin decoder" % error)
     if data[:8] == pngio.PNG_MAGIC:
         width, height, rgba = pngio.decode(data)
         return Image(width, height, rgba)
@@ -371,11 +354,6 @@ def decode_bytes(data, max_size=None):
         width, height, rgba = jpegio.decode(data, max_size)
         return Image(width, height, rgba)
     raise ValueError("unsupported image format")
-
-
-def decoder_name():
-    """Which decoder the pictures go through, for the log and the settings."""
-    return "Pillow" if _PILImage is not None else "the built-in decoder"
 
 
 def decode_size(width, height, fit="contain"):
@@ -501,9 +479,9 @@ class ImageCache(object):
 
     With ``background=True`` the cache also runs a worker thread and grows a
     second, asynchronous entry point, :meth:`request`.  Decoding a piece of
-    fanart without Pillow costs seconds of pure Python, and the service draws
-    its frames from a single loop - doing that work inline froze the whole
-    panel, clock and progress bar included, until the picture was ready.  The
+    fanart costs seconds of pure Python, and the service draws its frames
+    from a single loop - doing that work inline froze the whole display,
+    clock and progress bar included, until the picture was ready.  The
     worker does the reading, decoding, scaling and sprite building instead;
     the render thread only ever gets a finished picture or ``None``.
     """

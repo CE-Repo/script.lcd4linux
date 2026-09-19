@@ -207,13 +207,13 @@ DEFAULT_FIELDS = [
     _field("color", "color", "Default colour", "Standardfarbe"),
 ]
 
-#: Sizes of the panels the add-on drives, offered when a layout is created.
+#: Sizes of the displays the add-on drives, offered when a layout is created.
 SIZES = [
-    {"size": [480, 320], "label": "AX206 480×320"},
     {"size": [800, 480], "label": "Samsung SPF 800×480"},
     {"size": [1024, 600], "label": "Samsung SPF 1024×600"},
-    {"size": [320, 480], "label": "AX206 320×480 (90°)"},
-    {"size": [480, 800], "label": "SPF 480×800 (90°)"},
+    {"size": [480, 800], "label": "Samsung SPF 480×800 (90°)"},
+    {"size": [480, 320], "label": "Small display 480×320"},
+    {"size": [320, 480], "label": "Small display 320×480 (90°)"},
 ]
 
 #: Data fields, grouped the way the token picker lists them.
@@ -487,16 +487,20 @@ def describe_icons():
 
 
 def describe_fonts(fonts=None):
-    """Every bundled family with the pixel sizes it ships in.
+    """Every family the add-on can draw, and what it can do with it.
 
-    The editor cannot draw a bitmap font itself, so its font dialog asks
+    The editor cannot render the face itself, so its font dialog asks
     ``/api/fontsample`` for a picture per family; this is the list it walks
-    and what it prints beside each sample.
+    and what it prints beside each sample.  ``sizes`` is empty for a real
+    face, which draws any size asked of it, and lists the fixed sizes of an
+    older ``.l4f`` bitmap font where someone still has one.
     """
     if fonts is None:
-        return [{"name": "sans", "sizes": [], "bold": False}]
+        return [{"name": "sans", "sizes": [], "scalable": True,
+                 "bold": False}]
     available = fonts.available()
     return [{"name": name, "sizes": sorted(available[name]),
+             "scalable": not available[name],
              "bold": ("%s-bold" % name) in available}
             for name in sorted(available)]
 

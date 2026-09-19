@@ -84,14 +84,6 @@ msgctxt "#32104"
 msgid "Disabled"
 msgstr "Deaktiviert"
 
-msgctxt "#32105"
-msgid "USB device IDs"
-msgstr "USB-Geräte-IDs"
-
-msgctxt "#32106"
-msgid "Vendor:product IDs to look for, separated by commas. The AX206 panels use 1908:0102."
-msgstr "Gesuchte Hersteller:Produkt-IDs, durch Komma getrennt. AX206-Displays nutzen 1908:0102."
-
 msgctxt "#32107"
 msgid "Display number"
 msgstr "Displaynummer"
@@ -99,14 +91,6 @@ msgstr "Displaynummer"
 msgctxt "#32108"
 msgid "Which panel to use when several are connected."
 msgstr "Welches Display verwendet wird, wenn mehrere angeschlossen sind."
-
-msgctxt "#32109"
-msgid "Reset USB device when connecting"
-msgstr "USB-Gerät beim Verbinden zurücksetzen"
-
-msgctxt "#32110"
-msgid "Helps if the panel was left in a bad state by another program."
-msgstr "Hilft, wenn das Display von einem anderen Programm in einem ungültigen Zustand hinterlassen wurde."
 
 msgctxt "#32111"
 msgid "USB timeout (ms)"
@@ -148,22 +132,6 @@ msgctxt "#32120"
 msgid "Mirror horizontally"
 msgstr "Horizontal spiegeln"
 
-msgctxt "#32121"
-msgid "Pixel byte order"
-msgstr "Byte-Reihenfolge der Pixel"
-
-msgctxt "#32122"
-msgid "Change this if colours look wrong (for example red and blue swapped or a garbled picture)."
-msgstr "Ändern, wenn die Farben falsch sind (z. B. Rot und Blau vertauscht oder ein verzerrtes Bild)."
-
-msgctxt "#32123"
-msgid "High byte first (default)"
-msgstr "Höherwertiges Byte zuerst (Standard)"
-
-msgctxt "#32124"
-msgid "Low byte first"
-msgstr "Niederwertiges Byte zuerst"
-
 msgctxt "#32125"
 msgid "Override display size"
 msgstr "Displaygröße überschreiben"
@@ -179,18 +147,6 @@ msgstr "Breite"
 msgctxt "#32128"
 msgid "Height"
 msgstr "Höhe"
-
-msgctxt "#32130"
-msgid "Brightness"
-msgstr "Helligkeit"
-
-msgctxt "#32131"
-msgid "0 switches the backlight off, 7 is the brightest setting."
-msgstr "0 schaltet die Hintergrundbeleuchtung aus, 7 ist die hellste Stufe."
-
-msgctxt "#32133"
-msgid "Idle brightness"
-msgstr "Helligkeit im Leerlauf"
 
 msgctxt "#32138"
 msgid "Clear the display when Kodi stops"
@@ -488,10 +444,6 @@ msgctxt "#32331"
 msgid "not running"
 msgstr "läuft nicht"
 
-msgctxt "#32332"
-msgid "No AX206 display detected"
-msgstr "Kein AX206-Display gefunden"
-
 msgctxt "#32333"
 msgid "USB error"
 msgstr "USB-Fehler"
@@ -507,22 +459,6 @@ msgstr "Anzeigestatus"
 msgctxt "#32027"
 msgid "Samsung photo frame"
 msgstr "Samsung-Bilderrahmen"
-
-msgctxt "#32170"
-msgid "Display type"
-msgstr "Displaytyp"
-
-msgctxt "#32171"
-msgid "Which panel is connected. The AX206 type is the 3.5\" 480x320 LCD sold as an AIDA64 display; Samsung SPF frames are the 7\" and larger photo frames."
-msgstr "Welches Panel angeschlossen ist. Der AX206-Typ ist das 3,5\"-LCD mit 480x320, das als AIDA64-Display verkauft wird; Samsung-SPF sind die Bilderrahmen ab 7 Zoll."
-
-msgctxt "#32172"
-msgid "AX206 USB LCD (AIDA64 type)"
-msgstr "AX206-USB-LCD (AIDA64-Typ)"
-
-msgctxt "#32173"
-msgid "Samsung SPF photo frame"
-msgstr "Samsung-SPF-Bilderrahmen"
 
 msgctxt "#32174"
 msgid "Samsung model"
@@ -593,16 +529,12 @@ msgid "Brightness (software)"
 msgstr "Helligkeit (Software)"
 
 msgctxt "#32189"
-msgid "Samsung frames have no backlight control over USB, so the picture is darkened in software before it is sent. 100% leaves it untouched."
-msgstr "Samsung-Rahmen bieten keine Helligkeitssteuerung über USB. Das Bild wird deshalb vor dem Senden softwareseitig abgedunkelt. 100 % lässt es unverändert."
+msgid "Neither a Samsung frame nor a browser has a backlight that can be controlled, so the picture is darkened in software before it is sent. 100% leaves it untouched."
+msgstr "Weder ein Samsung-Rahmen noch ein Browser bietet eine steuerbare Hintergrundbeleuchtung. Das Bild wird deshalb vor dem Senden softwareseitig abgedunkelt. 100 % lässt es unverändert."
 
 msgctxt "#32190"
 msgid "Idle brightness (software)"
 msgstr "Helligkeit im Leerlauf (Software)"
-
-msgctxt "#32191"
-msgid "Backlight level while nothing is playing."
-msgstr "Helligkeitsstufe, solange nichts abgespielt wird."
 
 msgctxt "#32192"
 msgid "How far the picture is darkened while nothing is playing. 0% shows a black picture."
@@ -707,6 +639,74 @@ msgstr "Diese Adresse im Browser öffnen:"
 msgctxt "#32346"
 msgid "The web editor is switched off"
 msgstr "Der Web-Editor ist ausgeschaltet"
+
+msgctxt "#32347"
+msgid "Glyph rendering"
+msgstr "Zeichensatz-Rendering"
+
+msgctxt "#32250"
+msgid "Font cache"
+msgstr "Schriften-Cache"
+
+msgctxt "#32251"
+msgid "Downloading fonts is switched off"
+msgstr "Schriften-Downloads sind ausgeschaltet"
+
+msgctxt "#32252"
+msgid "Cached fonts"
+msgstr "Geladene Schriften"
+
+msgctxt "#32253"
+msgid "Download the fonts the layouts use"
+msgstr "Von den Layouts genutzte Schriften laden"
+
+msgctxt "#32254"
+msgid "Empty the font cache"
+msgstr "Schriften-Cache leeren"
+
+msgctxt "#32255"
+msgid "%d fonts removed"
+msgstr "%d Schriften entfernt"
+
+msgctxt "#32256"
+msgid "No layout uses a downloadable font"
+msgstr "Kein Layout nutzt eine ladbare Schrift"
+
+msgctxt "#32257"
+msgid "Downloading fonts"
+msgstr "Schriften werden geladen"
+
+msgctxt "#32258"
+msgid "%d fonts cached"
+msgstr "%d Schriften im Cache"
+
+msgctxt "#32259"
+msgid "No font could be downloaded"
+msgstr "Es konnte keine Schrift geladen werden"
+
+msgctxt "#32260"
+msgid "Download fonts from Google Fonts"
+msgstr "Schriften von Google Fonts laden"
+
+msgctxt "#32261"
+msgid "Off means only the bundled families and whatever is already cached are drawn (default on)."
+msgstr "Aus bedeutet, dass nur die mitgelieferten und die bereits geladenen Schriften gezeichnet werden (Vorgabe an)."
+
+msgctxt "#32262"
+msgid "Manage the font cache..."
+msgstr "Schriften-Cache verwalten ..."
+
+msgctxt "#32263"
+msgid "Download the fonts your layouts use, or give the space back."
+msgstr "Die von den Layouts genutzten Schriften laden oder den Platz wieder freigeben."
+
+msgctxt "#32264"
+msgid "Font source"
+msgstr "Schriftquelle"
+
+msgctxt "#32265"
+msgid "Where faces come from; empty uses the Google Fonts API (expert level)."
+msgstr "Woher die Schriften kommen; leer nutzt die Google-Fonts-API (Expertenstufe)."
 
 msgctxt "#32400"
 msgid "Playing"

@@ -1,7 +1,8 @@
 """A compact baseline JPEG decoder in pure Python.
 
-Kodi caches artwork as JPEG, and a stock CoreELEC image has neither Pillow
-nor an ``ffmpeg`` binary, so cover art would otherwise be impossible.  The
+Kodi caches artwork as JPEG, and a stock CoreELEC image has no imaging
+library and no ``ffmpeg`` binary, so cover art would otherwise be
+impossible.  The
 decoder therefore supports a *scaled* inverse DCT: blocks can be
 reconstructed at 1x1, 2x2, 4x4 or 8x8 pixels, which is how a 500x500 cover
 is turned into the ~200 px thumbnail a layout actually needs in a fraction

@@ -3,8 +3,8 @@
 *Add-ons → Program add-ons → LCD4Linux* opens the menu; *Settings* from there,
 or the usual context menu on the add-on, opens this dialog.
 
-The dialog hides whatever does not apply: pick a *Display type* and only that
-panel's options remain visible.
+The dialog hides whatever does not apply: pick an *Output* and only that
+mode's options remain visible.
 
 ---
 
@@ -12,19 +12,19 @@ panel's options remain visible.
 
 | Setting | Meaning |
 |---|---|
-| Display type | `AX206 USB LCD (AIDA64 type)` or `Samsung SPF photo frame` |
-| Output | `USB display`, `Network display (browser or tablet)`, `Preview file only` (writes `preview.png` into the add-on data folder) or `Disabled` |
-| USB device IDs | `1908:0102` by default, several separated by commas (AX206) |
-| Display number | which panel to use when several are connected |
-| Reset USB device when connecting | helps when another program left the panel in a bad state (AX206) |
+| Output | `USB display` (a Samsung SPF photo frame), `Network display (browser or tablet)`, `Preview file only` (writes `preview.png` into the add-on data folder) or `Disabled` |
+| Samsung model | `Automatic` takes the frame it finds; pick a model only when several frames are connected |
+| Display number | which frame to use when several are connected |
 | Reconnect interval | how long to wait before looking again after the display disappeared (20 s) |
 | Start-up grace period | how long after the service starts the display is looked for every few seconds (180 s). For panels that boot slower than Kodi — a Samsung frame needs about half a minute. No "display missing" warning appears during this time |
 
-## Display → Samsung photo frame
+## Display → JPEG
+
+Both outputs send whole JPEG frames, so these apply to a Samsung frame and to
+a browser alike.
 
 | Setting | Meaning |
 |---|---|
-| Samsung model | `Automatic` takes the frame it finds; pick a model only when several frames are connected |
 | JPEG quality | 40–100, default 85. Lower is faster and sends less |
 | Reduced colour resolution (4:2:0) | on: faster and smaller. Off: sharper coloured text, about twice the encoding time |
 
@@ -34,23 +34,20 @@ panel's options remain visible.
 |---|---|
 | Rotation | 0/90/180/270 degrees, for portrait mounting |
 | Mirror horizontally | for mirrored mounting |
-| Pixel byte order | if the colours come out wrong — see below (AX206) |
-| Override display size | only when the panel reports a wrong resolution. In network mode width and height are always editable, since nothing reports a size there |
+| Override display size | only when the frame reports a wrong resolution. In network mode width and height are always editable, since nothing reports a size there |
 
-## Display → Backlight
+## Display → Brightness
 
-| Setting | Applies to | Meaning |
-|---|---|---|
-| Brightness | AX206 | Backlight level 0–7 |
-| Brightness (software) | Samsung, network | 10–100%, the picture is darkened before sending |
-| Dim while idle | both | Dims whenever nothing is playing. Paused still counts as playing |
-| Idle brightness | AX206 | Backlight level while idle |
-| Idle brightness (software) | Samsung, network | 0–100%; 0% is a black picture |
-| Clear the display when Kodi stops | both | Black picture on shutdown |
+| Setting | Meaning |
+|---|---|
+| Brightness (software) | 10–100%, the picture is darkened before sending |
+| Dim while idle | Dims whenever nothing is playing. Paused still counts as playing |
+| Idle brightness (software) | 0–100%; 0% is a black picture |
+| Clear the display when Kodi stops | Black picture on shutdown |
 
-Samsung frames and browsers have no backlight to control, so there the picture
-is darkened rather than the lamp dimmed. It costs no extra CPU time — the
-darkening lives in the JPEG encoder's colour tables.
+Neither a Samsung frame nor a browser has a backlight to control, so the
+picture is darkened rather than the lamp dimmed. It costs no extra CPU time —
+the darkening lives in the JPEG encoder's colour tables.
 
 ## Layout
 
@@ -110,6 +107,38 @@ pause for a minute.
 `Symbol source` takes a URL with the placeholders `%(version)s`, `%(style)s`
 and `%(name)s`, for a mirror on the local network.
 
+## Layout → Font cache
+
+The same arrangement for type. Any of the 1825 Latin families on
+[Google Fonts](https://fonts.google.com/) can be named in a layout; only the
+*index* ships with the add-on, which is what the editor's font dialog
+searches, and a face is downloaded the first time something draws with it and
+kept in `<addon data>/gfonts/` together with its licence.
+
+| Setting | Meaning |
+|---|---|
+| Download fonts from Google Fonts | off means only the four bundled families and whatever is already cached are drawn (default on) |
+| Manage the font cache | how much is cached, and the buttons below |
+| Font source | where faces come from; empty uses the Google Fonts API (expert level) |
+
+*Manage the font cache* offers two things:
+
+* **Download the fonts the layouts use** — reads every layout on the box and
+  fetches the faces they name. Worth doing before a box goes somewhere without
+  internet.
+* **Empty the font cache** — gives the space back. A face still in use is
+  fetched again the next time it is drawn.
+
+A face is 30 to 180 kB, so a handful of families costs less than a megabyte.
+As with symbols, nothing holds up the display: text is drawn in a stand-in of
+the same kind — a monospaced family stands in as `mono` — until the real face
+has arrived, and a face that could not be fetched is retried every five
+minutes rather than on every frame.
+
+`Font source` replaces the Google Fonts CSS endpoint, for a mirror on the
+local network. It is asked for `?family=<name>:wght@<weight>&subset=latin` and
+has to answer with CSS naming a TrueType or OpenType file.
+
 ## Layout → Web editor
 
 | Setting | Meaning |
@@ -121,7 +150,7 @@ and `%(name)s`, for a mirror on the local network.
 | Password | empty means no prompt; otherwise any user name plus this password |
 
 The editor draws its own font samples through `GET /api/fontsample`, which
-renders a line of text with the bundled bitmap fonts and answers with a PNG.
+renders a line of text with the bundled faces and answers with a PNG.
 It is part of the editor, so it follows the same password and the same
 `Reachable from` setting.
 
@@ -168,14 +197,10 @@ xbmc.executeJSONRPC(json.dumps({
 
 ## Troubleshooting
 
-**Nothing happens, or "No AX206 display found"**
-Check `lsusb | grep 1908`. No device means cable, power, or a panel still on
-its original firmware. *Display status* in the menu shows what the service
-sees.
-
-**Colours wrong, red and blue swapped, garbled picture**
-Switch *Pixel byte order*. The default is "High byte first"; some panel
-variants want the other one.
+**Nothing happens, or "No Samsung photo frame detected"**
+Check `lsusb | grep 04e8`. No device means cable, power, or the frame is
+plugged into its host port instead of its upstream one. *Display status* in
+the menu shows what the service sees.
 
 **Picture shifted or cut off**
 Show the *test pattern*: the red frame must touch all four edges. If it does
