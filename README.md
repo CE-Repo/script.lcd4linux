@@ -56,7 +56,12 @@ on. For a browser instead, set *Output* to **Network display** and open
   a layout asks for — by FreeType where the box has it, by a built-in
   rasteriser otherwise. Nothing is resampled from a neighbouring size, and
   the four bundled families cost 220 kB rather than nine megabytes of
-  pre-rendered bitmaps. Drop a `.ttf` into the fonts folder to add your own.
+  pre-rendered bitmaps.
+* **Every Google Fonts family**, 1825 of them, picked from a dialog with a
+  search box and a preview drawn by the add-on itself. The index ships with
+  it, so searching needs no internet; a face is fetched the first time it is
+  used and then kept, and the whole set a layout needs can be cached up
+  front. Or drop your own `.ttf` into the fonts folder.
 * **20 bundled layouts**, each in 480×320, 800×480 and 1024×600 plus portrait.
   You pick the name, the add-on picks the size that fits the attached display.
 * **A layout editor in the browser** at `http://<box>:8050/` — drag elements
@@ -107,8 +112,8 @@ python3 tools/selftest.py                         # check fonts, decoders, layou
 
 `tools/contact_sheet.py` builds the overview images, `tools/make_thumbs.py` the
 pictures for the layout chooser, `tools/mkicons.py` rebuilds the Font Awesome
-index, and `tools/mkfonts.py` rebuilds the bundled faces (the only one that
-needs fontTools).
+index, `tools/mkgfonts.py` the Google Fonts one, and `tools/mkfonts.py` the
+bundled faces (the only one that needs fontTools).
 
 ## Licence
 
@@ -121,6 +126,13 @@ the media transport signs taken from
 [Noto Sans Symbols 2](https://fonts.google.com/noto/specimen/Noto+Sans+Symbols+2)
 (SIL Open Font License), see
 [resources/fonts/LICENSE-NotoSansSymbols2.txt](resources/fonts/LICENSE-NotoSansSymbols2.txt).
+
+Any family from [Google Fonts](https://fonts.google.com/) can be used; those
+are under the SIL Open Font License or Apache 2.0, see
+[fonts.google.com/attribution](https://fonts.google.com/attribution). The
+add-on bundles only the index of names in
+`resources/fonts/googlefonts.json` (rebuilt with `tools/mkgfonts.py`) and
+fetches the faces it needs, with their licences, into `<addon data>/gfonts/`.
 
 The `icon` widget can draw the [Font Awesome Free](https://fontawesome.com/)
 set; the icons are licensed under CC BY 4.0, see

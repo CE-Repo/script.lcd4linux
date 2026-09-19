@@ -340,6 +340,91 @@ def manage_icons():
     _toast(localize.text(32239, "%d symbols cached") % (cached + fetched))
 
 
+def manage_fonts():
+    """Look after the Google Fonts cache from Kodi's settings dialog.
+
+    A face is fetched the moment a layout first draws with it, so this is
+    for the box that is about to lose its internet connection - or has to
+    give the space back.
+    """
+    from . import gfonts
+
+    config = Config()
+    gfonts.configure(config)
+    state = gfonts.cache_state(max_age=0)
+    dialog = _dialog()
+    summary = "%s: %d · %.1f MB" % (
+        localize.text(32252, "Cached fonts"), state["count"],
+        state["bytes"] / (1024.0 * 1024.0))
+    if dialog is None:
+        print(summary)
+        print(state["directory"])
+        return
+    if not state["downloads"]:
+        summary += "\n%s" % localize.text(32251,
+                                          "Downloading fonts is switched off")
+    entries = [localize.text(32253, "Download the fonts the layouts use"),
+               localize.text(32254, "Empty the font cache")]
+    choice = dialog.select("%s · %s" % (localize.text(32250, "Font cache"),
+                                        summary), entries)
+    if choice < 0:
+        return
+    if choice == 1:
+        removed = gfonts.clear_cache()
+        _toast(localize.text(32255, "%d fonts removed") % removed)
+        return
+    if not state["downloads"]:
+        dialog.ok(localize.text(32250, "Font cache"),
+                  localize.text(32251, "Downloading fonts is switched off"))
+        return
+    wanted = _fonts_in_layouts(config)
+    if not wanted:
+        _toast(localize.text(32256, "No layout uses a downloadable font"))
+        return
+    progress = None
+    if xbmcgui is not None:
+        try:
+            progress = xbmcgui.DialogProgressBG()
+            progress.create(localize.text(32000, "LCD4Linux"),
+                            localize.text(32257, "Downloading fonts"))
+        except Exception as error:
+            log("no progress dialog: %s" % error)
+
+    def step(done, total, name):
+        if progress is not None:
+            progress.update(int(100.0 * done / max(1, total)), message=name)
+        return True
+
+    try:
+        cached, fetched, failed = gfonts.prefetch(wanted, progress=step)
+    finally:
+        if progress is not None:
+            progress.close()
+    if failed and not fetched:
+        _toast(localize.text(32259, "No font could be downloaded"))
+        return
+    _toast(localize.text(32258, "%d fonts cached") % (cached + fetched))
+
+
+def _fonts_in_layouts(config):
+    """Every downloadable family the layouts on this box name."""
+    from . import gfonts
+
+    bundled = FontCache(config.font_directories).families()
+    found = []
+    for name, path in sorted(layout_module.discover(
+            config.layout_directories).items()):
+        try:
+            spec = layout_module.Layout.load(path).spec
+        except (IOError, OSError, ValueError) as error:
+            log("cannot read %s for its fonts: %s" % (name, error))
+            continue
+        for entry in gfonts.used_by(spec, bundled):
+            if entry not in found:
+                found.append(entry)
+    return found
+
+
 def _icons_in_layouts(config):
     """Every Font Awesome icon the layouts on this box name."""
     from . import faicons
@@ -464,6 +549,7 @@ ACTIONS = {
     "layout": choose_layout,
     "webeditor": show_web_editor,
     "icons": manage_icons,
+    "fonts": manage_fonts,
     "status": show_status,
     "settings": open_settings,
     "preview": show_preview,

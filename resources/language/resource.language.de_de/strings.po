@@ -644,6 +644,70 @@ msgctxt "#32347"
 msgid "Glyph rendering"
 msgstr "Zeichensatz-Rendering"
 
+msgctxt "#32250"
+msgid "Font cache"
+msgstr "Schriften-Cache"
+
+msgctxt "#32251"
+msgid "Downloading fonts is switched off"
+msgstr "Schriften-Downloads sind ausgeschaltet"
+
+msgctxt "#32252"
+msgid "Cached fonts"
+msgstr "Geladene Schriften"
+
+msgctxt "#32253"
+msgid "Download the fonts the layouts use"
+msgstr "Von den Layouts genutzte Schriften laden"
+
+msgctxt "#32254"
+msgid "Empty the font cache"
+msgstr "Schriften-Cache leeren"
+
+msgctxt "#32255"
+msgid "%d fonts removed"
+msgstr "%d Schriften entfernt"
+
+msgctxt "#32256"
+msgid "No layout uses a downloadable font"
+msgstr "Kein Layout nutzt eine ladbare Schrift"
+
+msgctxt "#32257"
+msgid "Downloading fonts"
+msgstr "Schriften werden geladen"
+
+msgctxt "#32258"
+msgid "%d fonts cached"
+msgstr "%d Schriften im Cache"
+
+msgctxt "#32259"
+msgid "No font could be downloaded"
+msgstr "Es konnte keine Schrift geladen werden"
+
+msgctxt "#32260"
+msgid "Download fonts from Google Fonts"
+msgstr "Schriften von Google Fonts laden"
+
+msgctxt "#32261"
+msgid "Off means only the bundled families and whatever is already cached are drawn (default on)."
+msgstr "Aus bedeutet, dass nur die mitgelieferten und die bereits geladenen Schriften gezeichnet werden (Vorgabe an)."
+
+msgctxt "#32262"
+msgid "Manage the font cache..."
+msgstr "Schriften-Cache verwalten ..."
+
+msgctxt "#32263"
+msgid "Download the fonts your layouts use, or give the space back."
+msgstr "Die von den Layouts genutzten Schriften laden oder den Platz wieder freigeben."
+
+msgctxt "#32264"
+msgid "Font source"
+msgstr "Schriftquelle"
+
+msgctxt "#32265"
+msgid "Where faces come from; empty uses the Google Fonts API (expert level)."
+msgstr "Woher die Schriften kommen; leer nutzt die Google-Fonts-API (Expertenstufe)."
+
 msgctxt "#32400"
 msgid "Playing"
 msgstr "Wiedergabe"

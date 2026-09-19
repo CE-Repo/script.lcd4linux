@@ -12,6 +12,7 @@ import time
 
 from . import display as display_module
 from . import faicons
+from . import gfonts
 from .errors import DisplayError
 from . import layout as layout_module
 from . import localize
@@ -43,6 +44,12 @@ RELOAD_SETTINGS = frozenset((
     "mirror", "force_size", "width", "height", "usb_timeout",
     "jpeg_quality", "jpeg_subsample", "layout", "layout_dir",
 ))
+
+#: Settings the two download caches are built from.  They are applied by
+#: handing them back to the module, not by rebuilding anything, so a change
+#: takes effect on the next frame rather than on the next reload.
+ICON_SETTINGS = frozenset(("icon_download", "icon_source"))
+FONT_SETTINGS = frozenset(("font_download", "font_source"))
 
 #: Settings the web editor is built from.  They only restart the little
 #: HTTP server, never the USB link, so changing the port does not blank the
@@ -180,6 +187,10 @@ class Service(object):
             return
         log("settings changed (%s), applying them in place" % ", ".join(changed))
         self.config = config
+        if ICON_SETTINGS.intersection(changed):
+            faicons.configure(config)
+        if FONT_SETTINGS.intersection(changed):
+            gfonts.configure(config)
         if WEB_SETTINGS.intersection(changed):
             self.start_web_editor()
         if self.renderer is not None:
@@ -308,6 +319,7 @@ class Service(object):
         self.fonts = FontCache(self.config.font_directories)
         self.images.clear()
         faicons.configure(self.config)
+        gfonts.configure(self.config)
         self.provider = make_provider(self._addon_info("name"),
                                       self._addon_info("version"))
         log("starting with %s" % self.config.describe())
@@ -794,6 +806,7 @@ class Service(object):
         self.stop_web_editor()
         self._publish_web_url("")
         faicons.stop()
+        gfonts.stop()
         self.images.stop()
         self._close_target()
         # Last, so the power can be cut once the USB connection is closed.

@@ -20,8 +20,10 @@ API
 ``GET  /api/state``      active layout, panel size, service status
 ``GET  /api/layouts``    every layout the add-on can see
 ``GET  /api/layout``     one layout: ``?file=default.json``
+``GET  /api/fonts``      search Google Fonts: ``?q=mono&kind=Monospace``
 ``GET  /api/icons``      search Font Awesome: ``?q=heart&style=solid``
 ``GET  /api/fontsample`` a line of text drawn in one bundled font, as a PNG
+``POST /api/fonts``      font cache upkeep: prefetch or clear
 ``POST /api/icons``      cache upkeep: prefetch or clear
 ``POST /api/layout``     save ``{"file": ..., "spec": {...}}``
 ``POST /api/delete``     remove a layout from the user folder
@@ -49,6 +51,7 @@ from urllib.parse import parse_qs, quote, urlparse
 from . import bmfont
 from . import display as display_module
 from . import faicons
+from . import gfonts
 from . import layout as layout_module
 from . import layoutindex
 from . import pngio
@@ -480,6 +483,8 @@ class Handler(BaseHTTPRequestHandler):
         elif path == "/api/layout":
             self._send_json(read_layout(query.get("file", ""),
                                         self.editor.config))
+        elif path == "/api/fonts":
+            self._send_json(self.editor.fonts(query))
         elif path == "/api/icons":
             self._send_json(self.editor.icons(query))
         elif path == "/api/fontsample":
@@ -631,6 +636,9 @@ class Handler(BaseHTTPRequestHandler):
             payload = self._read_json()
             validate(payload.get("spec") or {})
             self._send_json({"ok": True})
+        elif path == "/api/fonts":
+            payload = self._read_json()
+            self._send_json(self.editor.font_cache(payload))
         elif path == "/api/icons":
             payload = self._read_json()
             self._send_json(self.editor.icon_cache(payload))
@@ -747,6 +755,7 @@ class WebEditor(object):
     # -- data for the handlers --------------------------------------------
     def schema(self):
         if self._schema is None:
+            gfonts.configure(self.config)
             # Built once, so the icon settings have to be in force before
             # the catalogue describes itself to the dialog.
             faicons.configure(self.config)
@@ -763,17 +772,23 @@ class WebEditor(object):
     SAMPLE_WIDTH = 1200
 
     def font_sample(self, query):
-        """A PNG of one line of text in one of the bundled fonts.
+        """A PNG of one line of text in one of the available fonts.
 
-        The families are bitmap fonts, so a browser cannot show what they
-        look like - it gets a picture drawn by the same font renderer that
-        feeds the panel, with a real alpha channel so it sits on whatever
-        the editor puts behind it.
+        A browser has none of these faces installed, so it gets a picture
+        drawn by the same renderer that feeds the display, with a real
+        alpha channel so it sits on whatever the editor puts behind it.
         """
         family = str(query.get("font", "") or "sans").strip()[:48]
         if str(query.get("bold", "")) in ("1", "true", "yes") \
                 and not family.endswith("-bold"):
             family += "-bold"
+        # A sample of a family that is only in the catalogue would show the
+        # stand-in, which is the one picture nobody wants from a font
+        # dialog.  This is a browser request, not a frame, so it can wait
+        # the second the download takes.
+        gfonts.configure(self.config)
+        if gfonts.resolve(family)[0] and not gfonts.lookup(family):
+            gfonts.download(family)
         size = _clamp(query.get("size"), 22, 6, 96)
         text = str(query.get("text", "") or "")[:self.SAMPLE_CHARS]
         if not text.strip():
@@ -798,6 +813,80 @@ class WebEditor(object):
             pixels[base + 3] = (coverage if alpha >= 255
                                 else coverage * alpha // 255)
         return bytes(pngio.encode_rgba(width, height, pixels))
+
+    #: How many families one request may ask for.  A dialog page is a few
+    #: dozen; more than this is a scraper, not a person browsing.
+    FONT_LIMIT = 120
+
+    def fonts(self, query):
+        """Search the Google Fonts catalogue.
+
+        ``?q=mono&kind=Monospace&offset=0&limit=60`` lists matches, most
+        used first, each saying whether the add-on already has it.  Nothing
+        is downloaded here: the dialog draws a sample per row and that is
+        what fetches the face.
+        """
+        gfonts.configure(self.config)
+        book = gfonts.catalogue()
+        kind = str(query.get("kind", "") or "").strip()
+        if kind not in book.categories.values():
+            kind = None
+        limit = _clamp(query.get("limit"), 60, 1, self.FONT_LIMIT)
+        offset = _clamp(query.get("offset"), 0, 0, 100000)
+        total, rows = book.search(query.get("q", ""), kind, offset, limit)
+        local = set(self.preview.fonts.families())
+        found = []
+        for entry in rows:
+            found.append({
+                "name": entry["name"],
+                "category": entry["category"],
+                "weights": entry["weights"],
+                "bold": gfonts.BOLD in entry["weights"],
+                "cached": bool(gfonts.lookup(entry["name"])),
+                "bundled": entry["name"] in local,
+            })
+        return {"total": total, "offset": offset, "limit": limit,
+                "query": query.get("q", ""), "kind": kind or "",
+                "kinds": sorted(set(book.categories.values())),
+                "fonts": found, "bundled": sorted(local),
+                "cache": gfonts.cache_state()}
+
+    def font_cache(self, payload):
+        """Keep the font cache: ``state``, ``prefetch`` or ``clear``."""
+        gfonts.configure(self.config)
+        action = str((payload or {}).get("action", "state")).lower()
+        if action == "clear":
+            removed = gfonts.clear_cache()
+            self.preview.fonts.clear()
+            return {"ok": True, "removed": removed,
+                    "cache": gfonts.cache_state(max_age=0)}
+        if action == "prefetch":
+            wanted = (payload or {}).get("fonts")
+            if not wanted:
+                # Nothing named: fetch what the layouts actually use.
+                wanted = self._fonts_in_layouts()
+            cached, fetched, failed = gfonts.prefetch(wanted[:self.FONT_LIMIT])
+            self.preview.fonts.clear()
+            return {"ok": True, "cached": cached, "fetched": fetched,
+                    "failed": failed, "cache": gfonts.cache_state(max_age=0)}
+        return {"ok": True, "cache": gfonts.cache_state()}
+
+    def _fonts_in_layouts(self):
+        """Every Google family the layouts on this box name."""
+        from . import layout as layout_module
+        bundled = self.preview.fonts.families()
+        wanted = []
+        found = layout_module.discover(self.config.layout_directories)
+        for path in found.values():
+            try:
+                spec = layout_module.Layout.load(path).spec
+            except Exception as error:
+                debug("cannot read %s for its fonts: %s" % (path, error))
+                continue
+            for entry in gfonts.used_by(spec, bundled):
+                if entry not in wanted:
+                    wanted.append(entry)
+        return wanted
 
     def icons(self, query):
         """Search the Font Awesome catalogue, or fetch named outlines.

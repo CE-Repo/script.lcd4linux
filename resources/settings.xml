@@ -284,6 +284,31 @@
         </setting>
       </group>
 
+      <group id="5" label="32250">
+        <setting id="font_download" type="boolean" label="32260" help="32261">
+          <level>0</level>
+          <default>true</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="action_fontcache" type="action" label="32262" help="32263">
+          <level>0</level>
+          <data>RunScript(script.lcd4linux,fonts)</data>
+          <!-- Downloading can take a moment and reports back with a
+               progress bar, so the settings stay open behind it. -->
+          <control type="button" format="action">
+            <close>false</close>
+          </control>
+        </setting>
+        <setting id="font_source" type="string" label="32264" help="32265">
+          <level>3</level>
+          <default></default>
+          <constraints>
+            <allowempty>true</allowempty>
+          </constraints>
+          <control type="edit" format="string"/>
+        </setting>
+      </group>
+
       <group id="2" label="32013">
         <setting id="web_enabled" type="boolean" label="32211" help="32212">
           <level>0</level>

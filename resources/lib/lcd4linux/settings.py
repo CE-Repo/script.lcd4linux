@@ -48,6 +48,8 @@ DEFAULTS = {
     "smooth_images": True,
     "icon_download": True,
     "icon_source": "",
+    "font_download": True,
+    "font_source": "",
     "start_command": "",
     "stop_command": "",
     "command_timeout": 15,
@@ -189,6 +191,15 @@ class Config(object):
     def icon_cache_directory(self):
         """Where downloaded Font Awesome outlines are kept."""
         return profile_path("icons")
+
+    @property
+    def font_cache_directory(self):
+        """Where downloaded Google Fonts faces are kept.
+
+        Separate from the user's own ``fonts`` folder, which is scanned for
+        families by file name and should hold only what they put there.
+        """
+        return profile_path("gfonts")
 
     @property
     def image_cache_directory(self):

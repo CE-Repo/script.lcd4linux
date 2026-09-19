@@ -13,6 +13,7 @@ import re
 import shutil
 import struct
 import sys
+import tempfile
 import time
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -2321,6 +2322,209 @@ def test_huffman_table():
           "codes longer than %d bits stay out of the table" % _PEEK)
 
 
+def test_gfonts():
+    """Google Fonts: the bundled index, the cache and the fallback.
+
+    Nothing here touches the network - the download is replaced by a stub
+    that copies a bundled face - because the whole point of the cache is
+    that the box works without one.
+    """
+    print("google fonts")
+    from lcd4linux import gfonts
+    from lcd4linux.bmfont import FontCache
+    from lcd4linux.settings import Config
+    from lcd4linux.webui import WebEditor
+
+    # -- the bundled index -------------------------------------------------
+    book = gfonts.catalogue()
+    check(book.count > 1000, "the index lists %d families" % book.count)
+    check(len(book.entries) == book.count,
+          "and no family is in it twice (%d names, %d rows)"
+          % (len(book.entries), book.count))
+    thin = [entry["name"] for entry in book.entries.values()
+            if not entry["weights"]][:4]
+    check(not thin, "every family says which weights it has (%s)"
+          % (thin or "all of them",))
+    kinds = {entry["category"] for entry in book.entries.values()}
+    check("Monospace" in kinds and "Sans Serif" in kinds,
+          "the kinds are named: %s" % ", ".join(sorted(kinds)))
+
+    total, rows = book.search("mono", "Monospace", 0, 5)
+    check(total > 10 and len(rows) == 5,
+          "searching 'mono' in Monospace gives %d, paged to %d"
+          % (total, len(rows)))
+    _total, second = book.search("mono", "Monospace", 5, 5)
+    check(rows[0]["name"] != second[0]["name"], "and the next page differs")
+    check(book.search("", None, 0, 3)[1][0]["name"] in
+          [entry["name"] for entry in book.search("", None, 0, 20)[1][:3]],
+          "the order is stable between pages")
+
+    # -- names -------------------------------------------------------------
+    check(gfonts.resolve("Roboto Mono") == ("Roboto Mono", 400),
+          "a plain family resolves at the regular weight")
+    check(gfonts.resolve("Roboto Mono-bold") == ("Roboto Mono", 700),
+          "and -bold at 700, which is what bold: true appends")
+    check(gfonts.resolve("roboto mono") == ("Roboto Mono", 400),
+          "the spelling in a layout need not match the catalogue's case")
+    check(gfonts.resolve("sans") == (None, 0)
+          and gfonts.resolve("Definitely Not A Font") == (None, 0),
+          "a name the catalogue does not have resolves to nothing")
+    # Bebas Neue has only one weight, so -bold has to land on it rather
+    # than ask for a 700 that does not exist.
+    if book.get("Bebas Neue"):
+        check(gfonts.resolve("Bebas Neue-bold")[1] in book.get("Bebas Neue")["weights"],
+              "a bold nobody cut falls to a weight the family really has")
+    check("/" not in gfonts.slug("Roboto Mono", 700)
+          and gfonts.slug("Roboto Mono", 700) == "RobotoMono-700.ttf",
+          "the cache file name is safe: %s" % gfonts.slug("Roboto Mono", 700))
+    # used_by and the download queue write a cut as "family-700", so that
+    # spelling has to resolve as well as "-bold" does, or a bold face would
+    # be queued and never fetched.
+    check(gfonts.resolve("Roboto Mono-700") == ("Roboto Mono", 700),
+          "a numeric weight suffix resolves too")
+    check(gfonts.name_for("Roboto Mono", 400) == "Roboto Mono"
+          and gfonts.name_for("Roboto Mono", 700) == "Roboto Mono-700",
+          "and is what name_for writes")
+
+    # -- the cache, against a stub ----------------------------------------
+    directory = tempfile.mkdtemp(prefix="lcd4linux-gfonts-")
+    face = os.path.join(ROOT, "resources", "fonts", "mono.ttf")
+    real_download = gfonts.download
+    calls = []
+    try:
+        gfonts.configure(cache=directory, downloads=True)
+        gfonts.clear_cache()
+
+        def fake_download(text):
+            calls.append(text)
+            family, weight = gfonts.resolve(text)
+            if not family or family == "Bungee":
+                return None      # stands in for one the server will not give
+            with open(face, "rb") as handle:
+                data = handle.read()
+            path = gfonts.cached_path(family, weight)
+            gfonts._write(path, data)
+            gfonts.generation += 1
+            return path
+
+        gfonts.download = fake_download
+
+        check(gfonts.lookup("Roboto Mono") is None, "the cache starts empty")
+        got = gfonts.download("Roboto Mono")
+        check(got and os.path.isfile(got), "a fetched face lands in the cache")
+        check(gfonts.lookup("Roboto Mono") == got,
+              "and is found again without another call")
+        check(gfonts.cached_families() == ["Roboto Mono"],
+              "the cache knows which families it holds (%s)"
+              % gfonts.cached_families())
+        state = gfonts.cache_state(max_age=0)
+        check(state["count"] == 1 and state["bytes"] > 0,
+              "and reports %d file(s), %d bytes" % (state["count"],
+                                                    state["bytes"]))
+
+        # -- what the renderer sees -------------------------------------
+        fonts = FontCache([os.path.join(ROOT, "resources", "fonts")])
+        drawn = fonts.get("Roboto Mono", 20)
+        check(drawn.name == "Roboto Mono",
+              "a cached family is drawn with its own face (%s)" % drawn.name)
+
+        # A family that is not cached must not block the frame: it draws in
+        # a stand-in of the same kind and swaps over once the face lands.
+        del calls[:]
+        fonts = FontCache([os.path.join(ROOT, "resources", "fonts")])
+        gfonts.download = lambda text: None      # queue, never finish
+        waiting = fonts.get("Space Mono", 20)
+        check(waiting.name == "mono",
+              "an uncached monospaced family stands in as mono (%s)"
+              % waiting.name)
+        proportional = fonts.get("Playfair Display", 20)
+        check(proportional.name == "sans",
+              "and a proportional one as sans (%s)" % proportional.name)
+        check(fonts.get("Space Mono", 20) is waiting,
+              "the stand-in is kept while nothing has changed")
+
+        gfonts.download = fake_download
+        gfonts.download("Space Mono")
+        check(fonts.get("Space Mono", 20).name == "Space Mono",
+              "and gives way to the real face once it has landed")
+        check(fonts.get("Playfair Display", 20).name == "sans",
+              "while a family still waiting keeps its stand-in")
+
+        # -- with downloads off -------------------------------------------
+        gfonts.configure(downloads=False)
+        del calls[:]
+        fonts = FontCache([os.path.join(ROOT, "resources", "fonts")])
+        check(fonts.get("Fira Code", 20).name == "mono",
+              "nothing is fetched when downloads are off")
+        check(not calls, "and nothing was even asked for (%s)" % (calls,))
+        check(fonts.get("Roboto Mono", 20).name == "Roboto Mono",
+              "but what is already cached still draws")
+        gfonts.configure(downloads=True)
+
+        # -- request() never waits ----------------------------------------
+        gfonts.download = lambda text: None
+        gfonts.clear_cache()
+        started = time.time()
+        answer = gfonts.request("Fira Code")
+        check(answer is None and time.time() - started < 0.5,
+              "request() answers at once and queues the work (%.3f s)"
+              % (time.time() - started))
+        gfonts.stop()
+
+        # -- what a layout asks for ---------------------------------------
+        spec = {
+            "defaults": {"font": "sans"},
+            "pages": [{"widgets": [
+                {"type": "text", "font": "Roboto Mono"},
+                {"type": "text", "font": "Roboto Mono", "bold": True},
+                {"type": "text", "font": "sans-bold"},
+                {"type": "text", "font": "${player.title}"},
+                {"type": "text", "font": "Not A Real Family"},
+            ]}],
+        }
+        wanted = gfonts.used_by(spec, ("sans", "sans-bold", "mono",
+                                       "mono-bold"))
+        check(wanted == ["Roboto Mono", "Roboto Mono-700"],
+              "a layout names exactly the faces worth fetching (%s)" % (wanted,))
+
+        # -- the editor's endpoint ----------------------------------------
+        editor = WebEditor(Config({"web_enabled": False}))
+        answer = editor.fonts({"q": "mono", "kind": "Monospace", "limit": "5"})
+        check(answer["total"] > 5 and len(answer["fonts"]) == 5,
+              "the dialog gets a page of %d out of %d"
+              % (len(answer["fonts"]), answer["total"]))
+        first = answer["fonts"][0]
+        check(set(first) >= {"name", "category", "weights", "cached", "bundled"},
+              "every row says what the dialog needs (%s)"
+              % ", ".join(sorted(first)))
+        check(set(answer["bundled"]) == {"sans", "sans-bold", "mono",
+                                         "mono-bold"},
+              "and the bundled families come along (%s)"
+              % ", ".join(sorted(answer["bundled"])))
+
+        # -- a bold cut has to survive the whole round trip ---------------
+        gfonts.download = fake_download
+        gfonts.clear_cache()
+        cached, fetched, failed = gfonts.prefetch(wanted)
+        check(fetched == 2 and not failed,
+              "both cuts a layout named are fetched (%d cached, %d fetched, "
+              "%d failed)" % (cached, fetched, failed))
+        check(gfonts.lookup("Roboto Mono-bold"),
+              "including the bold one, found again under its -bold name")
+        check(gfonts.prefetch(wanted)[0] == 2,
+              "and a second pass finds both already there")
+
+        removed = gfonts.clear_cache()
+        check(removed >= 2 and gfonts.cache_state(max_age=0)["count"] == 0,
+              "emptying the cache removes %d file(s)" % removed)
+    finally:
+        gfonts.download = real_download
+        gfonts.stop()
+        gfonts.configure(downloads=False,
+                         cache=tempfile.mkdtemp(prefix="lcd4linux-gfonts-"))
+        shutil.rmtree(directory, ignore_errors=True)
+
+
 def test_icons():
     """Font Awesome: the bundled index, the cache and the renderer.
 
@@ -2877,6 +3081,26 @@ def test_web_editor():
         check(blank["size"] == [800, 480], "a blank layout is offered")
         webui.validate(blank)
 
+        # Both halves of the font endpoint, over HTTP: a GET route pasted
+        # into the POST handler answers every unit test just fine and still
+        # 404s the dialog, so this asks the server itself.
+        code, _kind, body = request("/api/fonts?q=mono&limit=3")
+        found = json.loads(body) if code == 200 else {}
+        check(code == 200 and len(found.get("fonts", [])) == 3
+              and found.get("total", 0) > 3,
+              "GET /api/fonts pages the catalogue (%s, %d of %s)"
+              % (code, len(found.get("fonts", [])), found.get("total")))
+        check(set(found.get("bundled") or ()) >= {"sans", "mono"},
+              "and names the bundled families too (%s)"
+              % (found.get("bundled"),))
+        code, _kind, body = request("/api/fonts", {"action": "state"})
+        state = json.loads(body) if code == 200 else {}
+        check(code == 200 and "cache" in state,
+              "POST /api/fonts reports the cache (%s)" % code)
+        code, _kind, body = request("/api/fonts", {"action": "clear"})
+        check(code == 200 and json.loads(body).get("ok"),
+              "and empties it (%s)" % code)
+
         code, _kind, _body = request("/api/command", {"command": "rm -rf"})
         check(code == 400, "an unknown command is refused")
     finally:
@@ -3042,6 +3266,13 @@ def _png_size(data):
 
 def main():
     print("script.lcd4linux self test\n")
+    # Nothing in here may reach the network.  A layout naming a family that
+    # is only in the Google catalogue would otherwise start a download, so
+    # the whole run is pinned to an empty cache with fetching switched off;
+    # the font test turns it back on against a stub.
+    from lcd4linux import gfonts
+    gfonts.configure(downloads=False,
+                     cache=tempfile.mkdtemp(prefix="lcd4linux-gfonts-"))
     for test in (test_encoding, test_rasteriser, test_fonts, test_images,
                  test_tokens,
                  test_media_info, test_dolby_vision,
@@ -3056,7 +3287,8 @@ def main():
                  test_layout_index, test_layout_chooser,
                  test_preview_ownership, test_preview_encoding,
                  test_preview_worker,
-                 test_power_hooks, test_rotation, test_icons, test_web_editor,
+                 test_power_hooks, test_rotation, test_gfonts, test_icons,
+                 test_web_editor,
                  test_network_display,
                  test_layouts):
         test()

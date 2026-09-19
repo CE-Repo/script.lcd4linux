@@ -107,6 +107,38 @@ pause for a minute.
 `Symbol source` takes a URL with the placeholders `%(version)s`, `%(style)s`
 and `%(name)s`, for a mirror on the local network.
 
+## Layout → Font cache
+
+The same arrangement for type. Any of the 1825 Latin families on
+[Google Fonts](https://fonts.google.com/) can be named in a layout; only the
+*index* ships with the add-on, which is what the editor's font dialog
+searches, and a face is downloaded the first time something draws with it and
+kept in `<addon data>/gfonts/` together with its licence.
+
+| Setting | Meaning |
+|---|---|
+| Download fonts from Google Fonts | off means only the four bundled families and whatever is already cached are drawn (default on) |
+| Manage the font cache | how much is cached, and the buttons below |
+| Font source | where faces come from; empty uses the Google Fonts API (expert level) |
+
+*Manage the font cache* offers two things:
+
+* **Download the fonts the layouts use** — reads every layout on the box and
+  fetches the faces they name. Worth doing before a box goes somewhere without
+  internet.
+* **Empty the font cache** — gives the space back. A face still in use is
+  fetched again the next time it is drawn.
+
+A face is 30 to 180 kB, so a handful of families costs less than a megabyte.
+As with symbols, nothing holds up the display: text is drawn in a stand-in of
+the same kind — a monospaced family stands in as `mono` — until the real face
+has arrived, and a face that could not be fetched is retried every five
+minutes rather than on every frame.
+
+`Font source` replaces the Google Fonts CSS endpoint, for a mirror on the
+local network. It is asked for `?family=<name>:wght@<weight>&subset=latin` and
+has to answer with CSS naming a TrueType or OpenType file.
+
 ## Layout → Web editor
 
 | Setting | Meaning |

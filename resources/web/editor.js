@@ -86,8 +86,14 @@ const TEXTS = {
     fontpick: 'Schriften vergleichen', fontsample: 'Probetext',
     fontsize: 'Probegröße', fontbold: 'Fett',
     fontfound: '%s Schriften', fontnone: 'Keine Schrift gefunden',
-    fontsizes: 'feste Größen: %s', fontscaled: 'andere werden skaliert',
-    fontscalable: 'jede Größe',
+    fontall: 'Alle', fontmore: 'Mehr Schriften',
+    fontbundled: 'mitgeliefert', fontcached: 'geladen',
+    fontondemand: 'wird bei Bedarf geladen',
+    fontcachedcount: '%s von %s geladen',
+    fontdownloadoff: 'Schrift-Downloads sind in den Einstellungen aus. Es'
+      + ' stehen nur die mitgelieferten und die bereits geladenen zur'
+      + ' Verfügung.',
+    fontlicence: 'Google Fonts – SIL Open Font License / Apache 2.0',
     fontsampledefault: 'Hamburgefons 123 ÄÖÜ',
     fonthint: 'Die Proben zeichnet das Add-on mit derselben Schrift, die'
       + ' später auf dem Display steht.',
@@ -169,8 +175,13 @@ const TEXTS = {
     fontpick: 'Compare the fonts', fontsample: 'Sample text',
     fontsize: 'Sample size', fontbold: 'Bold',
     fontfound: '%s fonts', fontnone: 'No font found',
-    fontsizes: 'fixed sizes: %s', fontscaled: 'others are scaled',
-    fontscalable: 'any size',
+    fontall: 'All', fontmore: 'More fonts',
+    fontbundled: 'bundled', fontcached: 'downloaded',
+    fontondemand: 'fetched when used',
+    fontcachedcount: '%s of %s downloaded',
+    fontdownloadoff: 'Font downloads are switched off in the settings. Only'
+      + ' the bundled families and whatever is already cached can be used.',
+    fontlicence: 'Google Fonts - SIL Open Font License / Apache 2.0',
     fontsampledefault: 'Hamburgefons 123 ÄÖÜ',
     fonthint: 'The samples are drawn by the add-on with the very font that'
       + ' will end up on the display.',
@@ -1338,25 +1349,33 @@ function buildField(field, targets) {
       },
     }));
   } else if (field.type === 'font') {
-    // The families are bitmap fonts, so the list can only give their
-    // names; what they look like has to be drawn by the add-on, which is
-    // what the sample under the row and the dialog behind "Aa" show.
+    // The browser has none of these faces installed, so the list can only
+    // give their names; what they look like has to be drawn by the add-on,
+    // which is what the sample under the row and the "Aa" dialog show.
     const picked = () => (select.value || fontFallback(targets));
+    const names = (S.schema.fonts || []).slice();
+    if (value && !names.includes(String(value))) names.unshift(String(value));
     const select = el('select', {
       onchange: (event) => { setter(event.target.value); update(); },
     }, [el('option', { value: '', text: '—', selected: value === undefined })]
-      .concat(S.schema.fonts.map((name) => el('option', {
+      .concat(names.map((name) => el('option', {
         value: name, text: name, selected: String(value) === name,
       }))));
     const sample = el('img', { class: 'font-sample', alt: '' });
     const update = () => { sample.src = fontSampleURL(picked(), fontSample(targets)); };
+    /* Only the families on the box are listed; one picked out of the
+     * catalogue is not, so it is added rather than silently dropped. */
+    const choose = (name) => {
+      if (!Array.from(select.options).some((option) => option.value === name)) {
+        select.appendChild(el('option', { value: name, text: name }));
+      }
+      select.value = name;
+      setter(name);
+      update();
+    };
     control.append(select, el('button', {
       class: 'icon-btn', title: t('fontpick'), text: 'Aa',
-      onclick: () => openFontPicker(picked(), targets, (name) => {
-        select.value = name;
-        setter(name);
-        update();
-      }),
+      onclick: () => openFontPicker(picked(), targets, choose),
     }));
     row.appendChild(sample);
     fontPreviews.push({ node: sample, update });
@@ -1615,12 +1634,24 @@ function fontSampleURL(family, options) {
   return `/api/fontsample?${query}`;
 }
 
+const FONT_PAGE = 24;
+
+/* The font dialog searches the whole Google Fonts catalogue, which the
+ * add-on carries as an index; a face is only downloaded once a row asks the
+ * add-on to draw its sample.  The four bundled families come first, so
+ * picking one of those never needs the network at all. */
 function openFontPicker(current, targets, onPick) {
   const options = fontSample(targets);
-  const families = S.schema.fontinfo
-    || (S.schema.fonts || []).map((name) => ({ name, sizes: [], bold: false }));
+  const state = {
+    query: '', kind: '', offset: 0, total: 0,
+    busy: false, done: false, generation: 0,
+  };
   const list = el('div', { class: 'font-list' });
   const counter = el('span', { class: 'icon-count' });
+  const cacheNote = el('span', { class: 'icon-cache' });
+  const warning = el('p', { class: 'hint icon-warning', hidden: true });
+  const more = el('button', { class: 'icon-more', text: t('fontmore') });
+  const tabs = el('div', { class: 'icon-tabs' });
   const search = el('input', {
     type: 'search', class: 'icon-search', placeholder: t('fontsearch'),
     spellcheck: 'false',
@@ -1636,54 +1667,133 @@ function openFontPicker(current, targets, onPick) {
   })));
   const bold = el('input', { type: 'checkbox', checked: options.bold });
 
-  function draw() {
-    const shown = {
+  function shown() {
+    return {
       size: Number(size.value) || opening,
       bold: bold.checked,
       text: text.value.trim(),
     };
-    const query = search.value.trim().toLowerCase();
-    const matching = families.filter((entry) => entry.name.includes(query));
-    list.textContent = '';
-    matching.forEach((entry) => {
-      const meta = [];
-      // A face draws whatever size it is asked for; only a leftover bitmap
-      // font is stuck with the sizes it was built at.
-      if (entry.sizes.length) {
-        meta.push(t('fontsizes', entry.sizes.join(', ')));
-        meta.push(t('fontscaled'));
-      } else {
-        meta.push(t('fontscalable'));
+  }
+
+  function row(entry) {
+    const meta = [];
+    if (entry.bundled) meta.push(t('fontbundled'));
+    else if (entry.cached) meta.push(t('fontcached'));
+    else meta.push(t('fontondemand'));
+    if (entry.category) meta.push(entry.category);
+    if (entry.name.endsWith('-bold')) meta.push(t('fontbold'));
+    // A family is only drawn bold when it has a bold cut; asking for one
+    // that does not exist would silently show the regular weight.
+    const wanted = Object.assign({}, shown(),
+                                 { bold: shown().bold && entry.bold });
+    return el('button', {
+      class: 'font-row' + (entry.name === current ? ' active' : ''),
+      title: entry.name,
+      onclick: () => { onPick(entry.name); closeModal(); },
+    },
+      el('img', {
+        class: 'font-sample', alt: '', loading: 'lazy',
+        src: fontSampleURL(entry.name, wanted),
+      }),
+      el('span', { class: 'font-name', text: entry.name }),
+      el('span', { class: 'font-meta', text: meta.join(' · ') }));
+  }
+
+  /* The bundled families are not in the catalogue and need no download, so
+   * they are prepended to the first page rather than fetched. */
+  function bundledRows(names) {
+    const query = state.query.toLowerCase();
+    return (names || [])
+      .filter((name) => !query || name.toLowerCase().includes(query))
+      .map((name) => ({
+        name, category: '', bundled: true, cached: true,
+        bold: !name.endsWith('-bold') && (names || []).includes(`${name}-bold`),
+      }));
+  }
+
+  /* A search while a page is still loading must win, so every run carries a
+   * number and a run that has been overtaken throws its answer away. */
+  async function page(reset) {
+    if (reset) {
+      state.offset = 0;
+      state.done = false;
+      state.busy = false;
+      list.textContent = '';
+    } else if (state.busy || state.done) {
+      return;
+    }
+    const mine = ++state.generation;
+    state.busy = true;
+    more.disabled = true;
+    try {
+      const query = new URLSearchParams({
+        q: state.query, kind: state.kind,
+        offset: String(state.offset), limit: String(FONT_PAGE),
+      });
+      const data = await api(`/api/fonts?${query}`);
+      if (mine !== state.generation) return;
+      let extra = [];
+      if (reset && !state.kind) extra = bundledRows(data.bundled);
+      extra.forEach((entry) => list.appendChild(row(entry)));
+      (data.fonts || []).forEach((entry) => list.appendChild(row(entry)));
+      state.offset += (data.fonts || []).length;
+      state.total = data.total + (reset ? extra.length : 0);
+      state.done = state.offset >= data.total || !(data.fonts || []).length;
+      counter.textContent = t('fontfound', data.total + extra.length);
+      more.hidden = state.done;
+      if (data.cache) {
+        cacheNote.textContent = t('fontcachedcount', data.cache.count,
+                                  data.cache.total);
+        warning.hidden = data.cache.downloads !== false;
+        if (data.cache.downloads === false) {
+          warning.textContent = t('fontdownloadoff');
+        }
       }
-      if (entry.name.endsWith('-bold')) meta.push(t('fontbold'));
-      // A family is only drawn bold when it has a bold cut; asking for one
-      // that does not exist would silently show the regular weight.
-      const wanted = Object.assign({}, shown,
-                                    { bold: shown.bold && entry.bold });
-      list.appendChild(el('button', {
-        class: 'font-row' + (entry.name === current ? ' active' : ''),
-        title: entry.name,
-        onclick: () => { onPick(entry.name); closeModal(); },
-      },
-        el('img', {
-          class: 'font-sample', alt: '', loading: 'lazy',
-          src: fontSampleURL(entry.name, wanted),
-        }),
-        el('span', { class: 'font-name', text: entry.name }),
-        el('span', { class: 'font-meta', text: meta.join(' · ') })));
-    });
-    counter.textContent = t('fontfound', matching.length);
-    if (!matching.length) {
-      list.appendChild(el('p', { class: 'hint', text: t('fontnone') }));
+      if (!data.total && !extra.length) {
+        list.appendChild(el('p', { class: 'hint', text: t('fontnone') }));
+      }
+      if (!tabs.childElementCount) makeTabs(data.kinds || []);
+    } catch (err) {
+      toast(err.message, true);
+    } finally {
+      if (mine === state.generation) {
+        state.busy = false;
+        more.disabled = false;
+      }
     }
   }
 
+  function makeTabs(kinds) {
+    [{ value: '', text: t('fontall') }].concat(
+      kinds.map((kind) => ({ value: kind, text: kind })),
+    ).forEach((entry, index) => {
+      const button = el('button', {
+        class: index === 0 ? 'active' : '', text: entry.text,
+        onclick: () => {
+          tabs.querySelectorAll('button').forEach((other) =>
+            other.classList.remove('active'));
+          button.classList.add('active');
+          state.kind = entry.value;
+          page(true);
+        },
+      });
+      tabs.appendChild(button);
+    });
+  }
+
   let typing = null;
-  const later = () => { clearTimeout(typing); typing = setTimeout(draw, 200); };
+  const later = () => {
+    clearTimeout(typing);
+    typing = setTimeout(() => { state.query = search.value.trim(); page(true); },
+                        200);
+  };
   search.addEventListener('input', later);
+  // The sample text and size change every picture, so the page is redrawn
+  // rather than appended to.
   text.addEventListener('input', later);
-  size.addEventListener('change', draw);
-  bold.addEventListener('change', draw);
+  size.addEventListener('change', () => page(true));
+  bold.addEventListener('change', () => page(true));
+  more.addEventListener('click', () => page(false));
 
   openModal(t('fonttitle'),
     el('div', { class: 'font-picker' },
@@ -1691,10 +1801,16 @@ function openFontPicker(current, targets, onPick) {
         el('label', { class: 'font-opt' }, t('fontsample'), text),
         el('label', { class: 'font-opt' }, t('fontsize'), size),
         el('label', { class: 'font-opt' }, t('fontbold'), bold)),
-      list,
-      el('p', { class: 'hint', text: t('fonthint') })),
-    [counter, el('button', { text: t('cancel'), onclick: closeModal })]);
-  draw();
+      tabs, warning, list, more,
+      el('p', { class: 'hint', text: t('fonthint') }),
+      el('p', { class: 'hint' },
+        el('a', {
+          href: 'https://fonts.google.com/attribution',
+          target: '_blank', rel: 'noreferrer noopener',
+          text: t('fontlicence'),
+        }))),
+    [counter, cacheNote, el('button', { text: t('cancel'), onclick: closeModal })]);
+  page(true);
   search.focus();
 }
 

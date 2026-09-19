@@ -22,6 +22,7 @@ import os
 import struct
 import zlib
 
+from . import gfonts
 from . import ttfont
 from .logger import debug
 
@@ -399,6 +400,11 @@ class FontCache(object):
     looked for in each directory in turn, so a face dropped into the user's
     own fonts folder overrides a bundled one of the same name.  The old
     ``family-size.l4f`` bitmaps are still picked up where they exist.
+
+    A name that is none of those but is in the Google Fonts catalogue is
+    handed to :mod:`.gfonts`, which downloads it in the background; until
+    the file is there the layout is drawn in a stand-in of the same kind,
+    and the real face takes over on a later frame.
     """
 
     def __init__(self, directories):
@@ -406,6 +412,8 @@ class FontCache(object):
         self._cache = {}
         self._faces = None
         self._bitmaps = None
+        #: Keys drawn in a stand-in, against the download count at the time.
+        self._waiting = {}
 
     # -- discovery ---------------------------------------------------------
     def _scan(self):
@@ -474,47 +482,99 @@ class FontCache(object):
         key = (family, size)
         cached = self._cache.get(key)
         if cached is not None:
-            return cached
-        font = self._build(self._resolve(family), size)
+            seen = self._waiting.get(key)
+            if seen is None or seen == gfonts.generation:
+                return cached
+            # A face has landed since this one was drawn in a stand-in; it
+            # may or may not be this family's, so build it again and find
+            # out.  Downloads are rare, frames are not.
+            del self._cache[key]
+            del self._waiting[key]
+        font, waiting = self._build(family, size)
         self._cache[key] = font
+        if waiting:
+            self._waiting[key] = gfonts.generation
         return font
 
-    def _resolve(self, family):
-        """The name actually on disk for what a layout asked for.
+    def _build(self, family, size):
+        """``(font, waiting)`` for what a layout asked for.
 
-        An unknown family falls back to its own base weight first - so
-        ``oswald-bold`` lands on ``oswald`` rather than on the default face -
-        and then on whatever the add-on ships.
+        ``waiting`` says the font is a stand-in because the real face is
+        still downloading, which is what tells :meth:`get` not to keep it.
         """
         self._scan()
-        if family in self._faces or family in self._bitmaps:
-            return family
-        base, _dash, _weight = family.rpartition("-")
-        if base and (base in self._faces or base in self._bitmaps):
-            return base
-        for default in FAMILIES:
-            if default in self._faces or default in self._bitmaps:
-                return default
-        known = self.families()
-        if known:
-            return known[0]
-        raise IOError("no fonts found in %s" % (self.directories,))
+        font = self._local(family, size)
+        if font is not None:
+            return font, False
 
-    def _build(self, family, size):
+        # Not on disk under that name, but Google may have it.
+        google = gfonts.resolve(family)[0]
+        if google:
+            path = gfonts.request(family)
+            if path:
+                font = self._face(path, family, size)
+                if font is not None:
+                    return font, False
+            else:
+                # Queued, or downloads are off.  Either way something has to
+                # be drawn now, in the same kind of face so the layout does
+                # not jump about when the real one arrives.
+                return self._stand_in(family, google, size), True
+
+        # Unknown: the family's own base weight first, so ``oswald-bold``
+        # lands on ``oswald`` rather than on the default face.
+        base, _dash, _weight = family.rpartition("-")
+        if base:
+            font = self._local(base, size)
+            if font is not None:
+                return font, False
+        return self._stand_in(family, None, size), False
+
+    def _local(self, family, size):
+        """A face or bitmap font on disk, or ``None`` if there is none."""
         path = self._faces.get(family)
         if path is not None:
-            try:
-                return VectorFont(ttfont.open_face(path, size), family, size)
-            except (ttfont.FontError, IOError, OSError, struct.error) as error:
-                # A face that cannot be read must not take the display down;
-                # the bitmaps below, or another family, still draw something.
-                debug("cannot use %s at %d px: %s" % (path, size, error))
+            font = self._face(path, family, size)
+            if font is not None:
+                return font
         sizes = self._bitmaps.get(family)
         if sizes:
             if size in sizes:
                 return self._load_exact(sizes[size])
             nearest = min(sizes, key=lambda s: (abs(s - size), -s))
             return _ScaledFont(self._load_exact(sizes[nearest]), size)
+        return None
+
+    def _face(self, path, family, size):
+        try:
+            return VectorFont(ttfont.open_face(path, size), family, size)
+        except (ttfont.FontError, IOError, OSError, struct.error) as error:
+            # A face that cannot be read must not take the display down;
+            # a bitmap font, or another family, still draws something.
+            debug("cannot use %s at %d px: %s" % (path, size, error))
+            return None
+
+    def _stand_in(self, family, google, size):
+        """What to draw in while the real face is missing.
+
+        A monospaced family is stood in for by ``mono``: swapping a column
+        of figures to a proportional face and back again is the one
+        substitution anybody notices.  Every candidate is tried rather than
+        only named, because a face that will not open is no stand-in.
+        """
+        entry = gfonts.catalogue().get(google) if google else None
+        base = "mono" if entry and entry["category"] == "Monospace" else "sans"
+        if family.lower().endswith("-bold"):
+            base += "-bold"
+        tried = []
+        for candidate in (base, base.split("-")[0]) + FAMILIES \
+                + tuple(self.families()):
+            if candidate in tried:
+                continue
+            tried.append(candidate)
+            font = self._local(candidate, size)
+            if font is not None:
+                return font
         raise IOError("no usable font for %r in %s"
                       % (family, self.directories))
 
@@ -535,5 +595,6 @@ class FontCache(object):
                 except Exception:
                     pass
         self._cache.clear()
+        self._waiting.clear()
         self._faces = None
         self._bitmaps = None

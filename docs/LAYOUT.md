@@ -307,20 +307,38 @@ so every size is its own — nothing is resampled from a neighbour.
 | Text | `sans`, `sans-bold` |
 | Monospace | `mono`, `mono-bold` |
 
-`bold: true` appends `-bold` to whatever family is set, and a family without a
-bold weight simply stays as it is. An unknown family falls back to its own
-base weight first and then to `sans`, so a layout never fails to draw.
+**Any Google Fonts family** can be named as well — `"font": "Roboto Mono"`,
+spelled the way [fonts.google.com](https://fonts.google.com/) spells it, case
+insensitive. The add-on carries the index of all 1825 Latin families, so the
+editor's font dialog searches them without a network; the face itself is
+downloaded the first time something draws with it and kept in
+`<addon data>/gfonts/`. While it is on its way the text is drawn in a
+stand-in of the same kind — a monospaced family stands in as `mono` — and the
+real face takes over a frame or two later.
+
+`bold: true` appends `-bold` to whatever family is set. A bundled family
+without a bold cut simply stays as it is; for a Google one it asks for weight
+700, or the nearest weight that family really has. A specific weight can be
+named directly: `"font": "Inter-300"`.
 
 Drop your own `.ttf` or `.otf` into a `fonts` folder next to `layouts` and it
 becomes a family under its file name: `oswald.ttf` is `"font": "oswald"`. A
-face there overrides a bundled one of the same name. The `.l4f` bitmap fonts
-older versions shipped are still read if you have any.
+face there wins over a bundled one and over the catalogue. The `.l4f` bitmap
+fonts older versions shipped are still read if you have any.
 
-All four families draw the same characters — ASCII, Latin-1, Latin Extended-A
+An unknown family falls back to its own base weight first and then to `sans`,
+so a layout never fails to draw.
+
+The four bundled families draw the same characters — ASCII, Latin-1, Latin Extended-A
 and the punctuation and media signs the layouts use. DejaVu stops short of
 `⏵ ⏸ ⏹`, so `tools/mkfonts.py` grafts those on from Noto's symbol font when it
 builds the bundled faces, scaled into the cell for the monospaced ones so a
 column of figures still lines up.
+
+A downloaded face carries the Latin subset, which is the same character set;
+its licence is fetched alongside it into the cache. *Settings → Layout → Font
+cache* fetches everything the layouts use in one go, for a box that is about
+to lose its internet connection, and empties the cache again.
 
 Glyphs are drawn by FreeType where the box has it — every Kodi does, it draws
 its own interface with it — and by a built-in rasteriser otherwise. *Display
