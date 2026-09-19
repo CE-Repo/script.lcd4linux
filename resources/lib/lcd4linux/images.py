@@ -7,6 +7,7 @@ to be installed.
 
 import errno
 import hashlib
+import math
 import os
 import struct
 import threading
@@ -182,6 +183,98 @@ class Image(object):
             out[index + 3] = alpha
         return Image(self.width, self.height, out)
 
+    def turned(self, degrees, smooth=True):
+        """A copy rotated clockwise by ``degrees``, in a box that fits it.
+
+        The result is wider and taller than the original for anything that
+        is not a quarter turn, and whatever the corners sweep out is left
+        transparent, so the caller only has to centre it over the place the
+        upright version sat.  Quarter turns take a separate path: they are
+        a pure index shuffle, exact to the pixel and several times cheaper
+        than sampling, and they are what most rotated elements use.
+        """
+        angle = float(degrees) % 360.0
+        if angle < 0.05 or angle > 359.95:
+            return self
+        if abs(angle - 90.0) < 0.05:
+            return self._quarter_turn(1)
+        if abs(angle - 180.0) < 0.05:
+            return self._quarter_turn(2)
+        if abs(angle - 270.0) < 0.05:
+            return self._quarter_turn(3)
+        return self._free_turn(angle, smooth)
+
+    def _quarter_turn(self, steps):
+        """1, 2 or 3 clockwise quarter turns, by moving pixels about."""
+        steps = int(steps) % 4
+        if steps == 0:
+            return self
+        source = self.pixels
+        width = self.width
+        height = self.height
+        if steps == 2:
+            out = bytearray(len(source))
+            count = width * height
+            for index in range(count):
+                src = (count - 1 - index) * 4
+                dst = index * 4
+                out[dst:dst + 4] = source[src:src + 4]
+            return Image(width, height, out)
+        # A quarter turn swaps the sides of the box.
+        out = bytearray(len(source))
+        for y in range(height):
+            row = y * width * 4
+            for x in range(width):
+                if steps == 1:
+                    dst = (x * height + (height - 1 - y)) * 4
+                else:
+                    dst = ((width - 1 - x) * height + y) * 4
+                src = row + x * 4
+                out[dst:dst + 4] = source[src:src + 4]
+        return Image(height, width, out)
+
+    def _free_turn(self, angle, smooth):
+        """Any other angle, by sampling the source for every output pixel."""
+        radians = math.radians(angle)
+        sin = math.sin(radians)
+        cos = math.cos(radians)
+        width = self.width
+        height = self.height
+        out_w = max(1, int(math.ceil(abs(width * cos) + abs(height * sin))))
+        out_h = max(1, int(math.ceil(abs(width * sin) + abs(height * cos))))
+        source = self.pixels
+        out = bytearray(out_w * out_h * 4)
+        # Screen coordinates run downwards, so this matrix turns clockwise.
+        # Every output pixel is mapped back into the source rather than the
+        # other way round, which is what keeps the result free of holes.
+        centre_x = (width - 1) / 2.0
+        centre_y = (height - 1) / 2.0
+        offset_x = (out_w - 1) / 2.0
+        offset_y = (out_h - 1) / 2.0
+        for out_y in range(out_h):
+            dv = out_y - offset_y
+            base_x = dv * sin + centre_x
+            base_y = dv * cos + centre_y
+            step_x = cos
+            step_y = -sin
+            dst = out_y * out_w * 4
+            du = -offset_x
+            for _out_x in range(out_w):
+                src_x = base_x + du * step_x
+                src_y = base_y + du * step_y
+                du += 1.0
+                if smooth:
+                    _sample_bilinear(source, width, height, src_x, src_y,
+                                     out, dst)
+                else:
+                    px = int(src_x + 0.5)
+                    py = int(src_y + 0.5)
+                    if 0 <= px < width and 0 <= py < height:
+                        src = (py * width + px) * 4
+                        out[dst:dst + 4] = source[src:src + 4]
+                dst += 4
+        return Image(out_w, out_h, out)
+
     def rounded(self, radius):
         """Soften the corners by writing an anti-aliased alpha mask."""
         radius = int(radius)
@@ -240,6 +333,45 @@ class Image(object):
 # ---------------------------------------------------------------------------
 # resampling
 # ---------------------------------------------------------------------------
+
+def _sample_bilinear(pixels, width, height, x, y, out, dst):
+    """Write the colour at the fractional point ``x, y`` into ``out``.
+
+    Alpha is folded into the colour before the four neighbours are mixed and
+    taken out again afterwards, so the transparent pixels around a glyph
+    cannot bleed their black into its edge.  Anything outside the source is
+    transparent, which is what gives a rotated box its empty corners.
+    """
+    left = int(math.floor(x))
+    top = int(math.floor(y))
+    if left < -1 or top < -1 or left >= width or top >= height:
+        return
+    fx = x - left
+    fy = y - top
+    red = green = blue = alpha = 0.0
+    for offset_y, weight_y in ((0, 1.0 - fy), (1, fy)):
+        py = top + offset_y
+        if weight_y <= 0.0 or py < 0 or py >= height:
+            continue
+        row = py * width * 4
+        for offset_x, weight_x in ((0, 1.0 - fx), (1, fx)):
+            px = left + offset_x
+            if weight_x <= 0.0 or px < 0 or px >= width:
+                continue
+            weight = weight_x * weight_y
+            index = row + px * 4
+            pixel_alpha = pixels[index + 3] * weight
+            red += pixels[index] * pixel_alpha
+            green += pixels[index + 1] * pixel_alpha
+            blue += pixels[index + 2] * pixel_alpha
+            alpha += pixel_alpha
+    if alpha < 0.5:
+        return
+    out[dst] = min(255, int(red / alpha + 0.5))
+    out[dst + 1] = min(255, int(green / alpha + 0.5))
+    out[dst + 2] = min(255, int(blue / alpha + 0.5))
+    out[dst + 3] = min(255, int(alpha + 0.5))
+
 
 def _resample_nearest(pixels, src_w, src_h, dst_w, dst_h):
     out = bytearray(dst_w * dst_h * 4)

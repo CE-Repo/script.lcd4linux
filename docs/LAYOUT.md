@@ -129,6 +129,14 @@ included, and loads nothing from the internet.
 * **Move and resize** with the mouse, snapping to the grid. `Alt` disables
   snapping, `Shift` constrains direction, arrow keys nudge by a pixel and with
   `Shift` by ten.
+* **Turn** an element by the round handle on its stalk above the box, or by
+  the *Rotation* slider in the properties. It settles on 15° steps, 45° with
+  `Shift` and on nothing at all with `Alt`; the ⟳ button steps a quarter
+  turn at a time. The outline on the canvas turns with the element, and a
+  turned box is resized along its own edges rather than along the screen.
+* **Lock the aspect ratio** with the checkbox above the rotation. Both the
+  handles and the width and height fields then keep the proportion; `Shift`
+  while dragging turns the lock round.
 * **Several at once**: `Ctrl`-click (`Cmd` on a Mac) adds an element to the
   selection, `Shift`-click takes everything in between, `Ctrl+A` takes the
   whole page. Moving, nudging, aligning, duplicating and deleting then apply
@@ -163,6 +171,15 @@ included, and loads nothing from the internet.
 
 It always saves into your own folder, never over a bundled layout: your copy
 wins, and deleting it brings the original back.
+
+**Without a box at all.** There is a second editor that runs in a browser on
+its own - no Kodi, no panel, no server, not even a local one:
+[editor.lcd4linux](https://github.com/CE-Repo/editor.lcd4linux). Open its
+`index.html`, drop a layout file on the window and edit it; every value it
+shows is a placeholder, because nothing is playing anywhere. It offers the
+same fields (its catalogue is generated from `webschema.py`) and draws the
+preview itself, so text is set in the browser's fonts rather than the
+panel's and pictures are stand-ins.
 
 On a PC without Kodi:
 
@@ -287,6 +304,25 @@ Every widget shares these:
 | `w` / `width`, `h` / `height` | Size; without it the widget runs to the right or bottom edge |
 | `condition` / `visible` | See [Conditions](#conditions) |
 | `opacity` | 0–100% |
+| `angle` | Turn clockwise, 0–360°, about the middle of the box |
+| `lockaspect` | Editor only: width and height keep their proportion |
+
+**Rotation.** `"angle": 30` turns an element clockwise about the middle of
+its box; `rotate` and `rotation` are read as the same field, and a `${token}`
+may stand there. Every element type can be turned — a text label along the
+side of the panel, a rotated cover, a bar running diagonally. Right angles
+(90, 180, 270) are exact and cheap; any other angle is sampled, which costs
+more, so the picture is kept and only drawn again when what it shows changes.
+What an element draws outside its own box is cut off when it is turned, which
+matters for a `line` with `x2`/`y2` pointing somewhere else. A box larger
+than 640 × 640 is drawn upright: freeing and turning it would cost a low
+power box a whole frame.
+
+**Aspect ratio.** `"lockaspect": true` is read by the editor, not by the
+renderer: with it set, dragging a handle keeps the proportion and typing a
+new width sets the height to match — 100 × 50 typed to 200 becomes 200 × 100.
+`Shift` turns the lock round while dragging, so a locked element resizes
+freely and an unlocked one keeps its proportion.
 
 **Positions** can be plain numbers (`"x": 20`), percentages of the display
 (`"x": "50%"`), or negative to measure from the far edge (`"x": -100` from the

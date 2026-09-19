@@ -583,6 +583,106 @@ def test_rotation():
     target.close()
 
 
+def test_turned_widgets():
+    print("turning widgets")
+    from lcd4linux import widgets as widget_module
+    from lcd4linux.images import Image
+
+    # -- the picture itself ----------------------------------------------
+    corners = bytearray([255, 0, 0, 255, 0, 255, 0, 255,
+                         0, 0, 255, 255, 255, 255, 255, 255])
+    image = Image(2, 2, corners)
+    quarter = image.turned(90)
+    check(bytes(quarter.pixels[:4]) == b"\x00\x00\xff\xff",
+          "a quarter turn brings the bottom left corner to the top left")
+    check(bytes(image.turned(180).turned(180).pixels) == bytes(corners),
+          "two half turns come back to where they started")
+    check(bytes(image.turned(90).turned(270).pixels) == bytes(corners),
+          "a quarter turn and three more come back as well")
+    wide = Image(4, 2, bytearray(4 * 2 * 4))
+    check((wide.turned(90).width, wide.turned(90).height) == (2, 4),
+          "a quarter turn swaps the sides of the box")
+    free = wide.turned(30)
+    check(free.width > 4 and free.height > 2,
+          "a free angle asks for a bigger box: %dx%d"
+          % (free.width, free.height))
+    check(image.turned(0) is image, "0 degrees is not a turn at all")
+
+    # -- widgets ----------------------------------------------------------
+    provider = DemoProvider(0, 10.0, "playing")
+    fonts = FontCache([os.path.join(ROOT, "resources", "fonts")])
+    images = ImageCache()
+    layout = Layout({"name": "turning", "size": [120, 120], "pages": []})
+    now = time.time()
+
+    def painted(canvas):
+        """The box the drawing occupies, as (left, top, right, bottom)."""
+        left, top, right, bottom = canvas.width, canvas.height, -1, -1
+        for y in range(canvas.height):
+            row = canvas.buf[y * canvas.width:(y + 1) * canvas.width]
+            for x, value in enumerate(row):
+                if not value:
+                    continue
+                left, right = min(left, x), max(right, x)
+                top, bottom = min(top, y), max(bottom, y)
+        return (left, top, right, bottom)
+
+    def draw(spec, widget=None):
+        canvas = Canvas(120, 120, parse_color("#000000"))
+        context = widget_module.RenderContext(provider, fonts, images,
+                                              120, 120, now)
+        widget = widget or widget_module.create(spec, layout)
+        widget.draw(canvas, context)
+        return canvas, widget, context
+
+    bar = {"type": "rect", "x": 10, "y": 50, "w": 100, "h": 20,
+           "color": "#ffffff"}
+    flat, _, _ = draw(bar)
+    check(painted(flat) == (10, 50, 109, 69),
+          "the upright bar covers %r" % (painted(flat),))
+    turned, widget, context = draw(dict(bar, angle=90))
+    # Turning is about the middle of the box, so the bar stands on the very
+    # spot it lay on, its sides swapped.
+    check(painted(turned) == (50, 10, 69, 109),
+          "turned a quarter it covers %r" % (painted(turned),))
+    check(painted(draw(dict(bar, angle=180))[0]) == (10, 50, 109, 69),
+          "turned half way round it lies where it did")
+    slanted = painted(draw(dict(bar, angle=45))[0])
+    # Halfway between the two right angles the bar stands on its diagonal,
+    # so it covers the same distance either way: (100 + 20) / sqrt 2.
+    across = slanted[2] - slanted[0]
+    down = slanted[3] - slanted[1]
+    check(abs(across - down) <= 2 and abs(across - 85) <= 3,
+          "on the slant it stands on its diagonal: %d x %d" % (across, down))
+
+    # A turned widget keeps its picture as long as it draws the same thing;
+    # the sampling is far too expensive to repeat four times a second.
+    kept = widget._turn_cache[1]
+    draw(None, widget)
+    check(widget._turn_cache[1] is kept,
+          "the turned picture is kept while nothing about it changes")
+
+    # Half transparent white over black has to come back as grey rather than
+    # as white with a black halo: the alpha is read back out of two passes.
+    faded, _, _ = draw({"type": "rect", "x": 20, "y": 20, "w": 80, "h": 80,
+                        "color": "#80ffffff", "angle": 180})
+    middle = unpack565(faded.buf[60 * 120 + 60])
+    check(all(110 <= channel <= 145 for channel in middle[:3]),
+          "a half transparent turned fill stays half transparent: %r"
+          % (middle[:3],))
+
+    # -- the angle itself -------------------------------------------------
+    for spelling, expected in (({"angle": 450}, 90), ({"rotate": 90}, 90),
+                               ({"rotation": "180"}, 180), ({"angle": 0}, 0),
+                               ({"angle": ""}, 0), ({"angle": -90}, 270),
+                               ({}, 0)):
+        spec = dict(bar)
+        spec.update(spelling)
+        made = widget_module.create(spec, layout)
+        check(made.angle_of(context) == expected,
+              "%r reads as %g degrees" % (spelling, expected))
+
+
 def test_layouts():
     print("layouts")
     directories = [os.path.join(ROOT, "resources", "layouts")]
@@ -2806,6 +2906,10 @@ def test_web_editor():
             if 'get("%s"' % field["key"] not in widget_source:
                 unknown.append("%s.%s" % (kind, field["key"]))
     for field in webschema.COMMON_FIELDS:
+        # A field the editor keeps for itself - the aspect lock - is never
+        # asked for by the renderer, and says so in the catalogue.
+        if field.get("editoronly"):
+            continue
         if 'get("%s"' % field["key"] not in widget_source:
             unknown.append("common.%s" % field["key"])
     for group, fields in (("page", webschema.PAGE_FIELDS),
@@ -3287,7 +3391,8 @@ def main():
                  test_layout_index, test_layout_chooser,
                  test_preview_ownership, test_preview_encoding,
                  test_preview_worker,
-                 test_power_hooks, test_rotation, test_gfonts, test_icons,
+                 test_power_hooks, test_rotation, test_turned_widgets,
+                 test_gfonts, test_icons,
                  test_web_editor,
                  test_network_display,
                  test_layouts):

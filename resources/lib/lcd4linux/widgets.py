@@ -8,14 +8,20 @@ history) between frames.
 import math
 import time
 
+from . import canvas as canvas_module
 from . import faicons
 from . import images as images_module
 from . import svgpath
 from . import tokens
-from .canvas import parse_color
+from .canvas import Canvas, parse_color
 from .logger import debug
 
 REGISTRY = {}
+
+#: A box bigger than this is drawn upright even when it asks to be
+#: turned: freeing and rotating it costs a pass per pixel, and at that
+#: size it would be the whole frame budget of a low power box.
+ROTATION_LIMIT = 640 * 640
 
 
 def register(name):
@@ -94,6 +100,9 @@ class Widget(object):
         self.name = self.spec.get("name", "")
         self.condition = self.spec.get("condition") or self.spec.get("visible")
         self.opacity = self.spec.get("opacity", 100)
+        #: The last turned picture and what it was made from; a rotated
+        #: widget usually draws the same thing again next frame.
+        self._turn_cache = None
 
     # -- geometry ---------------------------------------------------------
     def geometry(self, context):
@@ -133,9 +142,86 @@ class Widget(object):
         if not self.is_visible(context):
             return
         try:
-            self.render(canvas, context)
+            angle = self.angle_of(context)
+            if angle:
+                self.render_turned(canvas, context, angle)
+            else:
+                self.render(canvas, context)
         except Exception as error:
             debug("widget %s (%s) failed: %s" % (self.name, self.type_name, error))
+
+    # -- rotation ---------------------------------------------------------
+    def angle_of(self, context):
+        """The ``angle`` of this widget in degrees clockwise, 0 to 360."""
+        value = self.spec.get("angle")
+        if value is None:
+            value = self.spec.get("rotate", self.spec.get("rotation"))
+        if value is None:
+            return 0.0
+        if isinstance(value, str):
+            if not value.strip():
+                return 0.0
+            value = context.number(value, 0.0)
+        try:
+            angle = float(value) % 360.0
+        except (TypeError, ValueError):
+            return 0.0
+        return 0.0 if angle < 0.05 or angle > 359.95 else angle
+
+    def render_turned(self, canvas, context, angle):
+        """Draw this widget turned by ``angle`` degrees about its centre.
+
+        The framebuffer holds no alpha, so the widget is drawn twice into
+        offscreen sheets - once over black, once over white - and what the
+        two have to say about each other is turned back into an RGBA
+        picture (see :func:`~.canvas.extract_rgba`).  That picture is
+        rotated and blitted, so a turned element sits over whatever is
+        behind it exactly as an upright one does, anti-aliased edges
+        included.
+
+        Only the widget's own box is taken along: anything it draws outside
+        that box - a long ``line`` reaching elsewhere, say - is cut off.
+        """
+        x, y, width, height = self.geometry(context)
+        if width < 1 or height < 1:
+            return
+        left = max(0, x)
+        top = max(0, y)
+        right = max(left + 1, x + width)
+        bottom = max(top + 1, y + height)
+        if (right - left) * (bottom - top) > ROTATION_LIMIT:
+            self.render(canvas, context)          # too big to be worth it
+            return
+        # The sheets cover the display plus whatever of the box hangs over
+        # its right or bottom edge, so a turn can bring that part back in.
+        sheet_width = max(canvas.width, right)
+        sheet_height = max(canvas.height, bottom)
+        region = (left, top, right - left, bottom - top)
+
+        on_black = Canvas(sheet_width, sheet_height, (0, 0, 0, 255))
+        on_black.push_clip(*region)
+        self.render(on_black, context)
+        on_white = Canvas(sheet_width, sheet_height, (255, 255, 255, 255))
+        on_white.push_clip(*region)
+        self.render(on_white, context)
+
+        smooth = self.spec.get("anglesmooth", self.spec.get("rotatesmooth", True))
+        signature = (angle, region, bool(smooth),
+                     canvas_module.region_bytes(on_black, on_white, *region))
+        cached = self._turn_cache
+        if cached is not None and cached[0] == signature:
+            sprite = cached[1]
+        else:
+            upright = images_module.Image(
+                region[2], region[3],
+                canvas_module.extract_rgba(on_black, on_white, *region))
+            sprite = upright.turned(angle, bool(smooth)).sprite()
+            self._turn_cache = (signature, sprite)
+        # A turn is about the middle of the box, so the bigger picture the
+        # corners need is hung around that same middle.
+        canvas.blit_sprite(int(round(left + (region[2] - sprite.width) / 2.0)),
+                           int(round(top + (region[3] - sprite.height) / 2.0)),
+                           sprite)
 
 
 # ---------------------------------------------------------------------------

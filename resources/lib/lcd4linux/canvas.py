@@ -104,6 +104,87 @@ def mix(color_a, color_b, factor):
 
 
 # ---------------------------------------------------------------------------
+# freeing a drawing from its background
+# ---------------------------------------------------------------------------
+
+#: 5 and 6 bit channels expanded back to the full range.  ``rgb565`` throws
+#: the low bits away, so reading them back with a shift would turn white
+#: into 248 and make everything drawn on it look faintly grey.
+_FROM_5BIT = tuple(value * 255 // 31 for value in range(32))
+_FROM_6BIT = tuple(value * 255 // 63 for value in range(64))
+
+#: Difference of the two green channels to coverage.  Drawing the same
+#: thing once on black and once on white leaves the two apart by exactly
+#: the part of the pixel nothing covered.
+_COVERAGE = tuple(max(0, 255 - (value * 255 // 252)) for value in range(253))
+
+
+def extract_rgba(on_black, on_white, x, y, width, height):
+    """RGBA bytes of a region drawn twice: on black, and on white.
+
+    There is no alpha channel in the framebuffer, so a widget that is about
+    to be rotated is drawn twice over two known backgrounds.  Wherever the
+    two agree the pixel is opaque; wherever they are 255 apart nothing was
+    drawn; in between sits an anti-aliased edge, and how far apart they are
+    is precisely how much of the pixel is still background.  The colour is
+    then the one from the black pass with that coverage divided out.
+    """
+    out = bytearray(width * height * 4)
+    black = on_black.buf
+    white = on_white.buf
+    stride = on_black.width
+    dst = 0
+    for row in range(y, y + height):
+        base = row * stride
+        dark = black[base + x:base + x + width]
+        light = white[base + x:base + x + width]
+        for column in range(width):
+            value = dark[column]
+            other = light[column]
+            if value == other:                       # opaque, the usual case
+                out[dst] = _FROM_5BIT[(value >> 11) & 0x1F]
+                out[dst + 1] = _FROM_6BIT[(value >> 5) & 0x3F]
+                out[dst + 2] = _FROM_5BIT[value & 0x1F]
+                out[dst + 3] = 255
+                dst += 4
+                continue
+            if value == 0x0000 and other == 0xFFFF:  # nothing was drawn here
+                dst += 4
+                continue
+            gap = (((other >> 5) & 0x3F) - ((value >> 5) & 0x3F)) * 4
+            alpha = _COVERAGE[gap] if gap > 0 else 255
+            if alpha:
+                # The black pass holds the colour already multiplied by its
+                # own coverage; dividing it out gives the colour back.
+                red = _FROM_5BIT[(value >> 11) & 0x1F] * 255 // alpha
+                green = _FROM_6BIT[(value >> 5) & 0x3F] * 255 // alpha
+                blue = _FROM_5BIT[value & 0x1F] * 255 // alpha
+                out[dst] = 255 if red > 255 else red
+                out[dst + 1] = 255 if green > 255 else green
+                out[dst + 2] = 255 if blue > 255 else blue
+                out[dst + 3] = alpha
+            dst += 4
+    return out
+
+
+def region_bytes(on_black, on_white, x, y, width, height):
+    """A short signature of the region, to tell two frames apart.
+
+    Rotating is the expensive part of a rotated widget, and most frames
+    draw the very same thing again - a clock face that only moves once a
+    minute, a label that does not move at all.  Comparing the raw pixels
+    is a handful of C level slices and saves all of it.
+    """
+    parts = []
+    stride = on_black.width
+    for row in range(y, y + height):
+        base = row * stride
+        parts.append(on_black.buf[base + x:base + x + width].tobytes())
+        parts.append(on_white.buf[base + x:base + x + width].tobytes())
+    return b"".join(parts)
+
+
+# ---------------------------------------------------------------------------
 # canvas
 # ---------------------------------------------------------------------------
 

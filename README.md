@@ -68,6 +68,10 @@ on. For a browser instead, set *Output* to **Network display** and open
   around, with a preview drawn by the same renderer that feeds the display.
   Pick several at once to recolour or realign them in one go, copy them into
   another layout with `Ctrl+C` / `Ctrl+V`, and drag the layer list to reorder.
+  Elements can be turned to any angle and can be made to keep their
+  proportion while they are resized. There is an
+  [offline editor](https://github.com/CE-Repo/editor.lcd4linux) too, for
+  building a layout on a laptop with no box in reach.
 * **Every Font Awesome Free icon**, about two thousand of them, picked from a
   dialog with a search box. Each one is fetched once and then kept in the
   add-on's own cache, so a box with no internet connection still draws them;

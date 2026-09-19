@@ -44,6 +44,8 @@ const TEXTS = {
       + ' an die Werte darin: ist alles darin leer, fällt die ganze Gruppe'
       + ' weg. Geschweifte Klammern ohne Wert darin bleiben gewöhnlicher Text.',
     jsontitle: 'Layout als JSON', duplicate: 'Duplizieren',
+    rotatehint: 'Ziehen dreht · Umschalt 45° · Alt stufenlos',
+    quarterturn: 'Vierteldrehung',
     front: 'Nach vorn', back: 'Nach hinten', remove: 'Entfernen',
     saveastitle: 'Speichern unter', filename: 'Dateiname',
     pagename: 'Seite %d', empty: 'leer', notsaved: 'nicht gespeichert',
@@ -133,6 +135,8 @@ const TEXTS = {
       + ' to the values inside it: once they are all empty the whole group'
       + ' goes. Braces without a value in them stay ordinary text.',
     jsontitle: 'Layout as JSON', duplicate: 'Duplicate',
+    rotatehint: 'Drag to turn · Shift 45° · Alt free',
+    quarterturn: 'Quarter turn',
     front: 'Bring forward', back: 'Send backward', remove: 'Remove',
     saveastitle: 'Save as', filename: 'File name',
     pagename: 'Page %d', empty: 'empty', notsaved: 'not saved',
@@ -361,6 +365,18 @@ function geometry(spec) {
   return { x, y, w, h };
 }
 
+/* The renderer turns an element clockwise about the middle of its box;
+ * ``rotate`` and ``rotation`` are accepted as spellings of the same thing. */
+function angleOf(spec) {
+  const raw = spec.angle !== undefined ? spec.angle
+    : (spec.rotate !== undefined ? spec.rotate : spec.rotation);
+  if (raw === undefined || raw === null || raw === '') return 0;
+  const value = Number(raw);
+  if (Number.isNaN(value)) return 0;          // a ${token}: left to the box
+  const angle = ((value % 360) + 360) % 360;
+  return angle < 0.05 || angle > 359.95 ? 0 : angle;
+}
+
 function widgetTitle(spec, index) {
   if (spec.name) return spec.name;
   if (spec.type === 'text' && spec.text) return display(spec.text).slice(0, 28);
@@ -582,8 +598,18 @@ function drawCanvas() {
     node.style.top = `${box.y * zoom}px`;
     node.style.width = `${Math.max(1, box.w) * zoom}px`;
     node.style.height = `${Math.max(1, box.h) * zoom}px`;
-    ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].forEach((dir) => {
-      node.appendChild(el('div', { class: `handle ${dir}`, 'data-dir': dir }));
+    const angle = angleOf(spec);
+    if (angle) {
+      // The browser turns the outline about its centre, which is the point
+      // the renderer turns the element about.
+      node.style.transform = `rotate(${angle}deg)`;
+      node.classList.add('turned');
+    }
+    ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w', 'rot'].forEach((dir) => {
+      node.appendChild(el('div', {
+        class: `handle ${dir}`, 'data-dir': dir,
+        title: dir === 'rot' ? t('rotatehint') : null,
+      }));
     });
     node.addEventListener('pointerdown', (event) => beginDrag(event, index));
     boxes.appendChild(node);
@@ -829,6 +855,8 @@ function beginDrag(event, index) {
   const zoom = currentZoom();
   const [width, height] = canvasSize();
   const node = $('boxes').children[index];
+  if (dir === 'rot') { beginTurn(spec, node, start, zoom); return; }
+  const angle = angleOf(spec);
   // Everything else that rides along, with the box it started from.
   const others = dir ? [] : picked().filter((other) => other !== index)
     .map((other) => ({ spec: widgets()[other],
@@ -858,6 +886,31 @@ function beginDrag(event, index) {
     });
   }
 
+  /* The side that was not dragged follows the one that was, in the
+   * proportion the box started from.  Dragging an edge scales the other
+   * side; on a corner whichever side moved further decides.  The lock is a
+   * property of the element and Shift turns it round: on for a box without
+   * it, off for a box with it. */
+  function keepRatio(motion) {
+    if (!start.w || !start.h) return;
+    if (!spec.lockaspect === !motion.shiftKey) return;
+    const ratio = start.w / start.h;
+    if (dir === 'n' || dir === 's') {
+      box.w = Math.max(1, Math.round(box.h * ratio));
+    } else if (dir === 'e' || dir === 'w') {
+      box.h = Math.max(1, Math.round(box.w / ratio));
+    } else if (Math.abs(box.w - start.w) * start.h
+               >= Math.abs(box.h - start.h) * start.w) {
+      box.h = Math.max(1, Math.round(box.w / ratio));
+    } else {
+      box.w = Math.max(1, Math.round(box.h * ratio));
+    }
+    // A handle on the top or left edge moved that edge, so the opposite one
+    // has to stay put whatever the ratio just did to the size.
+    if (dir.includes('w')) box.x = start.x + start.w - box.w;
+    if (dir.includes('n')) box.y = start.y + start.h - box.h;
+  }
+
   function move(motion) {
     let dx = Math.round((motion.clientX - originX) / zoom);
     let dy = Math.round((motion.clientY - originY) / zoom);
@@ -873,6 +926,17 @@ function beginDrag(event, index) {
         if (Math.abs(dx) > Math.abs(dy)) box.y = start.y; else box.x = start.x;
       }
     } else {
+      if (angle) {
+        // A turned box is resized along its own edges rather than along the
+        // screen, so the handle the mouse grabbed is the one that moves.
+        const radians = angle * Math.PI / 180;
+        const cos = Math.cos(radians);
+        const sin = Math.sin(radians);
+        const localX = dx * cos + dy * sin;
+        const localY = dy * cos - dx * sin;
+        dx = Math.round(localX);
+        dy = Math.round(localY);
+      }
       if (dir.includes('w')) { box.x = start.x + dx; box.w = start.w - dx; }
       if (dir.includes('e')) { box.w = start.w + dx; }
       if (dir.includes('n')) { box.y = start.y + dy; box.h = start.h - dy; }
@@ -883,6 +947,7 @@ function beginDrag(event, index) {
       }
       box.w = Math.max(1, box.w);
       box.h = Math.max(1, box.h);
+      keepRatio(motion);
     }
     box.x = Math.max(-width, Math.min(width, box.x));
     box.y = Math.max(-height, Math.min(height, box.y));
@@ -915,6 +980,55 @@ function beginDrag(event, index) {
     }
     apply();
     drawLayers();
+    drawInspector('widget');
+    schedulePreview(STEP_PREVIEW);
+  }
+
+  window.addEventListener('pointermove', move);
+  window.addEventListener('pointerup', finish);
+}
+
+/* The stalk above a box turns it: the element follows the angle between
+ * straight up and the pointer, so the handle stays under the cursor.  It
+ * settles on 15 degree steps, 45 with Shift, and on nothing at all with
+ * Alt. */
+function beginTurn(spec, node, start, zoom) {
+  const wrap = $('canvas-wrap').getBoundingClientRect();
+  const centreX = wrap.left + (start.x + start.w / 2) * zoom;
+  const centreY = wrap.top + (start.y + start.h / 2) * zoom;
+  const tag = node.querySelector('.tag');
+  let moved = false;
+
+  function move(motion) {
+    if (!moved) snapshot();
+    moved = true;
+    let angle = Math.atan2(motion.clientY - centreY, motion.clientX - centreX)
+      * 180 / Math.PI + 90;
+    angle = ((angle % 360) + 360) % 360;
+    if (!motion.altKey) {
+      const step = motion.shiftKey ? 45 : 15;
+      angle = (Math.round(angle / step) * step) % 360;
+    } else {
+      angle = Math.round(angle * 10) / 10;
+    }
+    // The renderer reads the same value out of any of the three spellings,
+    // so whichever one an imported file used goes: one is left standing.
+    delete spec.rotate;
+    delete spec.rotation;
+    if (angle) spec.angle = angle; else delete spec.angle;
+    node.style.transform = angle ? `rotate(${angle}deg)` : '';
+    node.classList.toggle('turned', !!angle);
+    tag.textContent = `${spec.type || 'text'} · ${angle}°`;
+    $('hover-info').textContent = `${angle}°`;
+    schedulePreview(LIVE_PREVIEW);
+  }
+
+  function finish() {
+    window.removeEventListener('pointermove', move);
+    window.removeEventListener('pointerup', finish);
+    if (!moved) return;
+    drawLayers();
+    drawCanvas();
     drawInspector('widget');
     schedulePreview(STEP_PREVIEW);
   }
@@ -1092,6 +1206,7 @@ function startEdit(target, key, live) {
 function endEdit() {
   clearTimeout(editRunTimer);
   editRun = null;
+  aspectRun = null;
 }
 
 /* Both events on one control: `input` moves the layout right away, `change`
@@ -1283,6 +1398,39 @@ function sharedFields(specs) {
     (entry) => entry.key === field.key && entry.type === field.type)));
 }
 
+const SIZE_KEYS = ['w', 'h', 'width', 'height'];
+
+/* The proportion a run of keystrokes in a size field started from.  Taking
+ * it from the box on every keystroke instead would let the rounding drift:
+ * 100x50 typed down to 3 and back up to 300 would not come back as 150. */
+let aspectRun = null;
+
+/* With the lock on, the side that was not typed follows the one that was. */
+function followAspect(target, key, ratio) {
+  if (!target.lockaspect || !ratio) return;
+  const box = geometry(target);
+  if (key === 'w' || key === 'width') {
+    delete target.height;
+    target.h = Math.max(1, Math.round(box.w / ratio));
+  } else {
+    delete target.width;
+    target.w = Math.max(1, Math.round(box.h * ratio));
+  }
+}
+
+/* With the lock on, a size that was typed moved the other side too.  The
+ * field showing that other side is standing right there, so it is kept in
+ * step rather than left showing the number it used to hold. */
+function showAspectSibling(targets, key) {
+  const other = (key === 'w' || key === 'width') ? 'h' : 'w';
+  const node = document.querySelector(
+    `#inspector .field[data-key="${other}"] input`);
+  if (!node) return;
+  const held = targets.map((target) => target[other]);
+  const agreed = held.every((entry) => entry === held[0]);
+  node.value = agreed && held[0] !== undefined ? held[0] : '';
+}
+
 function commit(targets, key, value, live) {
   const blank = value === '' || value === undefined || value === null;
   // Leaving a field repeats the value its keystrokes already applied; redoing
@@ -1290,11 +1438,24 @@ function commit(targets, key, value, live) {
   const changing = targets.filter((target) => (blank ? key in target
                                                      : target[key] !== value));
   if (!changing.length) return;
-  if (startEdit(targets[0], key, live)) snapshot();
+  const fresh = startEdit(targets[0], key, live);
+  if (fresh) snapshot();
+  const sizing = SIZE_KEYS.includes(key) && !blank;
+  if (sizing && (fresh || !aspectRun || aspectRun.key !== key)) {
+    aspectRun = { key, ratios: new Map(changing.map((target) => {
+      const box = geometry(target);
+      return [target, box.h ? box.w / box.h : 0];
+    })) };
+  }
   changing.forEach((target) => {
     if (blank) delete target[key];
     else target[key] = value;
   });
+  if (sizing) {
+    changing.forEach((target) => followAspect(target, key,
+                                              aspectRun.ratios.get(target)));
+    showAspectSibling(changing, key);
+  }
   drawLayers();
   drawCanvas();
   // The font sample is drawn at the element's own size, weight and colour,
@@ -1310,7 +1471,8 @@ function buildField(field, targets) {
   const mixed = held.some((entry) => entry !== held[0]);
   const value = mixed ? undefined : held[0];
   const control = el('div', { class: 'control' });
-  const row = el('div', { class: 'field' + (field.multiline ? ' wide' : '') },
+  const row = el('div', { class: 'field' + (field.multiline ? ' wide' : ''),
+                         'data-key': field.key },
     el('label', { text: label(field) }), control);
 
   const setter = (raw, live) => commit(targets, field.key, raw, live);
@@ -1436,6 +1598,40 @@ function buildField(field, targets) {
         value: entry.value, text: `${entry.value || '—'} · ${label(entry)}`,
       }))));
     control.append(input, presets);
+  } else if (field.type === 'angle') {
+    // Dragging finds an angle, typing repeats one and the button walks
+    // round in quarter turns: the three ways anybody ever sets one.
+    const read = (node, live) =>
+      setter(node.value === '' ? '' : Number(node.value), live);
+    const number = el('input', Object.assign({
+      class: 'angle-number', type: 'number', min: 0, max: 360, step: 1,
+      placeholder: blank || '0', value: value === undefined ? '' : value,
+    }, liveControl((node, live) => {
+      if (node.value !== '') slider.value = node.value;
+      read(node, live);
+    })));
+    const slider = el('input', Object.assign({
+      class: 'angle-slider', type: 'range', min: 0, max: 360, step: 1,
+      value: Number(value) || 0,
+    }, liveControl((node, live) => {
+      number.value = node.value;
+      read(node, live);
+    })));
+    const show = (raw) => {
+      number.value = raw === '' ? '' : raw;
+      slider.value = Number(raw) || 0;
+    };
+    control.append(slider, number, el('button', {
+      class: 'icon-btn', title: t('quarterturn'), text: '⟳',
+      onclick: () => {
+        const next = (Math.floor(((Number(number.value) || 0) + 90) / 90) * 90) % 360;
+        show(next);
+        setter(next || '');
+      },
+    }), el('button', {
+      class: 'icon-btn', title: t('clear'), text: '✕',
+      onclick: () => { show(''); setter(''); },
+    }));
   } else if (field.type === 'number') {
     control.appendChild(el('input', Object.assign({
       type: 'number', placeholder: blank,

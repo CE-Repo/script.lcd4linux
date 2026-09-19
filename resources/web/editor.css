@@ -240,12 +240,28 @@ h2 {
 .handle.s  { left: calc(50% - 5px); bottom: -5px; cursor: ns-resize; }
 .handle.sw { left: -5px; bottom: -5px; cursor: nesw-resize; }
 .handle.w  { left: -5px; top: calc(50% - 5px); cursor: ew-resize; }
+/* The turn handle stands off the top edge on a short stalk, so it cannot be
+ * mistaken for the corner it sits next to. */
+.handle.rot {
+  left: calc(50% - 6px); top: -24px; width: 12px; height: 12px;
+  border-radius: 50%; cursor: grab;
+}
+.handle.rot::after {
+  content: ''; position: absolute; left: 4px; top: 10px;
+  width: 1px; height: 12px; background: var(--accent);
+}
+.box.turned { border-style: dotted; }
 
 .guide { position: absolute; background: #f59e0b; }
 .guide.v { width: 1px; top: 0; bottom: 0; }
 .guide.h { height: 1px; left: 0; right: 0; }
 
 .dropping { outline: 2px dashed var(--accent); outline-offset: 2px; }
+
+/* An angle is easier to find by dragging than by typing, and easier to
+ * repeat by typing than by dragging, so the row offers both. */
+.control .angle-slider { flex: 1; min-width: 60px; padding: 0; }
+.control input.angle-number { width: 62px; flex: none; }
 
 /* ------------------------------------------------------------ inspector */
 
