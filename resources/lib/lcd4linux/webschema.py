@@ -207,13 +207,13 @@ DEFAULT_FIELDS = [
     _field("color", "color", "Default colour", "Standardfarbe"),
 ]
 
-#: Sizes of the panels the add-on drives, offered when a layout is created.
+#: Sizes of the displays the add-on drives, offered when a layout is created.
 SIZES = [
-    {"size": [480, 320], "label": "AX206 480×320"},
     {"size": [800, 480], "label": "Samsung SPF 800×480"},
     {"size": [1024, 600], "label": "Samsung SPF 1024×600"},
-    {"size": [320, 480], "label": "AX206 320×480 (90°)"},
-    {"size": [480, 800], "label": "SPF 480×800 (90°)"},
+    {"size": [480, 800], "label": "Samsung SPF 480×800 (90°)"},
+    {"size": [480, 320], "label": "Small display 480×320"},
+    {"size": [320, 480], "label": "Small display 320×480 (90°)"},
 ]
 
 #: Data fields, grouped the way the token picker lists them.

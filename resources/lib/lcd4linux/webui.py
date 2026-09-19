@@ -886,7 +886,6 @@ class WebEditor(object):
         return {
             "active": config.layout,
             "size": [int(config.width), int(config.height)],
-            "display": config.display_type,
             "rotation": int(config.rotation),
             "status": status,
             "kodi": xbmc is not None,

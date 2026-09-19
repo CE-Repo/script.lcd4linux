@@ -8,7 +8,6 @@ and settings.
 import contextlib
 import json
 
-from . import ax206
 from . import layout as layout_module
 from . import layoutindex
 from . import spf
@@ -248,7 +247,7 @@ def show_status():
                                                      "Network display"),
                                        int(config.width), int(config.height)))
             lines.append(_display_url(config))
-        elif config.display_type == "spf":
+        else:
             frames = spf.SamsungSPF.enumerate()
             if frames:
                 for info, mode, model in frames:
@@ -256,13 +255,6 @@ def show_status():
             else:
                 lines.append(localize.text(32336,
                                            "No Samsung photo frame detected"))
-        else:
-            found = ax206.AX206.enumerate(config.device_ids_parsed)
-            if found:
-                for info in found:
-                    lines.append(str(info))
-            else:
-                lines.append(localize.text(32332, "No AX206 display detected"))
     except Exception as error:
         lines.append("%s: %s" % (localize.text(32333, "USB error"), error))
     lines.append("")

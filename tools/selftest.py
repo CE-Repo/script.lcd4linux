@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Self test for script.lcd4linux.
 
-Exercises the whole pipeline without hardware: a simulated AX206 panel
-records the USB traffic and the checks below verify the command blocks, the
-partial screen updates and the layout renderer.  It runs on the target box
-too (``python3 tools/selftest.py`` on CoreELEC) and only uses modules the
-add-on ships with.
+Exercises the whole pipeline without hardware: a simulated Samsung SPF
+frame records the USB traffic and the checks below verify the mode switch,
+the JPEG encoder and the layout renderer.  It runs on the target box too
+(``python3 tools/selftest.py`` on CoreELEC) and only uses modules the add-on
+ships with.
 """
 
 import os
@@ -18,16 +18,15 @@ import time
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "resources", "lib"))
 
-from lcd4linux import ax206, jpegio, usbdev             # noqa: E402
+from lcd4linux import jpegio, usbdev                    # noqa: E402
 from lcd4linux.bmfont import FontCache                  # noqa: E402
 from lcd4linux.canvas import Canvas, parse_color, unpack565        # noqa: E402
-from lcd4linux.display import AX206Target               # noqa: E402
 from lcd4linux.images import ImageCache                 # noqa: E402
 from lcd4linux.kodidata import DemoProvider             # noqa: E402
 from lcd4linux.layout import Layout, Renderer, discover  # noqa: E402
 
-PANEL_WIDTH = 480
-PANEL_HEIGHT = 320
+PANEL_WIDTH = 800
+PANEL_HEIGHT = 480
 
 failures = []
 
@@ -40,203 +39,38 @@ def check(condition, message):
 
 
 # ---------------------------------------------------------------------------
-# a simulated AX206
-# ---------------------------------------------------------------------------
-
-class FakeDevice(object):
-    """Speaks just enough Bulk-Only-Transport to answer the driver."""
-
-    def __init__(self):
-        self.info = usbdev.DeviceInfo(0x1908, 0x0102, 1, 4, product_name="fake")
-        self.commands = []
-        self.blits = []
-        self.brightness = []
-        self.opens = 0
-        self.bytes_sent = 0
-        self._pending_data_in = 0
-        self._expect_data_out = 0
-        self._last_command = None
-
-    # -- device interface --------------------------------------------------
-    def claim(self):
-        self.opens += 1
-
-    def close(self):
-        pass
-
-    def reset(self):
-        pass
-
-    def clear_halt(self, endpoint):
-        pass
-
-    def bulk_endpoints(self):
-        return 0x81, 0x01
-
-    def write(self, endpoint, data, timeout=0):
-        if self._expect_data_out:
-            self.bytes_sent += len(data)
-            if self._last_command and self._last_command[6] == ax206.USBCMD_BLIT:
-                self.blits.append((self._last_command, len(data)))
-            self._expect_data_out = 0
-            return len(data)
-
-        assert len(data) == 31, "CBW must be 31 bytes, got %d" % len(data)
-        assert data[0:4] == b"USBC", "bad CBW signature"
-        length = struct.unpack_from("<I", data, 8)[0]
-        assert data[14] == 16, "command length must be 16"
-        command = bytearray(data[15:31])
-        assert command[0] == 0xCD, "vendor command must start with 0xcd"
-        self.commands.append(command)
-        self._last_command = command
-
-        if command[5] == 2:                       # get dimensions
-            self._pending_data_in = length
-        elif command[6] == ax206.USBCMD_SETPROPERTY:
-            self.brightness.append(command[9])
-        elif command[6] == ax206.USBCMD_BLIT:
-            self._expect_data_out = length
-        return len(data)
-
-    def read(self, endpoint, length, timeout=0):
-        if self._pending_data_in:
-            self._pending_data_in = 0
-            return struct.pack("<HHB", PANEL_WIDTH, PANEL_HEIGHT, 16)
-        return b"USBS" + struct.pack("<I", ax206.CBW_TAG) + struct.pack("<I", 0) + b"\x00"
-
-
-class FakeContext(object):
-    def __init__(self):
-        self.device = FakeDevice()
-
-    def find(self, matches):
-        return None, 1, [(object(), self.device.info)]
-
-    def release_list(self, devices):
-        pass
-
-    def close(self):
-        pass
-
-
-def install_fake_usb():
-    context = FakeContext()
-    usbdev.Context = lambda: context
-    usbdev.open_device = lambda ctx, dev, info, interface=0: context.device
-    return context
-
-
-# ---------------------------------------------------------------------------
 # tests
 # ---------------------------------------------------------------------------
 
-def test_protocol():
-    print("AX206 protocol")
-    context = install_fake_usb()
-    device = context.device
-    target = AX206Target(rotation=0)
-    target.open()
-    check((target.width, target.height) == (PANEL_WIDTH, PANEL_HEIGHT),
-          "panel size read back as %dx%d" % (target.width, target.height))
-    check(device.commands[0][5] == 2, "first command asks for the dimensions")
-
-    target.set_brightness(5)
-    check(device.brightness[-1] == 5, "brightness command carries the level")
-    check(device.commands[-1][6] == ax206.USBCMD_SETPROPERTY
-          and device.commands[-1][7] == ax206.PROPERTY_BRIGHTNESS,
-          "brightness uses SETPROPERTY/PROPERTY_BRIGHTNESS")
-
-    canvas = Canvas(PANEL_WIDTH, PANEL_HEIGHT)
-    canvas.clear(parse_color("#000000"))
-    target.present(canvas, force=True)
-    command, size = device.blits[-1]
-    check(size == PANEL_WIDTH * PANEL_HEIGHT * 2,
-          "full frame sends %d bytes" % size)
-    check((command[7] | command[8] << 8, command[9] | command[10] << 8) == (0, 0),
-          "full frame starts at 0,0")
-    check((command[11] | command[12] << 8, command[13] | command[14] << 8)
-          == (PANEL_WIDTH - 1, PANEL_HEIGHT - 1),
-          "full frame ends at the last pixel (inclusive)")
-
-    canvas.fill_rect(100, 60, 40, 20, parse_color("#ff0000"))
-    target.present(canvas)
-    command, size = device.blits[-1]
-    x0 = command[7] | command[8] << 8
-    y0 = command[9] | command[10] << 8
-    x1 = (command[11] | command[12] << 8) + 1
-    y1 = (command[13] | command[14] << 8) + 1
-    check((x0, y0, x1, y1) == (100, 60, 140, 80),
-          "partial update covers exactly the changed rectangle %s"
-          % ((x0, y0, x1, y1),))
-    check(size == 40 * 20 * 2, "partial update sends %d bytes instead of %d"
-          % (size, PANEL_WIDTH * PANEL_HEIGHT * 2))
-
-    before = len(device.blits)
-    target.present(canvas)
-    check(len(device.blits) == before, "an unchanged frame sends nothing")
-
-    payload_first_pixel = None
-    canvas.fill_rect(0, 0, 1, 1, parse_color("#ff0000"))
-    original_write = device.write
-
-    captured = {}
-
-    def capture(endpoint, data, timeout=0):
-        if device._expect_data_out:
-            captured["data"] = bytes(data[:2])
-        return original_write(endpoint, data, timeout)
-
-    device.write = capture
-    target.present(canvas)
-    device.write = original_write
-    payload_first_pixel = captured.get("data")
-    check(payload_first_pixel == b"\xf8\x00",
-          "red is sent high byte first (%s)"
-          % (payload_first_pixel.hex() if payload_first_pixel else "none"))
-
-    target.close()
-
-
 def test_target_from_settings():
-    """The path the service actually uses: Config -> make_target -> panel."""
+    """The path the service actually uses: Config -> make_target -> display."""
     print("settings to display")
     from lcd4linux import display as display_module
     from lcd4linux.settings import Config
 
-    context = install_fake_usb()
-    config = Config({"output_mode": "usb", "device_ids": "1908:0102"})
-    target = display_module.make_target(config)
-    check(isinstance(target, display_module.AX206Target), "USB mode builds an AX206 target")
-    check(target.device.device_ids == ((0x1908, 0x0102),),
-          "device IDs reach the driver parsed: %s" % (target.device.device_ids,))
-    target.open()
-    check((target.width, target.height) == (PANEL_WIDTH, PANEL_HEIGHT),
-          "panel opens through the settings path")
-    target.close()
-
-    config = Config({"output_mode": "usb", "device_ids": "1908:0102, 1908:3318"})
-    target = display_module.make_target(config)
-    check(target.device.device_ids == ((0x1908, 0x0102), (0x1908, 0x3318)),
-          "several device IDs are accepted")
-
     config = Config({"output_mode": "none"})
     check(isinstance(display_module.make_target(config), display_module.NullTarget),
           "disabled mode builds a null target")
-    assert context is not None
 
-    # The same path for a Samsung frame.
+    config = Config({"output_mode": "network", "width": 640, "height": 400})
+    target = display_module.make_target(config)
+    check(isinstance(target, display_module.NetworkTarget),
+          "network mode builds a network target")
+    check((target.width, target.height) == (640, 400),
+          "the configured size is the truth in network mode")
+
     bus = install_fake_spf("monitor")
     bus.device = FakeSPFDevice(bus)
-    config = Config({"output_mode": "usb", "display_type": "spf",
-                     "jpeg_quality": 70, "jpeg_subsample": True})
+    config = Config({"output_mode": "usb", "jpeg_quality": 70,
+                     "jpeg_subsample": True})
     target = display_module.make_target(config)
     check(isinstance(target, display_module.SPFTarget),
-          "SPF mode builds a Samsung target")
+          "USB mode builds a Samsung target")
     check(target.quality == 70, "JPEG quality reaches the encoder: %d" % target.quality)
     target.open()
-    check((target.width, target.height) == (800, 480),
+    check((target.width, target.height) == (PANEL_WIDTH, PANEL_HEIGHT),
           "Samsung frame opens through the settings path")
-    canvas = Canvas(800, 480, parse_color("#000000"))
+    canvas = Canvas(PANEL_WIDTH, PANEL_HEIGHT, parse_color("#000000"))
     target.present(canvas, force=True)
     check(len(bus.device.frames) == 1, "a frame reaches the fake Samsung")
     target.close()
@@ -425,7 +259,7 @@ def test_late_display():
     from lcd4linux.service import Service, STARTUP_RETRY_SECONDS
 
     bus = install_fake_spf("absent")
-    service = Service(overrides={"output_mode": "usb", "display_type": "spf",
+    service = Service(overrides={"output_mode": "usb",
                                  "width": 480, "height": 320,
                                  "layout": "default.json",
                                  "retry_seconds": 60, "startup_grace": 180,
@@ -473,7 +307,7 @@ def test_late_display():
     # A display that is still missing when the grace period is over is
     # reported once and then retried at the configured interval.
     bus2 = install_fake_spf("absent")
-    late = Service(overrides={"output_mode": "usb", "display_type": "spf",
+    late = Service(overrides={"output_mode": "usb",
                               "retry_seconds": 45, "startup_grace": 0,
                               "web_enabled": False})
     late.setup()
@@ -517,7 +351,7 @@ def test_jpeg_encoder():
 
 
 def test_brightness():
-    """Backlight on the AX206 and software dimming on a Samsung frame."""
+    """Software dimming, and the settings path that drives it."""
     print("brightness")
     from lcd4linux import display as display_module
     from lcd4linux.jpegenc import JpegEncoder
@@ -533,65 +367,62 @@ def test_brightness():
         def value(self, key):
             return self.state if key == "player.state" else u""
 
-    # -- the AX206 backlight ------------------------------------------------
-    context = install_fake_usb()
-    device = context.device
-    service = Service(overrides={"output_mode": "usb", "display_type": "ax206",
-                                 "brightness": 6, "dim_brightness": 2,
+    # -- idle dimming through the service -----------------------------------
+    bus = install_fake_spf("monitor")
+    bus.device = FakeSPFDevice(bus)
+    service = Service(overrides={"output_mode": "usb",
+                                 "spf_brightness": 80, "spf_dim_brightness": 30,
                                  "dim_on_idle": True})
     service.provider = FakeProvider("playing")
     service.setup()
-    check(device.brightness[-1] == 6,
-          "the configured level reaches the panel when it is opened")
+    check(service._brightness == 80,
+          "the configured level reaches the display when it is opened")
 
     service._update_idle()
     service._apply_brightness()
-    check(not service._idle and device.brightness[-1] == 6,
+    check(not service._idle and service._brightness == 80,
           "playback keeps the normal level")
 
     service.provider = FakeProvider("stopped")
     service._update_idle()
     service._apply_brightness()
-    check(service._idle and device.brightness[-1] == 2,
+    check(service._idle and service._brightness == 30,
           "nothing playing dims to the idle level")
 
     service.provider = FakeProvider("paused")
     service._update_idle()
     service._apply_brightness()
-    check(device.brightness[-1] == 6, "a pause counts as playing, not as idle")
+    check(service._brightness == 80, "a pause counts as playing, not as idle")
 
-    # A level the panel rejected must not be remembered as applied.
-    sent = len(device.brightness)
-    service.target.set_brightness = lambda level: False
-    service.config.set("brightness", 3)
+    # A level the display rejected must not be remembered as applied.
+    service.target.set_brightness = lambda percent: False
+    service.config.set("spf_brightness", 55)
     service._apply_brightness(force=True)
     check(service._brightness is None,
           "a rejected level is not cached, so the next frame tries again")
-    service.target.set_brightness = display_module.AX206Target.set_brightness.__get__(
+    service.target.set_brightness = display_module.SPFTarget.set_brightness.__get__(
         service.target)
     service._apply_brightness()
-    check(len(device.brightness) > sent and device.brightness[-1] == 3,
-          "the retry sends the level the user chose")
+    check(service._brightness == 55, "the retry applies the level the user chose")
 
     # Changing the brightness must not tear the USB connection down.  Kodi
     # is not around here, so the overrides stand in for the stored settings.
-    opens = device.opens
-    service._overrides["brightness"] = 1
+    opened = service.target
+    service._overrides["spf_brightness"] = 40
     service.refresh_settings()
-    check(device.opens == opens,
-          "a brightness change keeps the panel open (%d open(s))" % device.opens)
-    check(device.brightness[-1] == 1,
-          "and the new level is sent right away")
+    check(service.target is opened,
+          "a brightness change keeps the display open")
+    check(service._brightness == 40, "and the new level is applied right away")
     check(not service._reload_requested,
           "a brightness change does not queue a reload")
 
     service._overrides["rotation"] = 90
     service.refresh_settings()
     check(service._reload_requested,
-          "a change that needs the panel rebuilt still reloads")
+          "a change that needs the display rebuilt still reloads")
     service.shutdown()
 
-    # -- software dimming on a Samsung frame --------------------------------
+    # -- the software gain itself -------------------------------------------
     grey = Canvas(64, 64, parse_color("#808080"))
 
     def mean_luma(jpeg):
@@ -613,11 +444,8 @@ def test_brightness():
 
     bus = install_fake_spf("monitor")
     bus.device = FakeSPFDevice(bus)
-    config = Config({"output_mode": "usb", "display_type": "spf",
-                     "spf_brightness": 60})
+    config = Config({"output_mode": "usb", "spf_brightness": 60})
     target = display_module.make_target(config)
-    check(target.brightness_unit == "percent",
-          "a Samsung frame is driven in percent, not in backlight steps")
     target.open()
     target.set_brightness(50)
     check(target.encoder.gain == 128,
@@ -712,7 +540,7 @@ def test_power_hooks():
     bus.device = FakeSPFDevice(bus)
 
     service = Service(overrides={
-        "output_mode": "usb", "display_type": "spf",
+        "output_mode": "usb",
         "start_command": "touch '%s'" % started,
         "stop_command": "touch '%s'" % stopped,
     })
@@ -732,8 +560,11 @@ def test_power_hooks():
 
 def test_rotation():
     print("rotation")
-    context = install_fake_usb()
-    target = AX206Target(rotation=90)
+    from lcd4linux.display import SPFTarget
+
+    bus = install_fake_spf("monitor")
+    bus.device = FakeSPFDevice(bus)
+    target = SPFTarget(rotation=90)
     target.open()
     logical = target.logical_size
     check(logical == (PANEL_HEIGHT, PANEL_WIDTH),
@@ -741,8 +572,13 @@ def test_rotation():
     canvas = Canvas(logical[0], logical[1])
     canvas.fill_rect(0, 0, 10, 10, parse_color("#00ff00"))
     target.present(canvas, force=True)
-    check(context.device.blits[-1][1] == PANEL_WIDTH * PANEL_HEIGHT * 2,
-          "rotated frame still has the panel's pixel count")
+    # The frame carries the JPEG between the 12 byte header and the trailer.
+    frame = bus.device.frames[-1]
+    declared = struct.unpack_from("<I", frame, 4)[0]
+    width, height, _pixels = jpegio.decode(frame[12:declared - 2], 64)
+    check((width * 8, height * 8) == (PANEL_WIDTH, PANEL_HEIGHT),
+          "the rotated frame goes out at the display's own %dx%d"
+          % (width * 8, height * 8))
     target.close()
 
 
@@ -1366,7 +1202,7 @@ def test_preview_worker():
                     os.path.join(own, "worker.json"))
     bus = install_fake_spf("monitor")
     bus.device = FakeSPFDevice(bus)
-    service = Service(overrides={"output_mode": "usb", "display_type": "spf",
+    service = Service(overrides={"output_mode": "usb",
                                  "layout_dir": own})
 
     service._handle_command("render_thumbs",
@@ -1434,11 +1270,10 @@ def test_settings_xml():
           "the Samsung model list matches the driver (%d frames)"
           % len(spf.MODELS))
 
-    # Options that only one display type understands must be hidden for the
-    # other one, otherwise the dialog offers AX206 settings for a Samsung
-    # frame and the other way round.  The JPEG encoder and the software
-    # dimming are shared with the network display, so those follow both; the
-    # AX206 backlight levels are meaningless in a browser.
+    # A network display is not on the USB bus, so the settings that pick a
+    # frame off it have nothing to say there and must be hidden.  Everything
+    # else - the JPEG encoder, the software dimming - is shared between the
+    # Samsung frame and the browser and stays visible throughout.
     def visible_conditions(setting):
         """``(setting, operator, value)`` of every visibility condition.
 
@@ -1461,25 +1296,16 @@ def test_settings_xml():
                               dependency.text))
         return found
 
-    ax206_only = [("display_type", "is", "ax206"),
-                  ("output_mode", "!is", "network")]
-    spf_or_network = [("display_type", "is", "spf"),
-                      ("output_mode", "is", "network")]
     expected = {
-        "device_ids": [("display_type", "is", "ax206")],
-        "byte_order": [("display_type", "is", "ax206")],
-        "reset_on_open": [("display_type", "is", "ax206")],
-        "spf_model": [("display_type", "is", "spf")],
-        "brightness": ax206_only,
-        "dim_brightness": ax206_only,
-        "jpeg_quality": spf_or_network,
-        "jpeg_subsample": spf_or_network,
-        "spf_brightness": spf_or_network,
-        "spf_dim_brightness": spf_or_network,
+        "spf_model": [("output_mode", "!is", "network")],
+        "jpeg_quality": [],
+        "jpeg_subsample": [],
+        "spf_brightness": [],
+        "spf_dim_brightness": [],
     }
     for key, conditions in sorted(expected.items()):
         check(visible_conditions(settings[key]) == conditions,
-              "%s is shown for the right display types" % key)
+              "%s is shown for the right output modes" % key)
 
     # The size is what the network display renders at, so it must not be
     # locked away behind "override the display size".
@@ -3120,7 +2946,7 @@ def main():
                  test_decode_size, test_background_loader,
                  test_kodi_texture, test_picture_cache, test_rough_first,
                  test_huffman_table,
-                 test_jpeg_encoder, test_protocol, test_target_from_settings,
+                 test_jpeg_encoder, test_target_from_settings,
                  test_samsung_spf, test_late_display, test_brightness,
                  test_localisation,
                  test_settings_xml, test_layout_precedence,

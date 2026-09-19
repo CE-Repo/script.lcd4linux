@@ -1,34 +1,10 @@
 # Setup
 
-Three kinds of output. Pick one under *Settings → Display → Connection →
-Output*, and for a USB panel also set *Display type* — the two panel families
-speak completely different protocols.
+Two kinds of output — a Samsung SPF photo frame over USB, or any browser over
+the network. Pick one under *Settings → Display → Connection → Output*.
 
-Kodi runs as `root` on CoreELEC, so neither display needs udev rules. If a
-kernel driver has claimed the device, the add-on detaches it.
-
----
-
-## AX206 (AIDA64 type)
-
-| | |
-|---|---|
-| Controller | AX206 with the dpf-ax firmware |
-| USB ID | `1908:0102` |
-| Resolution | reported by the panel, typically 480×320 |
-| Transfer | raw RGB565, changed rectangle only |
-| Brightness | 8 backlight levels, driven by the add-on |
-
-Plug it in and check that the box sees it:
-
-```sh
-lsusb | grep 1908
-```
-
-If nothing shows up, it is the cable, the power, or a panel still running its
-original firmware — these displays need the dpf-ax firmware flashed.
-
-That is the whole setup; the defaults are correct for this panel.
+Kodi runs as `root` on CoreELEC, so the frame needs no udev rules. If a kernel
+driver has claimed the device, the add-on detaches it.
 
 ---
 
@@ -63,7 +39,7 @@ That is the whole setup; the defaults are correct for this panel.
    ```
 
    The menu entry *Display status* says the same thing in plain words.
-6. Set *Display type* to **Samsung SPF photo frame**, then *Reload service*.
+6. Leave *Output* at **USB display** and choose *Reload service*.
 
 ### The mode switch
 

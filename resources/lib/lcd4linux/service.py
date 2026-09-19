@@ -10,7 +10,6 @@ import subprocess
 import threading
 import time
 
-from . import ax206
 from . import display as display_module
 from . import faicons
 from .errors import DisplayError
@@ -18,7 +17,7 @@ from . import layout as layout_module
 from . import localize
 from . import thumbs
 from .bmfont import FontCache
-from .images import ImageCache, decoder_name
+from .images import ImageCache
 from .kodidata import make_provider
 from .logger import debug, error, log
 from .settings import (Config, DEFAULTS, addon_path, ensure_user_directories,
@@ -40,10 +39,9 @@ except ImportError:
 #: for every step of a slider, and tearing the USB link down for each of them
 #: is what used to make the brightness setting look like it did nothing.
 RELOAD_SETTINGS = frozenset((
-    "output_mode", "display_type", "spf_model", "device_ids", "device_index",
-    "device_serial", "byte_order", "rotation", "mirror", "force_size",
-    "width", "height", "usb_timeout", "reset_on_open", "jpeg_quality",
-    "jpeg_subsample", "layout", "layout_dir",
+    "output_mode", "spf_model", "device_index", "device_serial", "rotation",
+    "mirror", "force_size", "width", "height", "usb_timeout",
+    "jpeg_quality", "jpeg_subsample", "layout", "layout_dir",
 ))
 
 #: Settings the web editor is built from.  They only restart the little
@@ -313,10 +311,6 @@ class Service(object):
         self.provider = make_provider(self._addon_info("name"),
                                       self._addon_info("version"))
         log("starting with %s" % self.config.describe())
-        # Worth a line of its own: without Pillow every piece of
-        # fanart is decoded in Python, which on a weak box is the
-        # difference between a second and a quarter of a minute.
-        log("pictures are decoded by %s" % decoder_name())
 
         self._close_target()
         # Runs before the display is opened, so it can switch the power on.
@@ -528,14 +522,9 @@ class Service(object):
             # panel would otherwise start at the idle brightness.
             self._update_idle()
             self._apply_brightness(force=True)
-            if isinstance(self.target, display_module.AX206Target):
-                self._publish_status("%s | %dx%d" % (self.target.describe(),
-                                                     self.target.width,
-                                                     self.target.height))
-            else:
-                self._publish_status("%s | %dx%d" % (self.config.output_mode,
-                                                     self.target.width,
-                                                     self.target.height))
+            self._publish_status("%s | %dx%d" % (self.config.output_mode,
+                                                 self.target.width,
+                                                 self.target.height))
             return True
         except Exception as err:
             self._open_failures += 1
@@ -577,14 +566,12 @@ class Service(object):
 
     # -- brightness / dimming ---------------------------------------------
     def _brightness_pair(self):
-        """``(normal, idle)`` brightness in the unit the target expects.
+        """``(normal, idle)`` brightness as a percentage.
 
-        The AX206 has a real backlight and is driven with its 0-7 level; a
-        Samsung frame has none, so it gets a percentage and darkens the
-        picture itself.
+        Neither a Samsung frame nor a browser has a backlight that can be
+        told what to do, so both get a percentage and darken the picture
+        themselves.
         """
-        if self.target is not None and self.target.brightness_unit == "level":
-            return int(self.config.brightness), int(self.config.dim_brightness)
         return int(self.config.spf_brightness), int(self.config.spf_dim_brightness)
 
     def _wanted_brightness(self):
@@ -608,10 +595,7 @@ class Service(object):
 
     def _step_brightness(self, direction):
         """The ``brightness_up``/``brightness_down`` commands."""
-        if self.target is not None and self.target.brightness_unit == "level":
-            key, step, low, high = "brightness", 1, 0, ax206.MAX_BRIGHTNESS
-        else:
-            key, step, low, high = "spf_brightness", 10, 10, 100
+        key, step, low, high = "spf_brightness", 10, 10, 100
         value = int(self.config.get(key, high)) + direction * step
         self.config.set(key, max(low, min(high, value)))
         self._apply_brightness(force=True)
@@ -761,9 +745,8 @@ class Service(object):
         small = self.fonts.get("mono", 15)
         canvas.draw_text(font, localize.text(32341, "LCD4Linux test pattern"),
                          16, height // 2 + 34, parse_color("#ffffff"))
-        canvas.draw_text(small, "%d x %d  rot %d  %s-endian"
-                         % (width, height, self.config.rotation,
-                            self.config.byte_order),
+        canvas.draw_text(small, "%d x %d  rot %d"
+                         % (width, height, self.config.rotation),
                          16, height // 2 + 60, parse_color("#9aa3b5"))
         canvas.draw_text(small,
                          localize.text(32342,
@@ -795,10 +778,7 @@ class Service(object):
         # the tablet frozen on the last picture.
         if self.target is not None and self.config.clear_on_exit:
             try:
-                if isinstance(self.target, display_module.AX206Target) and self.target.is_open:
-                    self.target.set_brightness(0)
-                    self.target.device.clear(byte_order=self.config.byte_order)
-                elif isinstance(self.target, display_module.SPFTarget) and self.target.is_open:
+                if isinstance(self.target, display_module.SPFTarget) and self.target.is_open:
                     self.target.blank()
                 elif isinstance(self.target, display_module.NetworkTarget) and self.target.is_open:
                     self.target.blank()

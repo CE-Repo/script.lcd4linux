@@ -205,9 +205,9 @@ file. The bundled designs ship their picture and are never re-drawn.
 `size` must match the display. The add-on looks for a matching variant
 alongside the file you selected:
 
-| Panel | File name |
+| Display | File name |
 |---|---|
-| AX206 480×320 | `mine.json` |
+| 480×320 | `mine.json` |
 | SPF 800×480 | `mine-800x480.json` |
 | SPF 1024×600 | `mine-1024x600.json` |
 
@@ -767,5 +767,5 @@ it can find.
 python3 tools/preview.py --layout mine.json --page 0 --out test.png
 ```
 
-The *test pattern* in the menu verifies resolution, rotation and byte order:
-the red frame must touch all four edges and the grey wedge must be smooth.
+The *test pattern* in the menu verifies resolution and rotation: the red
+frame must touch all four edges and the grey wedge must be smooth.

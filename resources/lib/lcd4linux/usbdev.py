@@ -2,7 +2,7 @@
 
 Kodi add-ons cannot rely on ``pyusb`` being installed, and CoreELEC does not
 ship it, but ``libusb-1.0.so`` is always present because Kodi itself links
-against it.  Only the handful of calls the AX206 driver needs are bound.
+against it.  Only the handful of calls the display driver needs are bound.
 """
 
 import ctypes

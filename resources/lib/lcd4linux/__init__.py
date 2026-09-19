@@ -1,3 +1,4 @@
-"""script.lcd4linux - drive an AX206 based USB LCD from Kodi/CoreELEC."""
+"""script.lcd4linux - drive a Samsung SPF frame or a browser display
+from Kodi/CoreELEC."""
 
-__version__ = "1.3.1"
+__version__ = "1.4.0"

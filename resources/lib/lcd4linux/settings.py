@@ -6,7 +6,6 @@ defaults everywhere else, so the same code can be exercised from a shell.
 
 import os
 
-from . import ax206
 from .logger import log, set_debug
 
 try:
@@ -20,25 +19,19 @@ ADDON_ID = "script.lcd4linux"
 
 DEFAULTS = {
     "output_mode": "usb",
-    "display_type": "ax206",
     "spf_model": "auto",
     "jpeg_quality": 85,
     "jpeg_subsample": True,
-    "device_ids": "1908:0102",
     "device_index": 0,
     "device_serial": "",
-    "byte_order": "big",
     "rotation": 0,
     "mirror": False,
     "force_size": False,
-    "width": 480,
-    "height": 320,
-    "usb_timeout": 3000,
-    "reset_on_open": False,
+    "width": 800,
+    "height": 480,
+    "usb_timeout": 5000,
     "retry_seconds": 20,
     "startup_grace": 180,
-    "brightness": 7,
-    "dim_brightness": 1,
     "spf_brightness": 100,
     "spf_dim_brightness": 20,
     "dim_on_idle": True,
@@ -171,10 +164,6 @@ class Config(object):
 
     # -- derived values ---------------------------------------------------
     @property
-    def device_ids_parsed(self):
-        return ax206.parse_id_list(self._values["device_ids"])
-
-    @property
     def user_layout_directory(self):
         """Where the user's own layouts live, as opposed to the bundled ones."""
         return self._values["layout_dir"] or profile_path("layouts")
@@ -225,11 +214,9 @@ class Config(object):
         return 1.0 / max(1, int(self._values["fps_idle"]))
 
     def describe(self):
-        brightness = ("spf_brightness" if self._values["display_type"] == "spf"
-                      else "brightness")
-        keys = ("display_type", "output_mode", "device_ids", "rotation",
-                "mirror", "byte_order", "layout", brightness, "fps_playing",
-                "fps_idle", "web_enabled", "web_port")
+        keys = ("output_mode", "spf_model", "rotation", "mirror", "layout",
+                "spf_brightness", "fps_playing", "fps_idle", "web_enabled",
+                "web_port")
         return ", ".join("%s=%s" % (key, self._values[key]) for key in keys)
 
 
