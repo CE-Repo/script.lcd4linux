@@ -14,6 +14,7 @@ from . import spf
 from . import localize
 from . import thumbs
 from . import tokens
+from .bmfont import FontCache
 from .logger import log
 from .settings import ADDON_ID, Config, profile_path
 
@@ -259,6 +260,8 @@ def show_status():
         lines.append("%s: %s" % (localize.text(32333, "USB error"), error))
     lines.append("")
     lines.append(config.describe())
+    lines.append("%s: %s" % (localize.text(32347, "Glyph rendering"),
+                             FontCache(config.font_directories).backend_name()))
     lines.append("%s: %s" % (localize.text(32334, "Layout folder"),
                              profile_path("layouts")))
     dialog = _dialog()

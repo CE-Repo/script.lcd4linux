@@ -3,5 +3,5 @@ __pycache__/
 preview.png
 *.zip
 
-# Source faces the font rasteriser downloads; the bitmaps are what ships.
+# Source faces tools/mkfonts.py downloads; the subsetted ones are what ships.
 build/

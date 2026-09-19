@@ -311,6 +311,11 @@ class Service(object):
         self.provider = make_provider(self._addon_info("name"),
                                       self._addon_info("version"))
         log("starting with %s" % self.config.describe())
+        # Worth a line of its own: without FreeType every glyph is
+        # rasterised in Python, which on a weak box is the difference
+        # between a frame and a noticeable pause the first time a size
+        # appears.
+        log("glyphs are rendered by %s" % self.fonts.backend_name())
 
         self._close_target()
         # Runs before the display is opened, so it can switch the power on.

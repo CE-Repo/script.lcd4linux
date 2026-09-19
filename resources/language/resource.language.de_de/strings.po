@@ -640,6 +640,10 @@ msgctxt "#32346"
 msgid "The web editor is switched off"
 msgstr "Der Web-Editor ist ausgeschaltet"
 
+msgctxt "#32347"
+msgid "Glyph rendering"
+msgstr "Zeichensatz-Rendering"
+
 msgctxt "#32400"
 msgid "Playing"
 msgstr "Wiedergabe"

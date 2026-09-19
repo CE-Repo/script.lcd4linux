@@ -52,11 +52,11 @@ on. For a browser instead, set *Output* to **Network display** and open
 * **Sends only what changed.** Both outputs take complete JPEGs, so only the
   block rows that actually changed are re-encoded; a ticking clock costs a
   fraction of a full frame.
-* **30 bundled fonts** — text, narrow, display and seventeen monospaced
-  families, every one of them drawing the same characters, and every
-  monospaced one keeping a single cell width so figures line up. The editor
-  shows them all side by side as real samples, so a font can be compared
-  before it is picked.
+* **Type at any size.** The faces are outlines, rasterised at whatever size
+  a layout asks for — by FreeType where the box has it, by a built-in
+  rasteriser otherwise. Nothing is resampled from a neighbouring size, and
+  the four bundled families cost 220 kB rather than nine megabytes of
+  pre-rendered bitmaps. Drop a `.ttf` into the fonts folder to add your own.
 * **20 bundled layouts**, each in 480×320, 800×480 and 1024×600 plus portrait.
   You pick the name, the add-on picks the size that fits the attached display.
 * **A layout editor in the browser** at `http://<box>:8050/` — drag elements
@@ -107,16 +107,20 @@ python3 tools/selftest.py                         # check fonts, decoders, layou
 
 `tools/contact_sheet.py` builds the overview images, `tools/make_thumbs.py` the
 pictures for the layout chooser, `tools/mkicons.py` rebuilds the Font Awesome
-index, and `tools/mkfont.py` regenerates the fonts (the only one that needs
-Pillow).
+index, and `tools/mkfonts.py` rebuilds the bundled faces (the only one that
+needs fontTools).
 
 ## Licence
 
 MIT — see [LICENSE](LICENSE).
 
-The bundled fonts come from the [DejaVu fonts](https://dejavu-fonts.github.io/)
+The bundled faces come from the [DejaVu fonts](https://dejavu-fonts.github.io/)
 (Bitstream Vera licence), see
-[resources/fonts/LICENSE-DejaVu.txt](resources/fonts/LICENSE-DejaVu.txt).
+[resources/fonts/LICENSE-DejaVu.txt](resources/fonts/LICENSE-DejaVu.txt), with
+the media transport signs taken from
+[Noto Sans Symbols 2](https://fonts.google.com/noto/specimen/Noto+Sans+Symbols+2)
+(SIL Open Font License), see
+[resources/fonts/LICENSE-NotoSansSymbols2.txt](resources/fonts/LICENSE-NotoSansSymbols2.txt).
 
 The `icon` widget can draw the [Font Awesome Free](https://fontawesome.com/)
 set; the icons are licensed under CC BY 4.0, see

@@ -1,7 +1,10 @@
-"""Loader and renderer for the bundled ``.l4f`` bitmap fonts.
+"""Fonts: finding a face, and turning it into glyphs the canvas can draw.
 
-The format is produced by ``tools/mkfont.py``.  Everything here is pure
-Python so it works on any Kodi build without extra binary modules.
+A face is a ``.ttf``/``.otf`` file rasterised at the exact pixel size a
+layout asks for; :mod:`.ttfont` does that part.  The add-on used to carry
+every glyph pre-rendered at nine sizes instead, which is what the ``.l4f``
+reader below is still for: a bitmap font someone built earlier keeps working
+if they drop it into their own fonts folder.
 
 Layout of a ``.l4f`` file (all little endian)::
 
@@ -19,7 +22,16 @@ import os
 import struct
 import zlib
 
+from . import ttfont
+from .logger import debug
+
 MAGIC = b"L4F2"
+
+#: Extensions a face is looked for under, best first.
+FACE_SUFFIXES = (".ttf", ".otf", ".ttc")
+
+#: The bitmap format the add-on used to ship; still read, never written.
+BITMAP_SUFFIX = ".l4f"
 
 _GLYPH_STRUCT = struct.Struct("<IhhhBBI")
 _HEAD_STRUCT = struct.Struct("<HHHHI")
@@ -314,67 +326,197 @@ def text_mask(font, text, margin=1):
     return width, height, mask
 
 
+class VectorFont(Font):
+    """A face rasterised at one pixel size, a glyph at a time.
+
+    The whole point of moving off the bitmap format is that any size is now
+    the right size, so nothing is pre-rendered: a page uses a few dozen
+    characters out of the several hundred a face carries, and rasterising
+    the rest would be work nobody asked for.  Advances come straight from
+    the face's metrics, so measuring, wrapping and ellipsizing a string
+    never draws anything.
+    """
+
+    def __init__(self, face, name, size):
+        self._face = face
+        self._advances = {}
+        self._missing = set()
+        Font.__init__(self, name, size, face.ascent, face.descent,
+                      max(1, face.height), {})
+
+    # -- glyphs ------------------------------------------------------------
+    def glyph(self, code):
+        cached = self._glyphs.get(code)
+        if cached is not None:
+            return cached
+        if code in self._missing:
+            return self._fallback_glyph()
+        rendered = self._face.render(code)
+        if rendered is None:
+            self._missing.add(code)
+            return self._fallback_glyph()
+        width, height, left, top, advance, coverage = rendered
+        rows = _trim_rows(coverage, width, height) if width and height else []
+        # bearing_y counts up from the baseline, which is what FreeType's
+        # bitmap_top already is.
+        glyph = Glyph(code, advance, left, top, width, height, rows)
+        self._glyphs[code] = glyph
+        self._advances[code] = advance
+        return glyph
+
+    def _fallback_glyph(self):
+        """What a character the face does not carry is drawn as."""
+        for code in (0x3F, 0x20):               # '?', then a blank
+            if code in self._missing:
+                continue
+            glyph = self._glyphs.get(code)
+            if glyph is None:
+                glyph = self.glyph(code)
+            if glyph is not None:
+                return glyph
+        return None
+
+    def advance_of(self, code):
+        cached = self._advances.get(code)
+        if cached is not None:
+            return cached
+        advance = self._face.advance(code)
+        if advance is None:
+            fallback = self._fallback_glyph()
+            advance = fallback.advance if fallback is not None else 0
+            self._missing.add(code)
+        self._advances[code] = advance
+        return advance
+
+    def close(self):
+        self._face.close()
+
+
 class FontCache(object):
-    """Finds, loads and caches fonts, with nearest-size fallback."""
+    """Finds, loads and caches fonts.
+
+    A family is a file named after it - ``sans.ttf``, ``mono-bold.ttf`` -
+    looked for in each directory in turn, so a face dropped into the user's
+    own fonts folder overrides a bundled one of the same name.  The old
+    ``family-size.l4f`` bitmaps are still picked up where they exist.
+    """
 
     def __init__(self, directories):
         self.directories = [d for d in directories if d]
         self._cache = {}
-        self._available = None
+        self._faces = None
+        self._bitmaps = None
 
-    # -- discovery --------------------------------------------------------
+    # -- discovery ---------------------------------------------------------
+    def _scan(self):
+        """Walk the font directories once, remembering what is where."""
+        if self._faces is not None:
+            return
+        faces = {}
+        bitmaps = {}
+        # Reversed so that the first directory wins: it is scanned last and
+        # overwrites whatever a later one put in.
+        for directory in reversed(self.directories):
+            try:
+                names = sorted(os.listdir(directory))
+            except OSError:
+                continue
+            for name in names:
+                stem, _dot, suffix = name.rpartition(".")
+                suffix = "." + suffix.lower()
+                path = os.path.join(directory, name)
+                if suffix in FACE_SUFFIXES:
+                    if stem:
+                        faces[stem] = path
+                elif suffix == BITMAP_SUFFIX:
+                    family, _sep, size = stem.rpartition("-")
+                    if family and size.isdigit():
+                        bitmaps.setdefault(family, {})[int(size)] = path
+        self._faces = faces
+        self._bitmaps = bitmaps
+
     def available(self):
-        """Map of family name -> sorted list of bundled pixel sizes."""
-        if self._available is None:
-            found = {}
-            for directory in self.directories:
-                try:
-                    names = os.listdir(directory)
-                except OSError:
-                    continue
-                for name in names:
-                    if not name.endswith(".l4f"):
-                        continue
-                    stem = name[:-4]
-                    family, _, size = stem.rpartition("-")
-                    if not family or not size.isdigit():
-                        continue
-                    found.setdefault(family, {})[int(size)] = os.path.join(directory, name)
-            self._available = found
-        return self._available
+        """Map of family name -> sorted list of bundled pixel sizes.
+
+        A face has no fixed sizes, so it reports an empty list; what the
+        editor wants from this is the family names.
+        """
+        self._scan()
+        found = dict((family, sorted(sizes))
+                     for family, sizes in self._bitmaps.items())
+        for family in self._faces:
+            found.setdefault(family, [])
+        return found
 
     def families(self):
-        return sorted(self.available().keys())
+        self._scan()
+        return sorted(set(self._faces) | set(self._bitmaps))
 
-    # -- loading ----------------------------------------------------------
+    def backend_name(self):
+        """Which rasteriser the faces go through, for the log and dialogs.
+
+        Nothing picks a backend until a face is actually opened, so asking
+        before the first frame would only ever answer "not started yet";
+        one character settles it.
+        """
+        if ttfont.backend is None:
+            try:
+                self.get(FAMILIES[0], 16).glyph(0x41)
+            except Exception as error:
+                debug("cannot open a face to probe the rasteriser: %s" % error)
+        return ttfont.backend_name()
+
+    # -- loading -----------------------------------------------------------
     def get(self, family, size):
-        """Return a :class:`Font`; falls back to a bundled family/size."""
+        """Return a :class:`Font`; falls back to a bundled family."""
         family = (family or "sans").strip()
         size = max(6, int(size or 16))
         key = (family, size)
         cached = self._cache.get(key)
         if cached is not None:
             return cached
-
-        table = self.available()
-        sizes = table.get(family)
-        if sizes is None:
-            # Unknown family: try the plain weight, then anything at all.
-            base = family.split("-")[0]
-            sizes = table.get(base)
-            if sizes is None and table:
-                sizes = table[sorted(table)[0]]
-        if not sizes:
-            raise IOError("no bitmap fonts found in %s" % (self.directories,))
-
-        if size in sizes:
-            font = Font.load(sizes[size])
-        else:
-            nearest = min(sizes, key=lambda s: (abs(s - size), -s))
-            base_font = self._load_exact(sizes[nearest])
-            font = _ScaledFont(base_font, size)
+        font = self._build(self._resolve(family), size)
         self._cache[key] = font
         return font
+
+    def _resolve(self, family):
+        """The name actually on disk for what a layout asked for.
+
+        An unknown family falls back to its own base weight first - so
+        ``oswald-bold`` lands on ``oswald`` rather than on the default face -
+        and then on whatever the add-on ships.
+        """
+        self._scan()
+        if family in self._faces or family in self._bitmaps:
+            return family
+        base, _dash, _weight = family.rpartition("-")
+        if base and (base in self._faces or base in self._bitmaps):
+            return base
+        for default in FAMILIES:
+            if default in self._faces or default in self._bitmaps:
+                return default
+        known = self.families()
+        if known:
+            return known[0]
+        raise IOError("no fonts found in %s" % (self.directories,))
+
+    def _build(self, family, size):
+        path = self._faces.get(family)
+        if path is not None:
+            try:
+                return VectorFont(ttfont.open_face(path, size), family, size)
+            except (ttfont.FontError, IOError, OSError, struct.error) as error:
+                # A face that cannot be read must not take the display down;
+                # the bitmaps below, or another family, still draw something.
+                debug("cannot use %s at %d px: %s" % (path, size, error))
+        sizes = self._bitmaps.get(family)
+        if sizes:
+            if size in sizes:
+                return self._load_exact(sizes[size])
+            nearest = min(sizes, key=lambda s: (abs(s - size), -s))
+            return _ScaledFont(self._load_exact(sizes[nearest]), size)
+        raise IOError("no usable font for %r in %s"
+                      % (family, self.directories))
 
     def _load_exact(self, path):
         key = ("path", path)
@@ -385,5 +527,13 @@ class FontCache(object):
         return cached
 
     def clear(self):
+        for font in list(self._cache.values()):
+            close = getattr(font, "close", None)
+            if close is not None:
+                try:
+                    close()
+                except Exception:
+                    pass
         self._cache.clear()
-        self._available = None
+        self._faces = None
+        self._bitmaps = None

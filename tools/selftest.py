@@ -646,77 +646,169 @@ def test_layouts():
         check(ok, "%s renders every page (slowest %.0f ms)" % (name, slowest * 1000))
 
 
+def _mkfonts():
+    """The build tool, for the character set and the family list it defines."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "mkfonts", os.path.join(ROOT, "tools", "mkfonts.py"))
+    module = importlib.util.module_from_spec(spec)
+    try:
+        spec.loader.exec_module(module)
+    except ImportError:
+        return None              # fontTools missing: it is build-time only
+    return module
+
+
+def test_rasteriser():
+    """Both glyph backends, against the faces the add-on ships."""
+    print("glyph rasteriser")
+    from lcd4linux import ttfont
+
+    path = os.path.join(ROOT, "resources", "fonts", "sans.ttf")
+    probe = u"Hg0 ÄößŁœ ⏸★♪ …—°"
+
+    backends = []
+    try:
+        backends.append(("FreeType", ttfont.FreeTypeBackend(path, 20)))
+    except ttfont.FontError as error:
+        print("  [note] FreeType unavailable here (%s)" % error)
+    backends.append(("built-in", ttfont.PythonBackend(path, 20)))
+    check(len(backends) == 2, "both backends can open a face (%s)"
+          % ", ".join(name for name, _ in backends))
+
+    for name, face in backends:
+        missing = [ch for ch in probe
+                   if ch != " " and face.render(ord(ch)) is None]
+        check(not missing, "%s draws the whole probe (%s)"
+              % (name, "".join(missing) or "nothing missing"))
+        check(face.ascent > 0 and face.descent >= 0 and face.height > 0,
+              "%s reports metrics %d/%d/%d"
+              % (name, face.ascent, face.descent, face.height))
+        # Measuring must not depend on rasterising: a fresh face has to
+        # answer an advance before anything has been drawn.
+        fresh = type(face)(path, 20)
+        check(fresh.advance(ord("M")) > 0,
+              "%s answers an advance without rendering" % name)
+        fresh.close()
+
+    if len(backends) == 2:
+        # The two need not agree pixel for pixel - one hints, the other does
+        # not - but a layout laid out by one and drawn by the other would
+        # come apart, so the advances have to match.
+        (_, free), (_, pure) = backends
+        drift = [ch for ch in probe if ch != " "
+                 and abs((free.advance(ord(ch)) or 0)
+                         - (pure.advance(ord(ch)) or 0)) > 1]
+        check(not drift, "the backends agree on advances (%s)"
+              % ("".join(drift) or "every character"))
+        boxes = []
+        for ch in probe:
+            if ch == " ":
+                continue
+            a, b = free.render(ord(ch)), pure.render(ord(ch))
+            if abs(a[0] - b[0]) > 2 or abs(a[1] - b[1]) > 2:
+                boxes.append(ch)
+        check(not boxes, "and on glyph sizes to within two pixels, which is "
+                         "what hinting moves (%s)"
+              % ("".join(boxes) or "every character"))
+
+    for _name, face in backends:
+        face.close()
+
+    # A face the reader cannot handle has to say so rather than crash.
+    bogus = os.path.join(ROOT, "icon.png")
+    try:
+        ttfont.PythonBackend(bogus, 20)
+        check(False, "a non-font is rejected")
+    except ttfont.FontError:
+        check(True, "a non-font is rejected with FontError")
+
+
 def test_fonts():
     print("fonts")
-    fonts = FontCache([os.path.join(ROOT, "resources", "fonts")])
+    from lcd4linux import bmfont
+    from lcd4linux.bmfont import FontCache
+
+    directory = os.path.join(ROOT, "resources", "fonts")
+    fonts = FontCache([directory])
     families = fonts.families()
-    check("sans" in families and "mono" in families,
-          "families available: %s" % ", ".join(families))
+    check(sorted(families) == sorted(bmfont.FAMILIES),
+          "the four shipped families are found: %s" % ", ".join(families))
+
     font = fonts.get("sans-bold", 24)
     check(font.measure("Hello") > 0, "text measures %d px" % font.measure("Hello"))
-    check(fonts.get("sans", 27).size == 27, "unbundled sizes are resampled")
+
+    # Every size is its own size now; nothing is resampled from a neighbour.
+    for size in (13, 17, 22, 41, 137):
+        check(fonts.get("sans", size).size == size,
+              "%d px is rendered at %d px" % (size, size))
+    check(fonts.get("sans", 22).measure("Hamburgefons")
+          > fonts.get("sans", 21).measure("Hamburgefons"),
+          "and one pixel more really is wider")
+
     umlauts = fonts.get("sans", 16)
     check(all(umlauts.glyph(ord(ch)) is not None for ch in u"äöüßÄÖÜéèñ"),
           "accented characters have glyphs")
 
-    # Picking a different font must never cost a character.  Most faces stop
-    # somewhere in Latin Extended-A and none of them draws the media signs,
-    # so the rasteriser fills those in from DejaVu and Noto Symbols; if that
+    # Picking a different font must never cost a character.  DejaVu stops
+    # short of the media signs, so the build tool grafts those on; if that
     # ever breaks, a layout loses glyphs silently.
     probe = u"ÄÖÜäöüß·°—€ŁłŒœ≈≤∞⏵⏸⏹♪♫✓✗■▲▶▼◀●★☆←↑→↓"
     thin = []
     for family in families:
-        font = fonts.get(family, 24)
+        face = fonts.get(family, 24)
         for ch in probe:
-            glyph = font.glyph(ord(ch))
+            glyph = face.glyph(ord(ch))
             if glyph is None or not (glyph.width and glyph.height):
                 thin.append("%s:%s" % (family, ch))
     check(not thin, "every family draws the whole character set (%s)"
           % (thin[:8] or "all %d of them" % len(families),))
 
-    # A monospaced family is only worth having while every cell is the same
-    # width -- including the glyphs it had to borrow from somewhere else.
-    import importlib.util
-    spec = importlib.util.spec_from_file_location(
-        "mkfont", os.path.join(ROOT, "tools", "mkfont.py"))
-    try:
-        mkfont = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mkfont)
-    except ImportError:
-        mkfont = None            # Pillow or fontTools missing: build-time only
-    if mkfont is not None:
+    # A character no face carries must come back as something drawable
+    # rather than as None, or the renderer would trip over it.
+    exotic = fonts.get("sans", 20).glyph(0x4E2D)      # a Han character
+    check(exotic is not None, "an unknown character falls back to a glyph")
+
+    mkfonts = _mkfonts()
+    if mkfonts is not None:
+        # A monospaced family is only worth having while every cell is the
+        # same width -- including the glyphs it had to borrow elsewhere.
         wobbly = []
-        for family in sorted(mkfont.MONOSPACED):
-            if family not in families:
-                continue
+        for family in ("mono", "mono-bold"):
             for size in (12, 24, 48):
-                font = fonts.get(family, size)
-                widths = {font.glyph(c).advance for c in mkfont.charset()
-                          if font.glyph(c) is not None}
+                face = fonts.get(family, size)
+                widths = {face.glyph(c).advance for c in mkfonts.charset()
+                          if face.glyph(c) is not None}
                 if len(widths) != 1:
                     wobbly.append("%s@%d:%s" % (family, size, sorted(widths)))
-        check(not wobbly, "every monospaced family keeps one cell width (%s)"
-              % (wobbly[:4] or "all %d of them" % len(mkfont.MONOSPACED),))
+        check(not wobbly, "the monospaced families keep one cell width (%s)"
+              % (wobbly[:4] or "both of them",))
         proportional = fonts.get("sans", 24)
-        spread = {proportional.glyph(c).advance for c in mkfont.charset()
+        spread = {proportional.glyph(c).advance for c in mkfonts.charset()
                   if proportional.glyph(c) is not None}
         check(len(spread) > 1, "and the proportional ones stay proportional")
+        check(sorted(mkfonts.FAMILIES) == sorted(bmfont.FAMILIES),
+              "the build tool and the add-on agree on which families ship")
 
     # A bundled face without its licence beside it may not be redistributed.
-    directory = os.path.join(ROOT, "resources", "fonts")
     licences = [n for n in os.listdir(directory) if n.startswith("LICENSE-")]
-    check(len(licences) >= 17,
-          "every bundled face ships its licence (%d files)" % len(licences))
+    check(len(licences) >= 2,
+          "every bundled face ships its licence (%s)" % ", ".join(sorted(licences)))
+    faces = [n for n in os.listdir(directory) if n.endswith(".ttf")]
+    check(len(faces) == len(bmfont.FAMILIES),
+          "%d faces on disk, nothing left over" % len(faces))
 
-    for family in ("inter", "condensed", "oswald", "bebas", "jetbrains",
-                   "sourcecode", "robotomono", "firamono", "plexmono",
-                   "inconsolata", "spacemono", "sharetech", "courierprime"):
-        check(family in families, "the %s family is bundled" % family)
+    # An unknown family must land somewhere sensible instead of failing.
+    check(fonts.get("oswald-bold", 20).measure("x") > 0,
+          "an unknown family falls back to a shipped one")
+
+    # The bitmap format the add-on used to ship still loads, so a font
+    # someone built earlier keeps working in their own fonts folder.
+    check(hasattr(bmfont.Font, "load"), "the .l4f reader is still there")
 
     # -- the samples the editor's font dialog shows -----------------------
-    # A browser cannot draw a bitmap font, so the add-on rasterises a line
+    # A browser cannot draw the face itself, so the add-on rasterises a line
     # of it into a coverage map and sends that as a picture.
-    from lcd4linux import bmfont
     sample = fonts.get("sans", 24)
     width, height, mask = bmfont.text_mask(sample, "Hamburgefons 123")
     check(width >= sample.measure("Hamburgefons 123")
@@ -728,8 +820,6 @@ def test_fonts():
     empty_width, empty_height, empty = bmfont.text_mask(sample, "")
     check(not any(empty) and len(empty) == empty_width * empty_height,
           "empty text draws an empty sample")
-    # Every family has to survive being asked for a sample: a face missing
-    # a glyph used to be found only once a layout showed it.
     broken = []
     for family in families:
         try:
@@ -1888,17 +1978,25 @@ def test_background_loader():
         return sum(abs(a[i] - b[i]) for i in range(len(a))) / float(len(a))
 
     # What it has to end up looking like, and what one frame cost back when
-    # the pictures were decoded in the middle of it.
-    started = time.time()
-    reference = build(ImageCache(limit=32)).render(0.0)
+    # the pictures were decoded in the middle of it.  The reference renderer
+    # is kept so it can be drawn again at the same instant as the frame it
+    # is compared against: default.json scrolls its title, so two renders a
+    # few seconds apart differ however well the pictures loaded.
+    reference_renderer = build(ImageCache(limit=32))
+    epoch = time.time()
+    started = epoch
+    reference_renderer.render(epoch)
     inline_cost = time.time() - started
 
     images.decode_bytes = watched
     cache = ImageCache(limit=32, background=True)
     try:
         renderer = build(cache)
+        # Both renderers have to see the text for the first time at the same
+        # instant, or their marquees run out of phase and no amount of
+        # loading will make the frames match.
         started = time.time()
-        renderer.render(started)
+        renderer.render(epoch)
         slowest = time.time() - started
 
         deadline = time.time() + 60
@@ -1910,10 +2008,13 @@ def test_background_loader():
             canvas = renderer.render(frame_started)
             slowest = max(slowest, time.time() - frame_started)
             frames += 1
-            delta = difference(canvas, reference)
+            # Same instant for both, so only the pictures can differ.  The
+            # reference cache is warm by now, so this costs a redraw.
+            delta = difference(canvas, reference_renderer.render(frame_started))
             if delta < 1.0:
                 break
 
+        reference = reference_renderer.canvas
         check(not inline, "nothing is decoded on the render thread (%d decodes)"
               % len(inline))
         check(delta < 1.0,
@@ -2519,9 +2620,10 @@ def test_web_editor():
     families = dict((entry["name"], entry) for entry in described["fontinfo"])
     check(sorted(families) == sorted(described["fonts"]),
           "the schema describes every family it offers")
-    check(families["sans"]["sizes"] and families["sans"]["bold"]
-          and not families["sans-bold"]["bold"],
-          "and says which sizes it ships and where a bold cut exists")
+    check(families["sans"]["scalable"] and not families["sans"]["sizes"],
+          "and marks a real face as drawing any size")
+    check(families["sans"]["bold"] and not families["sans-bold"]["bold"],
+          "and says where a bold cut exists")
     png = editor.font_sample({"font": "bebas", "size": "28",
                               "text": "Hamburgefons"})
     check(png[:8] == b"\x89PNG\r\n\x1a\n", "a font sample comes back as a PNG")
@@ -2940,7 +3042,8 @@ def _png_size(data):
 
 def main():
     print("script.lcd4linux self test\n")
-    for test in (test_encoding, test_fonts, test_images, test_tokens,
+    for test in (test_encoding, test_rasteriser, test_fonts, test_images,
+                 test_tokens,
                  test_media_info, test_dolby_vision,
                  test_pixel_conversion, test_frame_cache, test_image_cache,
                  test_decode_size, test_background_loader,

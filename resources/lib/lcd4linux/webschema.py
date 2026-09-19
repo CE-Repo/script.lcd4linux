@@ -487,16 +487,20 @@ def describe_icons():
 
 
 def describe_fonts(fonts=None):
-    """Every bundled family with the pixel sizes it ships in.
+    """Every family the add-on can draw, and what it can do with it.
 
-    The editor cannot draw a bitmap font itself, so its font dialog asks
+    The editor cannot render the face itself, so its font dialog asks
     ``/api/fontsample`` for a picture per family; this is the list it walks
-    and what it prints beside each sample.
+    and what it prints beside each sample.  ``sizes`` is empty for a real
+    face, which draws any size asked of it, and lists the fixed sizes of an
+    older ``.l4f`` bitmap font where someone still has one.
     """
     if fonts is None:
-        return [{"name": "sans", "sizes": [], "bold": False}]
+        return [{"name": "sans", "sizes": [], "scalable": True,
+                 "bold": False}]
     available = fonts.available()
     return [{"name": name, "sizes": sorted(available[name]),
+             "scalable": not available[name],
              "bold": ("%s-bold" % name) in available}
             for name in sorted(available)]
 

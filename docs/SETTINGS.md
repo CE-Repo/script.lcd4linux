@@ -118,7 +118,7 @@ and `%(name)s`, for a mirror on the local network.
 | Password | empty means no prompt; otherwise any user name plus this password |
 
 The editor draws its own font samples through `GET /api/fontsample`, which
-renders a line of text with the bundled bitmap fonts and answers with a PNG.
+renders a line of text with the bundled faces and answers with a PNG.
 It is part of the editor, so it follows the same password and the same
 `Reachable from` setting.
 

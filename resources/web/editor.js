@@ -86,7 +86,8 @@ const TEXTS = {
     fontpick: 'Schriften vergleichen', fontsample: 'Probetext',
     fontsize: 'Probegröße', fontbold: 'Fett',
     fontfound: '%s Schriften', fontnone: 'Keine Schrift gefunden',
-    fontsizes: 'Größen: %s', fontscaled: 'andere Größen werden skaliert',
+    fontsizes: 'feste Größen: %s', fontscaled: 'andere werden skaliert',
+    fontscalable: 'jede Größe',
     fontsampledefault: 'Hamburgefons 123 ÄÖÜ',
     fonthint: 'Die Proben zeichnet das Add-on mit derselben Schrift, die'
       + ' später auf dem Display steht.',
@@ -168,7 +169,8 @@ const TEXTS = {
     fontpick: 'Compare the fonts', fontsample: 'Sample text',
     fontsize: 'Sample size', fontbold: 'Bold',
     fontfound: '%s fonts', fontnone: 'No font found',
-    fontsizes: 'Sizes: %s', fontscaled: 'other sizes are scaled',
+    fontsizes: 'fixed sizes: %s', fontscaled: 'others are scaled',
+    fontscalable: 'any size',
     fontsampledefault: 'Hamburgefons 123 ÄÖÜ',
     fonthint: 'The samples are drawn by the add-on with the very font that'
       + ' will end up on the display.',
@@ -1645,7 +1647,14 @@ function openFontPicker(current, targets, onPick) {
     list.textContent = '';
     matching.forEach((entry) => {
       const meta = [];
-      if (entry.sizes.length) meta.push(t('fontsizes', entry.sizes.join(', ')));
+      // A face draws whatever size it is asked for; only a leftover bitmap
+      // font is stuck with the sizes it was built at.
+      if (entry.sizes.length) {
+        meta.push(t('fontsizes', entry.sizes.join(', ')));
+        meta.push(t('fontscaled'));
+      } else {
+        meta.push(t('fontscalable'));
+      }
       if (entry.name.endsWith('-bold')) meta.push(t('fontbold'));
       // A family is only drawn bold when it has a bold cut; asking for one
       // that does not exist would silently show the regular weight.
