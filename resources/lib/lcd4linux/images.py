@@ -16,9 +16,9 @@ import zlib
 from array import array
 
 try:
-    from urllib.parse import unquote
+    from urllib.parse import quote, unquote
 except ImportError:  # pragma: no cover - Python 2 safety net
-    from urllib import unquote  # type: ignore
+    from urllib import quote, unquote  # type: ignore
 
 from . import pngio
 from . import jpegio
@@ -566,6 +566,39 @@ def read_bytes(path):
         return b""
 
 
+def texture_bytes(path):
+    """Kodi's own copy of a picture, made by Kodi's own decoder.
+
+    The decoders in here are written in Python and cannot read every
+    picture in the world: a progressive JPEG, above all, which a good
+    part of the fanart on the internet is, and which is why some titles
+    showed their backdrop and others did not.
+
+    Kodi reads all of them.  Handed a path wrapped in ``image://`` its
+    VFS produces the texture it caches for its own skin - a plain
+    baseline JPEG or a PNG, already scaled down to its texture limit -
+    and that is something these decoders can always read.
+    """
+    if xbmcvfs is None:
+        return b""
+    text = str(path or "")
+    if not text or text.startswith("image://"):
+        # Already Kodi's copy; asking for the same thing again is pointless.
+        return b""
+    return _vfs_read("image://%s/" % quote(text, safe=""))
+
+
+def _decode_or_log(path, data, max_size):
+    """Decode ``data``, reporting what went wrong instead of raising."""
+    if not data:
+        return None
+    try:
+        return decode_bytes(data, max_size)
+    except Exception as error:
+        log("cannot decode %s: %s" % (_short(path), error))
+        return None
+
+
 #: Magic and version of the files in the on disk picture cache.  Not an
 #: image format anybody else reads: a finished RGBA buffer, deflated.
 #: Storing a PNG would mean un-filtering it again on the way back in, and
@@ -672,17 +705,36 @@ class ImageCache(object):
             if missed_at is not None and time.time() - missed_at < self.MISS_SECONDS:
                 return None
         data = read_bytes(path)
-        if not data:
+        image = None
+        texture = b""
+        if data and jpegio.is_progressive(data):
+            # A progressive JPEG can be read here, but only the slow way:
+            # every scan of the whole picture, at full size, before a
+            # single pixel exists.  Kodi's decoder is C and it keeps a
+            # baseline copy of everything its own skin has shown, so ask
+            # for that first and keep the slow road for when there is none.
+            texture = texture_bytes(path)
+            image = _decode_or_log(path, texture, max_size)
+            if image is None:
+                debug("%s is progressive; decoding it the long way"
+                      % _short(path))
+        if image is None:
+            image = _decode_or_log(path, data, max_size)
+        if image is None and not texture:
+            # Either nothing came back or nothing in here could read it.
+            # Kodi can read it - it is showing the same picture in its own
+            # skin - so the second try goes through its texture cache.
+            texture = texture_bytes(path)
+            if texture and texture != data:
+                image = _decode_or_log(path, texture, max_size)
+                if image is not None:
+                    debug("%s came out of Kodi's texture cache" % _short(path))
+        if image is None:
             # Remembered briefly rather than cached for good: the file may
             # still be on its way, but retrying it every frame means a
             # failing open per frame for as long as the page is up.
             self._remember_miss(key)
             return None
-        try:
-            image = decode_bytes(data, max_size)
-        except Exception as error:
-            log("cannot decode %s: %s" % (path, error))
-            image = None
         with self._lock:
             self._misses.pop(key, None)
             self._store(key, image)

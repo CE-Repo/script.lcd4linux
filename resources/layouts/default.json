@@ -92,6 +92,7 @@
       "priority": 10,
       "background": "#08090d",
       "backgroundimage": "${player.fanart}",
+      "backgroundfallback": "${player.thumb}",
       "backgrounddim": 78,
       "widgets": [
         {"type": "image", "x": 18, "y": 18, "w": 130, "h": 195,
