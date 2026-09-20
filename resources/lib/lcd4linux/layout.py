@@ -31,6 +31,18 @@ DEFAULT_SIZE = (480, 320)
 
 
 class Page(object):
+    #: How long the picture behind a page may be on its way before the page
+    #: gives up on it, says so in the log and falls back to whatever else
+    #: the layout offers.  Long enough that a full piece of fanart still
+    #: gets decoded on a slow box, short enough that a source which is
+    #: never going to work does not leave the page black for good.
+    BACKGROUND_GRACE = 20.0
+
+    #: And how long before one that was given up on is tried again - the
+    #: art may simply not have been downloaded yet when it was first asked
+    #: for.
+    BACKGROUND_RETRY = 300.0
+
     def __init__(self, spec, layout, index):
         self.spec = spec or {}
         self.layout = layout
@@ -42,9 +54,13 @@ class Page(object):
         self.priority = int(self.spec.get("priority", 0))
         self.background = self.spec.get("background")
         self.background_image = self.spec.get("backgroundimage")
+        self.background_fallback = self.spec.get("backgroundfallback")
         self.background_dim = int(self.spec.get("backgrounddim", 0))
         self._background_cache = None
         self._background_key = None
+        self._waiting = None
+        self._given_up = None
+        self._given_up_at = 0.0
         self.widgets = []
         for entry in self.spec.get("widgets", []):
             widget = widget_module.create(entry, layout)
@@ -60,7 +76,7 @@ class Page(object):
         background = self.background if self.background is not None \
             else self.layout.background
         color = context.color(background, (0, 0, 0, 255))
-        source = context.text(self.background_image) if self.background_image else ""
+        source = self._background_source(context)
         key = (color, source, canvas.width, canvas.height, self.background_dim)
         if source:
             # The composed background rarely changes, so keep it and copy it
@@ -76,11 +92,57 @@ class Page(object):
                 if self._render_background(composed, context, source, color):
                     self._background_cache = composed
                     self._background_key = key
+                    self._waiting = None
+                else:
+                    self._note_waiting(context, source)
             canvas.blit_canvas(composed, 0, 0)
         else:
             canvas.clear(color)
         for widget in self.widgets:
             widget.draw(canvas, context)
+
+    def _background_source(self, context):
+        """Which picture belongs behind the page, if any.
+
+        ``backgroundfallback`` steps in where ``backgroundimage`` is empty -
+        a piece of fanart Kodi does not have for this item - and also where
+        the picture behind it never turns up at all, so that one missing
+        file cannot leave the page black for as long as it is playing.
+        """
+        now = context.now
+        primary = context.text(self.background_image) \
+            if self.background_image else ""
+        if self._given_up is not None \
+                and now - self._given_up_at >= self.BACKGROUND_RETRY:
+            # Art Kodi had not downloaded yet when the page first asked for
+            # it deserves another go, with the full grace period again.
+            self._given_up = None
+            self._waiting = None
+        if primary and primary != self._given_up:
+            waiting = self._waiting
+            if waiting is None or waiting[0] != primary \
+                    or now - waiting[1] < self.BACKGROUND_GRACE:
+                return primary
+            self._given_up = primary
+            self._given_up_at = now
+            self._waiting = None
+            log("page %s: %s could not be shown after %d s; "
+                "check that Kodi has this artwork"
+                % (self.name, primary, self.BACKGROUND_GRACE))
+        fallback = context.text(self.background_fallback) \
+            if self.background_fallback else ""
+        return fallback or primary
+
+    def _note_waiting(self, context, source):
+        """Remember since when a background has been on its way.
+
+        Nothing is wrong with a picture that takes a few frames - decoding
+        a piece of fanart in Python is slow.  One that never arrives is a
+        different matter, and used to be invisible: the page simply stayed
+        the colour underneath, with nothing in the log to say why.
+        """
+        if self._waiting is None or self._waiting[0] != source:
+            self._waiting = (source, context.now)
 
     def _render_background(self, canvas, context, source, color):
         """Draw the picture behind the page.

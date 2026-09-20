@@ -544,9 +544,29 @@ class KodiProvider(BaseProvider):
                     or self._info("VideoPlayer.Cover")
                     or self._info("Player.Icon"))
         if name == "fanart":
-            return self._info("Player.Art(fanart)")
+            # Only a film carries its backdrop under the bare ``fanart``
+            # key.  An episode keeps the one of its series and a track the
+            # one of its artist, each under its own prefix, so asking for
+            # ``fanart`` alone left the page background black for
+            # everything that was not a film.
+            return (self._info("Player.Art(fanart)")
+                    or self._info("Player.Art(tvshow.fanart)")
+                    or self._info("Player.Art(season.fanart)")
+                    or self._info("Player.Art(artist.fanart)")
+                    or self._info("Player.Art(albumartist.fanart)")
+                    or self._info("VideoPlayer.Art(fanart)")
+                    or self._info("VideoPlayer.Art(tvshow.fanart)")
+                    or self._info("MusicPlayer.Art(fanart)")
+                    or self._info("MusicPlayer.Art(artist.fanart)"))
         if name == "poster":
-            return self._info("Player.Art(poster)")
+            # Same story: an episode has no poster of its own, and the one
+            # of the series - or of the season, if it has one - is what a
+            # layout asking for a poster wants to show.
+            return (self._info("Player.Art(poster)")
+                    or self._info("Player.Art(season.poster)")
+                    or self._info("Player.Art(tvshow.poster)")
+                    or self._info("VideoPlayer.Art(poster)")
+                    or self._info("VideoPlayer.Art(tvshow.poster)"))
         if name == "clearlogo":
             # The logo of the film, the series or the artist, whichever of
             # them is playing; Kodi keeps each under its own art key and

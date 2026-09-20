@@ -2158,6 +2158,114 @@ def test_background_loader():
           "and no loader thread is left behind")
 
 
+def test_background_fallback():
+    """A page is not left black by artwork Kodi cannot hand out."""
+    print("background fallback")
+    from lcd4linux.bmfont import FontCache
+    from lcd4linux.images import ImageCache
+    from lcd4linux.kodidata import DemoProvider, KodiProvider
+    from lcd4linux.layout import Layout, Renderer, Page
+
+    # -- where Kodi keeps the artwork ------------------------------------
+    # Only a film has a bare ``fanart``; an episode carries the one of its
+    # series and a track the one of its artist, which is what used to leave
+    # the background black for everything but films.
+    class Stub(KodiProvider):
+        def __init__(self, art):
+            KodiProvider.__init__(self)
+            self.art = art
+
+        def _info(self, label):
+            return self.art.get(label, u"")
+
+        def _state(self):
+            return "playing"
+
+        def _media_type(self):
+            return "video"
+
+        def _player_times(self):
+            return (0.0, 100.0)
+
+    for art, expected, what in (
+            ({"Player.Art(fanart)": "movie.jpg"}, "movie.jpg", "a film"),
+            ({"Player.Art(tvshow.fanart)": "show.jpg"}, "show.jpg",
+             "an episode"),
+            ({"Player.Art(artist.fanart)": "artist.jpg"}, "artist.jpg",
+             "a track"),
+            ({"MusicPlayer.Art(artist.fanart)": "music.jpg"}, "music.jpg",
+             "a track whose art only MusicPlayer knows"),
+            ({}, "", "an item without any fanart")):
+        provider = Stub(art)
+        provider.begin_frame(time.time())
+        check(provider.value("player.fanart") == expected,
+              "the fanart of %s is found (%r)"
+              % (what, provider.value("player.fanart")))
+
+    provider = Stub({"Player.Art(tvshow.poster)": "show-poster.jpg"})
+    provider.begin_frame(time.time())
+    check(provider.value("player.poster") == "show-poster.jpg",
+          "and an episode falls back to the poster of its series")
+
+    # -- and what the page does when there is none ------------------------
+    media = os.path.join(ROOT, "resources", "media")
+    fonts = FontCache([os.path.join(ROOT, "resources", "fonts")])
+    cover = os.path.join(media, "demo-cover.jpg")
+    spec = {
+        "name": "fallback", "size": [320, 240],
+        "pages": [{"name": "video", "background": "#000000",
+                   "backgroundimage": "${player.fanart}",
+                   "backgroundfallback": "${player.thumb}",
+                   "widgets": []}],
+    }
+
+    def brightness(canvas):
+        pixels = canvas.to_rgb888()
+        return sum(pixels) / float(len(pixels))
+
+    # No fanart at all: the cover behind the page instead of nothing.
+    provider = DemoProvider(1, 97.0, "playing", cover)
+    provider.fanart = ""
+    provider.art = cover
+    renderer = Renderer(Layout(spec), provider, fonts, ImageCache())
+    lit = brightness(renderer.render(time.time()))
+    check(lit > 1.0, "an empty background image falls back to the cover "
+          "(mean brightness %.1f)" % lit)
+
+    # Fanart that never loads: black until the page gives up on it, then
+    # the fallback - and a line in the log saying which file it was.
+    missing = os.path.join(media, "no-such-fanart.jpg")
+    provider = DemoProvider(1, 97.0, "playing", cover)
+    provider.fanart = missing
+    layout = Layout(spec)
+    renderer = Renderer(layout, provider, fonts, ImageCache())
+    page = layout.pages[0]
+    epoch = time.time()
+    dark = brightness(renderer.render(epoch))
+    check(dark < 1.0, "a background that is still loading stays dark "
+          "(mean brightness %.1f)" % dark)
+    lines = []
+    from lcd4linux import logger
+    plain = logger.log
+    layout_module = sys.modules["lcd4linux.layout"]
+    layout_module.log = lambda message: lines.append(message)
+    try:
+        recovered = brightness(renderer.render(
+            epoch + Page.BACKGROUND_GRACE + 1.0))
+    finally:
+        layout_module.log = plain
+    check(recovered > 1.0,
+          "a background that never arrives gives way to the fallback "
+          "(mean brightness %.1f)" % recovered)
+    check(any("no-such-fanart.jpg" in line for line in lines),
+          "and the log names the picture that could not be shown (%s)"
+          % (lines or "nothing logged"))
+    check(page._given_up == missing, "the page remembers what it gave up on")
+    page._given_up_at = epoch - Page.BACKGROUND_RETRY
+    renderer.render(epoch + Page.BACKGROUND_RETRY + 2.0)
+    check(page._given_up is None, "and tries it again a while later")
+
+
 def test_kodi_texture():
     """An ``image://`` URL is Kodi's copy; the original is the fallback."""
     print("kodi texture")
@@ -3382,6 +3490,7 @@ def main():
                  test_media_info, test_dolby_vision,
                  test_pixel_conversion, test_frame_cache, test_image_cache,
                  test_decode_size, test_background_loader,
+                 test_background_fallback,
                  test_kodi_texture, test_picture_cache, test_rough_first,
                  test_huffman_table,
                  test_jpeg_encoder, test_target_from_settings,

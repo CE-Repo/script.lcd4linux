@@ -196,6 +196,10 @@ PAGE_FIELDS = [
            hint="higher wins over lower pages", hint_de="höher verdrängt niedriger"),
     _field("background", "color", "Background", "Hintergrund"),
     _field("backgroundimage", "token", "Background image", "Hintergrundbild"),
+    _field("backgroundfallback", "token", "Background fallback",
+           "Ersatz-Hintergrund",
+           hint="used when the background image is missing",
+           hint_de="wird genutzt, wenn das Hintergrundbild fehlt"),
     _field("backgrounddim", "number", "Dim %", "Abdunkeln %", min=0, max=100),
 ]
 

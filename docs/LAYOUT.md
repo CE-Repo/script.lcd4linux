@@ -272,7 +272,8 @@ differ by 1.28 and 1.25.
   "duration": 0,
   "priority": 10,
   "background": "#0b0d12",
-  "backgroundimage": "${player.thumb}",
+  "backgroundimage": "${player.fanart}",
+  "backgroundfallback": "${player.thumb}",
   "backgrounddim": 88,
   "widgets": [ ... ]
 }
@@ -286,6 +287,7 @@ differ by 1.28 and 1.25.
 | `priority` | Higher wins: while any `priority: 10` page is visible, lower ones are ignored. That is how a playback page hides the clock page |
 | `background` | Background colour for this page |
 | `backgroundimage` | Background image (path or token), cropped to fill |
+| `backgroundfallback` | Shown instead when `backgroundimage` is empty or cannot be loaded — `${player.thumb}` behind `${player.fanart}`, for instance |
 | `backgrounddim` | 0–100%, how far that image is darkened |
 | `widgets` | In drawing order — later ones sit on top |
 
@@ -583,7 +585,7 @@ in colours and in conditions. Fixed words may stand next to them, and
 | `title`, `artist`, `albumartist`, `album`, `genre`, `year` | Metadata |
 | `track`, `discnumber`, `rating` | Music details |
 | `showtitle`, `season`, `episode`, `episodelabel`, `plot` | TV details — `episodelabel` gives `S02E05` |
-| `thumb` / `cover` / `art`, `poster`, `fanart`, `clearlogo` | Artwork — `clearlogo` is the transparent logo of the film, the series or the artist |
+| `thumb` / `cover` / `art`, `poster`, `fanart`, `clearlogo` | Artwork — `poster`, `fanart` and `clearlogo` also look under the series, season and artist Kodi filed them under, so an episode shows the backdrop of its show |
 | `codec` | Codec of the running stream, spelled out: `H.265`, `FLAC` |
 | `videocodec`, `audiocodec` | Picture and sound separately |
 | `spatial` | Object audio: `Atmos`, `DTS:X`, `IMAX Enhanced`, else empty |
