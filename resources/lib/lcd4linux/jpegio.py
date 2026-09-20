@@ -8,13 +8,15 @@ reconstructed at 1x1, 2x2, 4x4 or 8x8 pixels, which is how a 500x500 cover
 is turned into the ~200 px thumbnail a layout actually needs in a fraction
 of the time a full decode would cost.
 
-Baseline (SOF0) and extended sequential (SOF1) Huffman JPEGs are supported.
-Progressive files raise :class:`UnsupportedJPEG`; callers fall back to a
-placeholder.
+Baseline (SOF0), extended sequential (SOF1) and progressive (SOF2) Huffman
+JPEGs are supported; anything else - arithmetic coding, lossless, twelve
+bit samples - raises :class:`UnsupportedJPEG` and the caller falls back to
+Kodi's own copy of the picture.
 """
 
 import math
 import struct
+from array import array
 
 ZIGZAG = (
     0, 1, 8, 16, 9, 2, 3, 10, 17, 24, 32, 25, 18, 11, 4, 5,
@@ -93,7 +95,15 @@ class _Huffman(object):
 
 class _Component(object):
     __slots__ = ("cid", "h", "v", "tq", "td", "ta", "pred",
-                 "blocks_w", "blocks_h", "plane", "plane_w", "plane_h")
+                 "blocks_w", "blocks_h", "plane", "plane_w", "plane_h",
+                 # Progressive files only: every coefficient of every block,
+                 # in zigzag order, refined scan by scan until the picture
+                 # can be reconstructed.  ``scan_w``/``scan_h`` is the block
+                 # grid a scan of this component on its own walks - the
+                 # component's own pixels rounded up to whole blocks, which
+                 # is smaller than the padded MCU grid the array is indexed
+                 # by.
+                 "coeffs", "scan_w", "scan_h")
 
 
 class _BitReader(object):
@@ -217,6 +227,11 @@ def _decode_block(reader, comp, dc_table, ac_table, quant, n, out, out_stride,
             nonzero_ac = True
         k += 1
 
+    _render_block(coeffs, n, nonzero_ac, out, out_stride, out_x, out_y)
+
+
+def _render_block(coeffs, n, nonzero_ac, out, out_stride, out_x, out_y):
+    """Turn one block's dequantised coefficients into n x n samples."""
     scale = n / 8.0
     if not nonzero_ac:
         # Extremely common: flat block, skip the transform entirely.
@@ -278,6 +293,8 @@ def decode(data, max_size=None):
     restart_interval = 0
     adobe_transform = None
     progressive = False
+    started = False
+    hmax = vmax = mcus_x = mcus_y = 0
 
     while pos < len(data):
         if data[pos] != 0xFF:
@@ -346,8 +363,6 @@ def decode(data, max_size=None):
         elif marker == 0xEE and segment[:5] == b"Adobe":
             adobe_transform = segment[11] if len(segment) > 11 else None
         elif marker == 0xDA:
-            if progressive:
-                raise UnsupportedJPEG("progressive JPEG is not supported")
             count = segment[0]
             scan = []
             for i in range(count):
@@ -359,12 +374,308 @@ def decode(data, max_size=None):
                         comp.ta = tables & 15
                         scan.append(comp)
                         break
-            pos += length
-            return _decode_scan(data, pos, width, height, components, scan,
-                                quant, dc_tables, ac_tables, restart_interval,
-                                adobe_transform, max_size)
+            if not scan:
+                raise UnsupportedJPEG("malformed JPEG header")
+            if not progressive:
+                pos += length
+                return _decode_scan(data, pos, width, height, components,
+                                    scan, quant, dc_tables, ac_tables,
+                                    restart_interval, adobe_transform,
+                                    max_size)
+            if not started:
+                if not components or not width or not height:
+                    raise UnsupportedJPEG("malformed JPEG header")
+                hmax = max(comp.h for comp in components)
+                vmax = max(comp.v for comp in components)
+                mcus_x = (width + 8 * hmax - 1) // (8 * hmax)
+                mcus_y = (height + 8 * vmax - 1) // (8 * vmax)
+                _prepare_coefficients(components, width, height, hmax, vmax,
+                                      mcus_x, mcus_y)
+                started = True
+            # Which band of coefficients this scan carries, and which bit
+            # of them: a progressive file sends the picture several times
+            # over, each pass finer than the one before.
+            first = segment[1 + count * 2]
+            last = segment[2 + count * 2]
+            approximation = segment[3 + count * 2]
+            pos = _decode_progressive_scan(
+                data, pos + length, scan, dc_tables, ac_tables,
+                first, min(last, 63), approximation >> 4, approximation & 15,
+                restart_interval, mcus_x, mcus_y)
+            continue
         pos += length
+    if started:
+        return _finish_progressive(components, quant, width, height,
+                                   hmax, vmax, max_size)
     raise UnsupportedJPEG("no image data found")
+
+
+
+# ---------------------------------------------------------------------------
+# progressive files
+# ---------------------------------------------------------------------------
+#
+# A progressive JPEG does not hand over one block at a time.  It sends the
+# picture in layers - first the coarse, most significant bits of every
+# block, then finer ones - so nothing can be reconstructed until the last
+# scan has been read.  Every coefficient of every block is therefore kept
+# in an array of its own, refined scan by scan, and the transform runs once
+# at the end.  Much of the artwork on the internet is stored this way, and
+# until this was here such a picture simply did not appear.
+
+
+def is_progressive(data):
+    """Whether these bytes are a progressive JPEG, by the header alone."""
+    if not data or data[:2] != b"\xff\xd8":
+        return False
+    pos = 2
+    end = len(data)
+    while pos + 4 <= end:
+        if data[pos] != 0xFF:
+            pos += 1
+            continue
+        marker = data[pos + 1]
+        pos += 2
+        if marker in (0xD8, 0x01) or 0xD0 <= marker <= 0xD7:
+            continue
+        if marker in (0xD9, 0xDA):
+            return False
+        if marker == 0xC2:
+            return True
+        if 0xC0 <= marker <= 0xCF:
+            return False
+        try:
+            pos += struct.unpack_from(">H", data, pos)[0]
+        except struct.error:
+            return False
+    return False
+
+
+def _prepare_coefficients(components, width, height, hmax, vmax,
+                          mcus_x, mcus_y):
+    """One coefficient array per component, sized for the padded MCU grid."""
+    for comp in components:
+        comp.blocks_w = mcus_x * comp.h
+        comp.blocks_h = mcus_y * comp.v
+        # A scan carrying this component on its own walks the blocks its
+        # own pixels need, not the padding the MCU grid adds.
+        comp.scan_w = (int(math.ceil(width * comp.h / float(hmax))) + 7) // 8
+        comp.scan_h = (int(math.ceil(height * comp.v / float(vmax))) + 7) // 8
+        comp.coeffs = array("i", [0]) * (comp.blocks_w * comp.blocks_h * 64)
+
+
+def _next_marker(data, pos):
+    """The next real marker at or after ``pos``, so the reader can go on."""
+    end = len(data) - 1
+    while pos < end:
+        if data[pos] == 0xFF:
+            following = data[pos + 1]
+            if following != 0x00 and not (0xD0 <= following <= 0xD7):
+                return pos
+        pos += 1
+    return len(data)
+
+
+def _dc_first(reader, comp, table, offset, low):
+    symbol = reader.decode(table)
+    comp.pred += reader.receive_extend(symbol)
+    comp.coeffs[offset] = comp.pred << low
+
+
+def _dc_refine(reader, comp, offset, low):
+    if reader.bit():
+        comp.coeffs[offset] |= 1 << low
+
+
+def _ac_first(reader, comp, table, offset, first, last, low, eobrun):
+    """The first pass over a band of AC coefficients."""
+    if eobrun[0] > 0:
+        eobrun[0] -= 1
+        return
+    coeffs = comp.coeffs
+    k = first
+    while k <= last:
+        rs = reader.decode(table)
+        run = rs >> 4
+        size = rs & 15
+        if size == 0:
+            if run != 15:
+                # A band of zeroes that runs on over the next blocks too.
+                eobrun[0] = (1 << run) - 1
+                if run:
+                    eobrun[0] += reader.bits(run)
+                return
+            k += 16
+            continue
+        k += run
+        if k > last:
+            return
+        coeffs[offset + k] = reader.receive_extend(size) << low
+        k += 1
+
+
+def _ac_refine(reader, comp, table, offset, first, last, low, eobrun):
+    """A later pass, which appends one bit to what is already there.
+
+    The awkward one: the stream carries a correction bit for every
+    coefficient that is already non-zero, and the run lengths in between
+    count only the ones that are still zero.
+    """
+    coeffs = comp.coeffs
+    plus = 1 << low
+    minus = -1 << low
+    k = first
+    if eobrun[0] <= 0:
+        while k <= last:
+            rs = reader.decode(table)
+            run = rs >> 4
+            size = rs & 15
+            value = 0
+            if size == 0:
+                if run != 15:
+                    eobrun[0] = 1 << run
+                    if run:
+                        eobrun[0] += reader.bits(run)
+                    break
+                # ``run`` of 15 with no value: sixteen zero coefficients.
+            else:
+                value = plus if reader.bit() else minus
+            while k <= last:
+                index = offset + k
+                coefficient = coeffs[index]
+                if coefficient:
+                    if reader.bit() and not coefficient & plus:
+                        coeffs[index] = coefficient + (plus if coefficient >= 0
+                                                       else minus)
+                else:
+                    if run == 0:
+                        if value:
+                            coeffs[index] = value
+                        k += 1
+                        break
+                    run -= 1
+                k += 1
+    if eobrun[0] > 0:
+        # Inside a run of empty bands only the corrections are still read.
+        while k <= last:
+            index = offset + k
+            coefficient = coeffs[index]
+            if coefficient:
+                if reader.bit() and not coefficient & plus:
+                    coeffs[index] = coefficient + (plus if coefficient >= 0
+                                                   else minus)
+            k += 1
+        eobrun[0] -= 1
+
+
+def _decode_progressive_scan(data, pos, scan, dc_tables, ac_tables,
+                             first, last, high, low, restart_interval,
+                             mcus_x, mcus_y):
+    """Read one scan, refining the coefficients it covers."""
+    reader = _BitReader(data, pos)
+    for comp in scan:
+        comp.pred = 0
+    eobrun = [0]
+    single = scan[0] if len(scan) == 1 else None
+
+    if single is not None:
+        units = single.scan_w * single.scan_h
+    else:
+        units = mcus_x * mcus_y
+    interval = restart_interval or units
+    done = 0
+    while done < units:
+        if done:
+            if not reader.restart():
+                break
+            for comp in scan:
+                comp.pred = 0
+            eobrun[0] = 0
+        stop = min(units, done + interval)
+        while done < stop:
+            if single is not None:
+                offset = ((done // single.scan_w) * single.blocks_w
+                          + done % single.scan_w) * 64
+                _progressive_block(reader, single, dc_tables, ac_tables,
+                                   offset, first, last, high, low, eobrun)
+            else:
+                mcu_x = done % mcus_x
+                mcu_y = done // mcus_x
+                for comp in scan:
+                    for by in range(comp.v):
+                        row = mcu_y * comp.v + by
+                        for bx in range(comp.h):
+                            offset = (row * comp.blocks_w
+                                      + mcu_x * comp.h + bx) * 64
+                            _progressive_block(reader, comp, dc_tables,
+                                               ac_tables, offset, first, last,
+                                               high, low, eobrun)
+            done += 1
+        if reader.marker and not (0xD0 <= reader.marker <= 0xD7):
+            break
+    return _next_marker(data, reader.pos)
+
+
+def _progressive_block(reader, comp, dc_tables, ac_tables, offset,
+                       first, last, high, low, eobrun):
+    if first == 0:
+        if high == 0:
+            table = dc_tables.get(comp.td)
+            if table is None:
+                raise UnsupportedJPEG("missing JPEG table")
+            _dc_first(reader, comp, table, offset, low)
+        else:
+            _dc_refine(reader, comp, offset, low)
+        return
+    table = ac_tables.get(comp.ta)
+    if table is None:
+        raise UnsupportedJPEG("missing JPEG table")
+    if high == 0:
+        _ac_first(reader, comp, table, offset, first, last, low, eobrun)
+    else:
+        _ac_refine(reader, comp, table, offset, first, last, low, eobrun)
+
+
+def _finish_progressive(components, quant, width, height, hmax, vmax,
+                        max_size):
+    """Transform the gathered coefficients into the finished picture."""
+    n = _pick_scale(width, height, max_size)
+    block = [0.0] * (n * n)
+    for comp in components:
+        table = quant.get(comp.tq)
+        if table is None:
+            raise UnsupportedJPEG("missing JPEG table")
+        comp.plane_w = comp.blocks_w * n
+        comp.plane_h = comp.blocks_h * n
+        comp.plane = bytearray(comp.plane_w * comp.plane_h)
+        coeffs = comp.coeffs
+        plane = comp.plane
+        stride = comp.plane_w
+        for by in range(comp.blocks_h):
+            out_y = by * n
+            base = by * comp.blocks_w * 64
+            for bx in range(comp.blocks_w):
+                offset = base + bx * 64
+                for index in range(n * n):
+                    block[index] = 0.0
+                nonzero_ac = False
+                # Only the coefficients the scaled transform can still see
+                # are worth dequantising; at 4/8 that is a quarter of them.
+                for k in range(64):
+                    value = coeffs[offset + k]
+                    if not value:
+                        continue
+                    position = ZIGZAG[k]
+                    row = position >> 3
+                    col = position & 7
+                    if row < n and col < n:
+                        block[row * n + col] = value * table[k]
+                        if k:
+                            nonzero_ac = True
+                _render_block(block, n, nonzero_ac, plane, stride,
+                              bx * n, out_y)
+        comp.coeffs = None
+    return _planes_to_rgba(components, width, height, n, hmax, vmax)
 
 
 def _pick_scale(width, height, max_size):
@@ -432,6 +743,11 @@ def _decode_scan(data, pos, width, height, components, scan, quant,
         if reader.marker and reader.marker != 0 and not (0xD0 <= reader.marker <= 0xD7):
             break
 
+    return _planes_to_rgba(components, width, height, n, hmax, vmax)
+
+
+def _planes_to_rgba(components, width, height, n, hmax, vmax):
+    """Upsample the component planes and convert them to RGBA."""
     out_w = max(1, int(math.ceil(width * n / 8.0)))
     out_h = max(1, int(math.ceil(height * n / 8.0)))
     rgba = bytearray(out_w * out_h * 4)

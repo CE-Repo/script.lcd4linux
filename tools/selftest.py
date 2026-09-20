@@ -2266,6 +2266,70 @@ def test_background_fallback():
     check(page._given_up is None, "and tries it again a while later")
 
 
+def test_progressive_jpeg():
+    """Progressive JPEGs - much of the artwork on the internet - decode."""
+    print("progressive jpeg")
+    from lcd4linux import images, jpegio
+
+    data = os.path.join(ROOT, "tools", "testdata")
+    with open(os.path.join(data, "progressive.jpg"), "rb") as handle:
+        progressive = handle.read()
+    with open(os.path.join(data, "baseline.jpg"), "rb") as handle:
+        baseline = handle.read()
+
+    check(jpegio.is_progressive(progressive), "the progressive one is spotted")
+    check(not jpegio.is_progressive(baseline),
+          "and a baseline file is not mistaken for one")
+
+    # Both files hold the same picture at the same quality, so the two
+    # decoders have to come out at exactly the same pixels.
+    for size in (None, 120):
+        left = jpegio.decode(progressive, size)
+        right = jpegio.decode(baseline, size)
+        check(left[0] == right[0] and left[1] == right[1],
+              "both are %dx%d at max_size %s" % (left[0], left[1], size))
+        check(left[2] == right[2],
+              "and the progressive decode matches the baseline one exactly "
+              "(max_size %s)" % size)
+
+    check(images.decode_bytes(progressive).width == 480,
+          "and it arrives as an ordinary image")
+
+    # Where Kodi is there, its own decoder does the work instead: reading
+    # every scan of a full sized picture in Python is the slow way round.
+    asked = []
+
+    class FakeFile(object):
+        def __init__(self, path):
+            asked.append(path)
+            self._path = path
+
+        def readBytes(self):
+            return baseline if self._path.startswith("image://") else progressive
+
+        def close(self):
+            pass
+
+    class FakeVFS(object):
+        File = FakeFile
+
+        @staticmethod
+        def translatePath(path):
+            return path
+
+    previous = images.xbmcvfs
+    images.xbmcvfs = FakeVFS
+    try:
+        image = images.ImageCache(limit=4).get("/storage/art/fanart.jpg", 320)
+        check(image is not None and image.width >= 320,
+              "the picture comes back either way (%s)"
+              % (image.width if image else "nothing"))
+        check(any(path.startswith("image://") for path in asked),
+              "and Kodi's copy is what was asked for (%s)" % (asked or "none"))
+    finally:
+        images.xbmcvfs = previous
+
+
 def test_kodi_texture():
     """An ``image://`` URL is Kodi's copy; the original is the fallback."""
     print("kodi texture")
@@ -2322,6 +2386,43 @@ def test_kodi_texture():
         images.read_bytes("special://profile/Thumbnails/a/abc.jpg")
         check(len(asked) == 1 and not asked[0].startswith("image://"),
               "a plain path is read once, as before")
+    finally:
+        images.xbmcvfs = previous
+
+    # A picture these decoders cannot read - a progressive JPEG, which a
+    # good deal of the fanart on the internet is - used to leave the page
+    # black.  Kodi reads it, so the second try asks Kodi for its texture.
+    real = os.path.join(ROOT, "resources", "media", "demo-fanart.jpg")
+    with open(real, "rb") as handle:
+        good = handle.read()
+    unreadable = b"\xff\xd8\xff\xe0" + b"nothing a decoder here can read"
+    art = "/storage/movies/A Film/fanart.jpg"
+
+    class Progressive(FakeFile):
+        def readBytes(self):
+            return good if self._path.startswith("image://") else unreadable
+
+    class ProgressiveVFS(FakeVFS):
+        File = Progressive
+
+    images.xbmcvfs = ProgressiveVFS
+    try:
+        del asked[:]
+        cache = images.ImageCache(limit=4)
+        image = cache.get(art, 320)
+        check(image is not None,
+              "a picture only Kodi can read comes back all the same")
+        check(any(path.startswith("image://") for path in asked),
+              "by way of its texture cache (%s)" % (asked or "nothing asked"))
+        check(quote(art, safe="") in "".join(asked),
+              "which is asked for by the wrapped path")
+        # And the ordinary way round is still one read: no texture is
+        # fetched for a picture that decoded on the first attempt.
+        del asked[:]
+        images.xbmcvfs = previous
+        cache = images.ImageCache(limit=4)
+        check(cache.get(real, 320) is not None and not asked,
+              "a picture that decodes is not fetched twice")
     finally:
         images.xbmcvfs = previous
 
@@ -3491,7 +3592,7 @@ def main():
                  test_pixel_conversion, test_frame_cache, test_image_cache,
                  test_decode_size, test_background_loader,
                  test_background_fallback,
-                 test_kodi_texture, test_picture_cache, test_rough_first,
+                 test_kodi_texture, test_progressive_jpeg, test_picture_cache, test_rough_first,
                  test_huffman_table,
                  test_jpeg_encoder, test_target_from_settings,
                  test_samsung_spf, test_late_display, test_brightness,

@@ -508,8 +508,11 @@ vertical rule. `thickness` only raises that minimum.
 | `align`, `valign` | `center` | Alignment inside the box |
 | `opacity` | `100` | Opacity |
 
-PNG and baseline JPEG only — progressive JPEG is not supported. Images are
-cached and decoded again only when the source changes.
+PNG and JPEG, baseline and progressive alike. A picture the built-in
+decoders cannot read — an interlaced PNG, a JPEG in some exotic coding — is
+fetched a second time through Kodi's own texture cache, which hands over a
+copy Kodi has already converted. Images are cached and decoded again only
+when the source changes.
 
 #### `icon`
 
