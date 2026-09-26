@@ -1,0 +1,1074 @@
+# Kodi Media Center language file
+# Addon Name: LCD4Linux
+# Addon id: script.lcd4linux
+# Addon Provider: U3knOwn
+msgid ""
+msgstr ""
+"Project-Id-Version: Kodi Add-ons\n"
+"Report-Msgid-Bugs-To: https://github.com/CE-Repo/script.lcd4linux\n"
+"POT-Creation-Date: 2026-01-01 00:00+0000\n"
+"PO-Revision-Date: 2026-01-01 00:00+0000\n"
+"Last-Translator: Kodi Translation Team\n"
+"Language-Team: English (United Kingdom)\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Language: en_GB\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgctxt "#32000"
+msgid "LCD4Linux"
+msgstr ""
+
+msgctxt "#32010"
+msgid "Display"
+msgstr "Kijelző"
+
+msgctxt "#32011"
+msgid "Layout"
+msgstr "Elrendezés"
+
+msgctxt "#32012"
+msgid "Behaviour"
+msgstr "Viselkedés"
+
+msgctxt "#32013"
+msgid "Web editor"
+msgstr "Web tervező"
+
+msgctxt "#32020"
+msgid "Connection"
+msgstr "Kapcsolat"
+
+msgctxt "#32021"
+msgid "Picture"
+msgstr "Kép"
+
+msgctxt "#32022"
+msgid "Backlight"
+msgstr "Háttérvilágítás"
+
+msgctxt "#32023"
+msgid "Layout file"
+msgstr "Elrendezés fájl"
+
+msgctxt "#32024"
+msgid "Actions"
+msgstr "Akciók"
+
+msgctxt "#32025"
+msgid "Performance"
+msgstr "Teljesítmény"
+
+msgctxt "#32026"
+msgid "Notifications"
+msgstr "Értesítések"
+
+msgctxt "#32100"
+msgid "Output"
+msgstr "Kimenet"
+
+msgctxt "#32101"
+msgid "Where the rendered frames are sent. \"Network display\" serves them to a browser or wall mounted tablet instead of a USB panel; \"Preview file only\" writes preview.png into the add-on data folder."
+msgstr "Hol jelenjenek meg a renderelt képkockák. A \"Hálózati megjelenítés\” opció böngészőben vagy falra szerelt táblagépen jeleníti meg őket USB-kijelzőpanel helyett; a \"Csak előnézeti fájl\” opció a preview.png fájlt a kiegészítő adatmappájába menti."
+
+msgctxt "#32102"
+msgid "USB display"
+msgstr "USB-kijelzőpanel"
+
+msgctxt "#32103"
+msgid "Preview file only"
+msgstr "Előnézet fájl"
+
+msgctxt "#32104"
+msgid "Disabled"
+msgstr "Letiltva"
+
+msgctxt "#32107"
+msgid "Display number"
+msgstr "Kijelzők száma"
+
+msgctxt "#32108"
+msgid "Which panel to use when several are connected."
+msgstr "Melyik panel legyen használatban, ha több is csatlakozik"
+
+msgctxt "#32111"
+msgid "USB timeout (ms)"
+msgstr "USB időtúllépés (ms)"
+
+msgctxt "#32112"
+msgid "Reconnect interval (s)"
+msgstr "Újracsatlakozási időintervallum (mp)"
+
+msgctxt "#32113"
+msgid "How long to wait before looking for the display again after it disappeared."
+msgstr "Mennyi ideig kell várni, mielőtt újra látni lehet a kijelzőt, miután eltűnt?"
+
+msgctxt "#32114"
+msgid "Rotation"
+msgstr "Forgatás"
+
+msgctxt "#32115"
+msgid "Rotate the picture clockwise, for panels that are not mounted in landscape."
+msgstr "A nem fekvő tájolású kijelzők esetében a kép elforgatása az óramutató járásával megegyező irányban történik."
+
+msgctxt "#32116"
+msgid "None"
+msgstr "Nincs"
+
+msgctxt "#32117"
+msgid "90 degrees"
+msgstr "90 fok"
+
+msgctxt "#32118"
+msgid "180 degrees"
+msgstr "180 fok"
+
+msgctxt "#32119"
+msgid "270 degrees"
+msgstr "270 fok"
+
+msgctxt "#32120"
+msgid "Mirror horizontally"
+msgstr "Vízszintes tükrözés"
+
+msgctxt "#32125"
+msgid "Override display size"
+msgstr "Megjelenítési méret felülbírálása"
+
+msgctxt "#32126"
+msgid "Only needed when the panel reports a wrong resolution."
+msgstr "Csak akkor szükséges, ha a panel helytelen felbontást jelez."
+
+msgctxt "#32127"
+msgid "Width"
+msgstr "Szélesség"
+
+msgctxt "#32128"
+msgid "Height"
+msgstr "Magasság"
+
+msgctxt "#32138"
+msgid "Clear the display when Kodi stops"
+msgstr "Töröld a kijelzőt, amikor a Kodi leáll."
+
+msgctxt "#32140"
+msgid "Active layout"
+msgstr "Aktív elrendezés"
+
+msgctxt "#32141"
+msgid "File name of the layout, for example default.json."
+msgstr "Az elrendezés fájlneve, például default.json."
+
+msgctxt "#32142"
+msgid "Choose layout..."
+msgstr "Elrendezés kiválasztása..."
+
+msgctxt "#32143"
+msgid "User layout folder"
+msgstr "Felhasználói elrendezés mappa"
+
+msgctxt "#32144"
+msgid "Leave empty to use the layouts folder in the add-on data directory."
+msgstr "Hagyd üresen, ha a kiegészítő adatkönyvtárában található elrendezések mappát szeretnéd használni."
+
+msgctxt "#32145"
+msgid "Page interval (s)"
+msgstr "Oldal megjelenítési intervallum (mp)"
+
+msgctxt "#32146"
+msgid "How long each page is shown when a layout has more than one visible page. 0 keeps the first page."
+msgstr "Mennyi ideig láthatóak az egyes oldalak, ha egy elrendezésnek egynél több látható oldala van. A 0 csak az első oldalt mutatja."
+
+msgctxt "#32147"
+msgid "Preview current layout"
+msgstr "Aktuális elrendezés előnézete"
+
+msgctxt "#32148"
+msgid "Show test pattern"
+msgstr "Tesztminta megjelenítése"
+
+msgctxt "#32149"
+msgid "Display status"
+msgstr "Kijelző státusz"
+
+msgctxt "#32150"
+msgid "Reload service"
+msgstr "Szolgáltatás újratöltése"
+
+msgctxt "#32151"
+msgid "Start-up grace period (s)"
+msgstr "Indításkori türelmi időszak (mp)"
+
+msgctxt "#32152"
+msgid "How long after the service starts the display is looked for every few seconds, for a panel that needs longer to boot than Kodi does."
+msgstr "A szolgáltatás indulása után, mennyi idő elteltével ellenőrzi a kijelzőt néhány másodpercenként, olyan panelek esetén, amelyeknek hosszabb időre van szükségük a boothoz, mint a Kodinak."
+
+msgctxt "#32160"
+msgid "Updates per second while playing"
+msgstr "Frissítés másodpercenként, lejátszás közben"
+
+msgctxt "#32161"
+msgid "Higher values make the progress bar and scrolling smoother but use more CPU."
+msgstr "A magasabb értékek simábbá teszik a folyamatjelző sávot és a görgetést, de több CPU-t használnak."
+
+msgctxt "#32162"
+msgid "Updates per second when idle"
+msgstr "Frissítés másodpercenként, tétlenségnél"
+
+msgctxt "#32163"
+msgid "Smooth image scaling"
+msgstr "Simább képskálázás"
+
+msgctxt "#32164"
+msgid "Sharper cover art. Turning it off makes a picture change about a quarter quicker, which shows on a slow box."
+msgstr "Élesebb borító. Kikapcsoláskor a kép körülbelül negyedével gyorsabban változik, ami egy lassú elrendezési oldalon látszik."
+
+msgctxt "#32165"
+msgid "Show Kodi notifications on the display"
+msgstr "Kodi értesítések megjelenítése a kijelzőn"
+
+msgctxt "#32166"
+msgid "Mirrors library scans, sleep/wake and add-on messages as a banner."
+msgstr "Tükrözi a médiatári szkenneléseket, az alvás/ébrenlét és a kiegészítő üzeneteket bannerként."
+
+msgctxt "#32167"
+msgid "Notification duration (s)"
+msgstr "Értesítés időtartama (mp)"
+
+msgctxt "#32168"
+msgid "Debug logging"
+msgstr "Hibakeresési naplózás"
+
+msgctxt "#32169"
+msgid "Writes detailed messages to the Kodi log."
+msgstr "Részletes Kodi naplózás."
+
+msgctxt "#32211"
+msgid "Layout editor in the browser"
+msgstr "Elrendezés szerkesztő a böngészőben"
+
+msgctxt "#32212"
+msgid "Design layouts from a phone, tablet or PC on the network"
+msgstr "Tervezz elrendezéseket telefonról, táblagépről vagy számítógépről a hálózaton keresztül."
+
+msgctxt "#32213"
+msgid "Port"
+msgstr "Port"
+
+msgctxt "#32214"
+msgid "The editor is reached at http://<box>:<port>/"
+msgstr "A szerkesztő a http://<box-ip>:<port>/ címen érhető el."
+
+msgctxt "#32215"
+msgid "Reachable from"
+msgstr "Innen érhető el"
+
+msgctxt "#32216"
+msgid "Whether other devices on the network may open the editor"
+msgstr "Döntés hogy  hálózaton lévő egyéb eszközök megnyithatják-e a szerkesztőt"
+
+msgctxt "#32217"
+msgid "the whole network"
+msgstr "az egész hálózaton"
+
+msgctxt "#32218"
+msgid "this box only"
+msgstr "csak ezen az eszközön"
+
+msgctxt "#32219"
+msgid "Password"
+msgstr "Jelszó"
+
+msgctxt "#32220"
+msgid "Leave empty for no password; any user name is accepted"
+msgstr "Hagyjd üresen, ha nem kívánsz jelszót megadni; bármilyen elfogadott."
+
+msgctxt "#32221"
+msgid "Open the web editor"
+msgstr "Webszerkesztő megnyitása"
+
+msgctxt "#32230"
+msgid "Symbol cache"
+msgstr "Szimbólum-gyorsítótár"
+
+msgctxt "#32231"
+msgid "Downloading symbols is switched off"
+msgstr "A szimbólumok letöltése ki van kapcsolva."
+
+msgctxt "#32232"
+msgid "Cached symbols"
+msgstr "Gyorsítótárazott szimbólumok"
+
+msgctxt "#32233"
+msgid "Download every symbol for offline use"
+msgstr "Töltsd le az összes szimbólumot offline használatra."
+
+msgctxt "#32234"
+msgid "Download only what the layouts use"
+msgstr "Csak azt töltsd le, amit az elrendezések használnak."
+
+msgctxt "#32235"
+msgid "Empty the symbol cache"
+msgstr "Szimbólum-gyorsítótár törlése"
+
+msgctxt "#32236"
+msgid "%d symbols removed"
+msgstr "%d szimbólum törölve"
+
+msgctxt "#32237"
+msgid "No layout uses a Font Awesome symbol"
+msgstr "Egyetlen elrendezés sem használ Font Awesome-szimbólumot."
+
+msgctxt "#32238"
+msgid "Downloading symbols"
+msgstr "Szimbólumok letöltése"
+
+msgctxt "#32239"
+msgid "%d symbols cached"
+msgstr "%d szimbólum gyorsítótárazva"
+
+msgctxt "#32240"
+msgid "No symbol could be downloaded"
+msgstr "Nem sikerült szimbólumot letölteni."
+
+msgctxt "#32241"
+msgid "Download Font Awesome symbols"
+msgstr "Font Awesome szimbólumok letöltése"
+
+msgctxt "#32242"
+msgid "Fetch symbols the layouts use from the internet once and keep them in the cache; off means only the built-in shapes and what is already cached are drawn"
+msgstr "A sablonok által használt szimbólumok egyszeri letöltése az internetről és tárolásuk a gyorsítótárban; kikapcsolt állapotban a rendszer csak a beépített alakzatokat és a már gyorsítótárazott elemeket jeleníti meg."
+
+msgctxt "#32243"
+msgid "Manage the symbol cache"
+msgstr "Szimbólum-gyorsítótár kezelése"
+
+msgctxt "#32244"
+msgid "Load every symbol for offline use, or free the space again"
+msgstr "Tölts be minden szimbólumot offline használatra, vagy szabadíts fel tárhelyet."
+
+msgctxt "#32245"
+msgid "Symbol source"
+msgstr "Szimbólumforrás"
+
+msgctxt "#32246"
+msgid "Where outlines are fetched from; empty uses the Font Awesome CDN. Placeholders: %(version)s, %(style)s, %(name)s"
+msgstr "Honnan származnak a körvonalak; üres érték esetén a Font Awesome CDN használatos. Helykitöltők: %(version)s, %(style)s, %(name)s"
+
+msgctxt "#32300"
+msgid "Video library scan started"
+msgstr "Videótár-ellenőrzés elindítva"
+
+msgctxt "#32301"
+msgid "Video library scan finished"
+msgstr "Videótár-ellenőrzés befejeződött"
+
+msgctxt "#32302"
+msgid "Video library clean started"
+msgstr "Videótár tisztítása elindítva"
+
+msgctxt "#32303"
+msgid "Video library clean finished"
+msgstr "Videótár tisztítása befejezve"
+
+msgctxt "#32304"
+msgid "Music library scan started"
+msgstr "Zenetár vizsgálata elindult"
+
+msgctxt "#32305"
+msgid "Music library scan finished"
+msgstr "Zenetár vizsgálata befejezve"
+
+msgctxt "#32306"
+msgid "System going to sleep"
+msgstr ""
+
+msgctxt "#32307"
+msgid "System woken up"
+msgstr "A rendszer alvó állapotba lép"
+
+msgctxt "#32308"
+msgid "Kodi is shutting down"
+msgstr "A Kodi ki fog kapcsolni"
+
+msgctxt "#32309"
+msgid "Kodi is restarting"
+msgstr "A Kodi újraindul"
+
+msgctxt "#32310"
+msgid "Page"
+msgstr "Oldal"
+
+msgctxt "#32320"
+msgid "Choose layout"
+msgstr "Elrendezés kiválasztása"
+
+msgctxt "#32321"
+msgid "No layout files found"
+msgstr "Nem található elrendezés fájl"
+
+msgctxt "#32322"
+msgid "Reloading"
+msgstr "Újratöltés"
+
+msgctxt "#32323"
+msgid "Test pattern"
+msgstr "Tesztminta megjelenítése"
+
+msgctxt "#32324"
+msgid "Preview layout"
+msgstr "Elrendezés előnézet"
+
+msgctxt "#32325"
+msgid "Next page"
+msgstr "Következő oldal"
+
+msgctxt "#32326"
+msgid "Settings"
+msgstr "Beállítások"
+
+msgctxt "#32327"
+msgid "Rendering layout previews"
+msgstr "Elrendezés-előnézetek generálása"
+
+msgctxt "#32328"
+msgid "Preparing layout previews"
+msgstr "Elrendezés-előnézetek előkészítése
+"
+
+msgctxt "#32330"
+msgid "Service"
+msgstr "Szolgáltatás"
+
+msgctxt "#32331"
+msgid "not running"
+msgstr "nem fut"
+
+msgctxt "#32333"
+msgid "USB error"
+msgstr "USB hiba"
+
+msgctxt "#32334"
+msgid "Layout folder"
+msgstr "Elrendezés mappa"
+
+msgctxt "#32335"
+msgid "Display status"
+msgstr "Kijelző státusz"
+
+msgctxt "#32027"
+msgid "Samsung photo frame"
+msgstr "Samsung digitális képkeret"
+
+msgctxt "#32174"
+msgid "Samsung model"
+msgstr "Samsung modell"
+
+msgctxt "#32175"
+msgid "Which frame to talk to. \"Automatic\" takes the first Samsung frame on the bus, which is all that is needed for a single frame; pick a model to select one when several are connected."
+msgstr "Meg kell adni, melyik kijelzővel kívánunk kommunikálni. Az \"Automatic\" (automatikus) beállítás az USB buszon található első Samsung kijelzőt választja ki – ez egyetlen kijelző esetén elegendő is; ha több kijelző csatlakozik, válassz ki egy konkrét modellt"
+
+msgctxt "#32176"
+msgid "JPEG quality"
+msgstr "JPEG minőség"
+
+msgctxt "#32177"
+msgid "Samsung frames accept complete JPEG images only. Lower values encode faster and send less data."
+msgstr "A Samsung képkeretek kizárólag teljes JPEG-képeket fogadnak el. Az alacsonyabb értékek gyorsabb kódolást és kisebb adatmennyiség továbbítását eredményezik."
+
+msgctxt "#32178"
+msgid "Reduced colour resolution (4:2:0)"
+msgstr "Csökkentett színfelbontás (4:2:0)"
+
+msgctxt "#32179"
+msgid "Faster and smaller. Switch it off for sharper coloured text at the cost of about twice the encoding time."
+msgstr "Gyorsabb és kisebb. Kapcsold ki az élesebb színezetű szöveg érdekében – cserébe a kódolási idő nagyjából a duplájára nő."
+
+msgctxt "#32336"
+msgid "No Samsung photo frame detected"
+msgstr "Nem található Samsung képkeret."
+
+msgctxt "#32028"
+msgid "Power hooks"
+msgstr "Tápfeszültség-csatolás"
+
+msgctxt "#32180"
+msgid "Command when the service starts"
+msgstr "Parancs a szolgáltatás indításakor"
+
+msgctxt "#32181"
+msgid "Shell command run before the display is opened, for example to switch on a smart plug. Leave empty to do nothing."
+msgstr "A kijelző megnyitása előtt futtatandó shell parancs, például egy okosdugalj bekapcsolására. Hagyd üresen, ha nem kívánsz semmit végrehajtani."
+
+msgctxt "#32182"
+msgid "Command when the service stops"
+msgstr "Parancs a szolgáltatás leállásakor"
+
+msgctxt "#32183"
+msgid "Shell command run after the display has been released, for example to switch off a smart plug. Samsung frames cannot be switched off over USB, so cutting their power is the only way."
+msgstr "A kijelző kiürítése után futtatandó shell parancs – például egy okosdugalj kikapcsolására. A Samsung Frame kijelzők nem kapcsolhatók ki USB-n keresztül, így ez az egyetlen megoldás az áramellátás megszakítása."
+
+msgctxt "#32184"
+msgid "Command timeout (s)"
+msgstr "Parancs időtúllépése (mp)"
+
+msgctxt "#32185"
+msgid "How long to wait for a command before giving up."
+msgstr "Mennyi ideig kell várni egy parancsra, mielőtt feladnánk."
+
+msgctxt "#32186"
+msgid "Dim while idle"
+msgstr "Sötétítés tétlen állapotban"
+
+msgctxt "#32187"
+msgid "Dims the display whenever nothing is playing. Paused playback still counts as playing."
+msgstr "Sötétítse a kijelzőt, amikor éppen nincs lejátszás. A szüneteltetett lejátszás is lejátszásnak számít."
+
+msgctxt "#32188"
+msgid "Brightness (software)"
+msgstr "Fényerő (szoftveres)"
+
+msgctxt "#32189"
+msgid "Neither a Samsung frame nor a browser has a backlight that can be controlled, so the picture is darkened in software before it is sent. 100% leaves it untouched."
+msgstr "Sem a Samsung képkeret, sem a böngésző nem rendelkezik szabályozható háttérvilágítással, ezért a kép a továbbítás előtt szoftveresen sötétedik el; a 100%-os beállítás érintetlenül hagyja a képet."
+
+msgctxt "#32190"
+msgid "Idle brightness (software)"
+msgstr "Tétlenségi fényerő (szoftveres)"
+
+msgctxt "#32192"
+msgid "How far the picture is darkened while nothing is playing. 0% shows a black picture."
+msgstr "Mennyire sötétedik el a kép, amikor éppen nem megy lejátszás. A 0% fekete képet eredményez."
+
+msgctxt "#32193"
+msgid "Automatic (use the frame that is found)"
+msgstr "Automatikus (a megtalált Samsung képkeret használata)"
+
+msgctxt "#32194"
+msgid "SPF-72H (800x480)"
+msgstr ""
+
+msgctxt "#32195"
+msgid "SPF-75H (800x480)"
+msgstr ""
+
+msgctxt "#32196"
+msgid "SPF-76H (800x480)"
+msgstr ""
+
+msgctxt "#32197"
+msgid "SPF-83H (800x600)"
+msgstr ""
+
+msgctxt "#32198"
+msgid "SPF-83M (800x600)"
+msgstr ""
+
+msgctxt "#32199"
+msgid "SPF-85H (800x600)"
+msgstr ""
+
+msgctxt "#32200"
+msgid "SPF-85P (800x600)"
+msgstr ""
+
+msgctxt "#32201"
+msgid "SPF-86H (800x600)"
+msgstr ""
+
+msgctxt "#32202"
+msgid "SPF-86P (800x600)"
+msgstr ""
+
+msgctxt "#32203"
+msgid "SPF-87H (800x480)"
+msgstr ""
+
+msgctxt "#32204"
+msgid "SPF-87H-v2 (800x480)"
+msgstr ""
+
+msgctxt "#32205"
+msgid "SPF-105P (1024x600)"
+msgstr ""
+
+msgctxt "#32206"
+msgid "SPF-107H (1024x600)"
+msgstr ""
+
+msgctxt "#32207"
+msgid "SPF-107H-v2 (1024x600)"
+msgstr ""
+
+msgctxt "#32208"
+msgid "SPF-700T (800x600)"
+msgstr ""
+
+msgctxt "#32209"
+msgid "SPF-800P (800x480)"
+msgstr ""
+
+msgctxt "#32210"
+msgid "SPF-1000P (1024x600)"
+msgstr ""
+
+msgctxt "#32340"
+msgid "{weekday}, {day} {month} {year}"
+msgstr "{weekday}, {day} {month} {year}"
+
+msgctxt "#32341"
+msgid "LCD4Linux test pattern"
+msgstr "LCD4Linux-tesztábra"
+
+msgctxt "#32342"
+msgid "red border must touch all four edges"
+msgstr "A piros szegélynek a kijelző mind a négy szélén látszódnia kell."
+
+msgctxt "#32343"
+msgid "Web editor"
+msgstr "Webes szerkesztő"
+
+msgctxt "#32344"
+msgid "The web editor is not running yet"
+msgstr "A webszerkesztő még nem fut."
+
+msgctxt "#32345"
+msgid "Open this address in a browser:"
+msgstr "Nyisd meg ezt a címet egy böngészőben:"
+
+msgctxt "#32346"
+msgid "The web editor is switched off"
+msgstr "A webszerkesztő ki van kapcsolva."
+
+msgctxt "#32347"
+msgid "Glyph rendering"
+msgstr "Betűjel-megjelenítés"
+
+msgctxt "#32250"
+msgid "Font cache"
+msgstr "Betútípus gyorsítótár"
+
+msgctxt "#32251"
+msgid "Downloading fonts is switched off"
+msgstr "A betűtípusok letöltése ki van kapcsolva."
+
+msgctxt "#32252"
+msgid "Cached fonts"
+msgstr "Gyorsítótárazott betűtípusok"
+
+msgctxt "#32253"
+msgid "Download the fonts the layouts use"
+msgstr "Töltsd le az elrendezésekhez használt betűtípusokat."
+
+msgctxt "#32254"
+msgid "Empty the font cache"
+msgstr "Betútípus gyorsítótár törlése"
+
+msgctxt "#32255"
+msgid "%d fonts removed"
+msgstr "%d betűtípus törölve"
+
+msgctxt "#32256"
+msgid "No layout uses a downloadable font"
+msgstr "Egyetlen elrendezés sem használ letöltendő betűtípust."
+
+msgctxt "#32257"
+msgid "Downloading fonts"
+msgstr "Betűtípusok letöltése"
+
+msgctxt "#32258"
+msgid "%d fonts cached"
+msgstr "%d betűtípus gyorsítótárazva"
+
+msgctxt "#32259"
+msgid "No font could be downloaded"
+msgstr "Nem sikerült betűtípust letölteni."
+
+msgctxt "#32260"
+msgid "Download fonts from Google Fonts"
+msgstr "Tölts le betűtípusokat a Google Fonts-ról."
+
+msgctxt "#32261"
+msgid "Off means only the bundled families and whatever is already cached are drawn (default on)."
+msgstr "A kikapcsolt állapot azt jelenti, hogy csak a csomagolt betűcsaládok és a már gyorsítótárban lévő elemek jelennek meg (alapértelmezés szerint bekapcsolva)."
+
+msgctxt "#32262"
+msgid "Manage the font cache..."
+msgstr "Betűtípus-gyorsítótár kezelése..."
+
+msgctxt "#32263"
+msgid "Download the fonts your layouts use, or give the space back."
+msgstr "Töltsd le az elrendezések által használt betűtípusokat, vagy szabadíts fel a tárhelyet."
+
+msgctxt "#32264"
+msgid "Font source"
+msgstr "Betűtípus forrás"
+
+msgctxt "#32265"
+msgid "Where faces come from; empty uses the Google Fonts API (expert level)."
+msgstr "Honnan származnak a betűtípusok; az "empty” a Google Fonts API-t használja (szakértői szint)."
+
+msgctxt "#32400"
+msgid "Playing"
+msgstr "Lejátszás"
+
+msgctxt "#32401"
+msgid "Idle"
+msgstr "Tétlen"
+
+msgctxt "#32402"
+msgid "Clock"
+msgstr "Óra"
+
+msgctxt "#32403"
+msgid "Music"
+msgstr "Zene"
+
+msgctxt "#32404"
+msgid "Library"
+msgstr "Médiatár"
+
+msgctxt "#32405"
+msgid "Now and next"
+msgstr "Most játszott és következő"
+
+msgctxt "#32406"
+msgid "Other"
+msgstr "Más"
+
+msgctxt "#32407"
+msgid "Weather"
+msgstr "Időjárás"
+
+msgctxt "#32408"
+msgid "Remaining"
+msgstr "Hátralevő"
+
+msgctxt "#32420"
+msgid "Next"
+msgstr "Következő"
+
+msgctxt "#32421"
+msgid "UP NEXT"
+msgstr ""
+
+msgctxt "#32422"
+msgid "Track"
+msgstr "Zeneszám"
+
+msgctxt "#32423"
+msgid "of"
+msgstr ""
+
+msgctxt "#32424"
+msgid "Free"
+msgstr "Szabad"
+
+msgctxt "#32425"
+msgid "free"
+msgstr "szabad"
+
+msgctxt "#32426"
+msgid "Ends at"
+msgstr "Befejezés"
+
+msgctxt "#32427"
+msgid "remaining  ·  ends at"
+msgstr "hátralévő  ·  véget ér"
+
+msgctxt "#32428"
+msgid "Up"
+msgstr "Működési idő"
+
+msgctxt "#32429"
+msgid "up"
+msgstr "működési idő"
+
+msgctxt "#32430"
+msgid "Memory"
+msgstr "Memória"
+
+msgctxt "#32431"
+msgid "Temperature"
+msgstr "Hőmérséklet"
+
+msgctxt "#32432"
+msgid "CPU history"
+msgstr "CPU előzmények"
+
+msgctxt "#32433"
+msgid "Library"
+msgstr "Médiatár"
+
+msgctxt "#32434"
+msgid "Movies"
+msgstr "Filmek"
+
+msgctxt "#32435"
+msgid "TV shows"
+msgstr "Sorozatok"
+
+msgctxt "#32436"
+msgid "Albums"
+msgstr "Albumok"
+
+msgctxt "#32437"
+msgid "Episodes"
+msgstr "Epizódok"
+
+msgctxt "#32438"
+msgid "Artists"
+msgstr "Előadók"
+
+msgctxt "#32439"
+msgid "elapsed  "
+msgstr "eltelt  "
+
+msgctxt "#32440"
+msgid "remain   "
+msgstr "hátralevő   "
+
+msgctxt "#32441"
+msgid "Now"
+msgstr "Jelenleg"
+
+msgctxt "#32442"
+msgid "Ends"
+msgstr "Véget ér"
+
+msgctxt "#32443"
+msgid "Elapsed"
+msgstr "Eltelt"
+
+msgctxt "#32444"
+msgid "Length"
+msgstr "Hossz"
+
+msgctxt "#32445"
+msgid "Picture"
+msgstr "Kép"
+
+msgctxt "#32446"
+msgid "Sound"
+msgstr "Hang"
+
+msgctxt "#32450"
+msgid "Monday"
+msgstr "Hétfő"
+
+msgctxt "#32451"
+msgid "Tuesday"
+msgstr "Kedd"
+
+msgctxt "#32452"
+msgid "Wednesday"
+msgstr "Szerda"
+
+msgctxt "#32453"
+msgid "Thursday"
+msgstr "Csötörtök"
+
+msgctxt "#32454"
+msgid "Friday"
+msgstr "Péntek"
+
+msgctxt "#32455"
+msgid "Saturday"
+msgstr "Szomabat"
+
+msgctxt "#32456"
+msgid "Sunday"
+msgstr "Vasárnap"
+
+msgctxt "#32457"
+msgid "Mon"
+msgstr "Hét"
+
+msgctxt "#32458"
+msgid "Tue"
+msgstr "Ked"
+
+msgctxt "#32459"
+msgid "Wed"
+msgstr "Sze"
+
+msgctxt "#32460"
+msgid "Thu"
+msgstr "Csü"
+
+msgctxt "#32461"
+msgid "Fri"
+msgstr "Pén"
+
+msgctxt "#32462"
+msgid "Sat"
+msgstr "Szo"
+
+msgctxt "#32463"
+msgid "Sun"
+msgstr "Vas"
+
+msgctxt "#32464"
+msgid "January"
+msgstr "Január"
+
+msgctxt "#32465"
+msgid "February"
+msgstr "Február"
+
+msgctxt "#32466"
+msgid "March"
+msgstr "Március"
+
+msgctxt "#32467"
+msgid "April"
+msgstr "Április"
+
+msgctxt "#32468"
+msgid "May"
+msgstr "Május"
+
+msgctxt "#32469"
+msgid "June"
+msgstr "Június"
+
+msgctxt "#32470"
+msgid "July"
+msgstr "Július"
+
+msgctxt "#32471"
+msgid "August"
+msgstr "Augusztus"
+
+msgctxt "#32472"
+msgid "September"
+msgstr "Szeptember"
+
+msgctxt "#32473"
+msgid "October"
+msgstr "Október"
+
+msgctxt "#32474"
+msgid "November"
+msgstr "November"
+
+msgctxt "#32475"
+msgid "December"
+msgstr "December"
+
+msgctxt "#32476"
+msgid "Jan"
+msgstr "Jan"
+
+msgctxt "#32477"
+msgid "Feb"
+msgstr "Feb"
+
+msgctxt "#32478"
+msgid "Mar"
+msgstr "Már"
+
+msgctxt "#32479"
+msgid "Apr"
+msgstr "Ápr"
+
+msgctxt "#32480"
+msgid "May"
+msgstr "Máj"
+
+msgctxt "#32481"
+msgid "Jun"
+msgstr "Jún"
+
+msgctxt "#32482"
+msgid "Jul"
+msgstr "Júl"
+
+msgctxt "#32483"
+msgid "Aug"
+msgstr "Aug"
+
+msgctxt "#32484"
+msgid "Sep"
+msgstr "Sze"
+
+msgctxt "#32485"
+msgid "Oct"
+msgstr "Okt"
+
+msgctxt "#32486"
+msgid "Nov"
+msgstr "Nov"
+
+msgctxt "#32487"
+msgid "Dec"
+msgstr "Dec"
+
+msgctxt "#32500"
+msgid "Default"
+msgstr "Alapértelmezett"
+
+msgctxt "#32501"
+msgid "Big cover"
+msgstr "Nagy borító"
+
+msgctxt "#32502"
+msgid "Cover full screen"
+msgstr "Teljes képernyős borító"
+
+msgctxt "#32503"
+msgid "Library"
+msgstr "Médiatár"
+
+msgctxt "#32504"
+msgid "Light"
+msgstr "Egyszerű"
+
+msgctxt "#32505"
+msgid "Portrait"
+msgstr "Portré"
+
+msgctxt "#32506"
+msgid "Now and next"
+msgstr "Most és következő"
+
+msgctxt "#32507"
+msgid "Weather & clock"
+msgstr "Óra és időjárás"
+
+msgctxt "#32508"
+msgid "XL clock"
+msgstr "XL óra"
+
+msgctxt "#32509"
+msgid "XL player"
+msgstr "XL lejátszó"
+
+msgctxt "#32510"
+msgid "XL remaining"
+msgstr ""
+
+msgctxt "#32511"
+msgid "XL times"
+msgstr "XL idők"
+
+msgctxt "#32512"
+msgid "XL badges"
+msgstr "XL jelzők"
+
+msgctxt "#32513"
+msgid "XL HDR & sound"
+msgstr "XL HDR & hang"
+
+msgctxt "#32520"
+msgid "Network display (browser or tablet)"
+msgstr "Hálózati kijelző (böngésző vagy táblagép)"
+
+msgctxt "#32521"
+msgid "Wall panel address:"
+msgstr "Kijelző panel címe:"
+
+msgctxt "#32522"
+msgid "Network display"
+msgstr "Hálózati kijelző"
