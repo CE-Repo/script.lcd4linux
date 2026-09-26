@@ -262,6 +262,7 @@ TOKEN_GROUPS = [
             ("player.poster", "Poster", "Poster"),
             ("player.fanart", "Fanart", "Fanart"),
             ("player.clearlogo", "Clearlogo", "Clearlogo"),
+            ("player.channellogo", "Channel logo (Live TV)", "Senderlogo (Live-TV)"),
             ("player.codec", "Codec (H.265, FLAC)", "Codec (H.265, FLAC)"),
             ("player.videocodec", "Video codec (H.265)", "Video-Codec (H.265)"),
             ("player.audiocodec", "Audio codec (Dolby TrueHD)",

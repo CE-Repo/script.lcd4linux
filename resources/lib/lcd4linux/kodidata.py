@@ -347,6 +347,19 @@ class KodiProvider(BaseProvider):
         if cached is not None:
             return cached
         elapsed = total = 0.0
+        if self._live_tv():
+            # The player only knows the timeshift buffer; the broadcast's
+            # real length and position come from the EPG, as in the OSD.
+            try:
+                total = float(self._info("PVR.EpgEventDuration(secs)") or 0)
+                elapsed = float(self._info("PVR.EpgEventElapsedTime(secs)") or 0)
+            except ValueError:
+                elapsed = total = 0.0
+            if total:
+                result = (max(0.0, elapsed), total)
+                self._cache["__times"] = result
+                return result
+            elapsed = 0.0
         if self.player is not None:
             try:
                 if self.player.isPlaying():
@@ -363,6 +376,38 @@ class KodiProvider(BaseProvider):
         result = (max(0.0, elapsed), max(0.0, total))
         self._cache["__times"] = result
         return result
+
+    def _live_tv(self):
+        """True while a PVR channel (TV or radio) is playing."""
+        cached = self._cache.get("__livetv")
+        if cached is None:
+            cached = (self._kodi_condition("PVR.IsPlayingTV")
+                      or self._kodi_condition("PVR.IsPlayingRadio"))
+            self._cache["__livetv"] = cached
+        return cached
+
+    def _channel_logo(self):
+        """The logo of the playing PVR channel, or ``""``."""
+        if not self._live_tv():
+            return ""
+        return (self._art("Player.Art(icon)")
+                or self._art("VideoPlayer.Art(icon)")
+                or self._art("Player.Icon"))
+
+    def _art(self, label):
+        """A picture path, or ``""`` for one of Kodi's placeholders.
+
+        With no art of its own an item still answers with the skin's
+        stand-in, a bare ``DefaultVideo.png`` or the like.  That lives
+        inside the skin's packed textures where nothing here can read it,
+        and being non-empty it kept a layout's "no picture" fallback from
+        ever showing.
+        """
+        path = self._info(label)
+        if (path.lower().startswith("default")
+                and "/" not in path and "\\" not in path):
+            return ""
+        return path
 
     def _state(self):
         """``playing``/``paused``/``stopped``, resolved once per frame.
@@ -538,11 +583,17 @@ class KodiProvider(BaseProvider):
             return episode
         if name == "plot":
             return self._info("VideoPlayer.Plot")
+        if name == "channellogo":
+            return self._channel_logo()
         if name in ("thumb", "cover", "art"):
-            return (self._info("Player.Art(thumb)")
-                    or self._info("MusicPlayer.Cover")
-                    or self._info("VideoPlayer.Cover")
-                    or self._info("Player.Icon"))
+            # Live TV has no cover; what Kodi hands out as the thumb there
+            # is the EPG picture of the broadcast, often missing or a web
+            # address that never loads.  The channel logo is always local.
+            return (self._channel_logo()
+                    or self._art("Player.Art(thumb)")
+                    or self._art("MusicPlayer.Cover")
+                    or self._art("VideoPlayer.Cover")
+                    or self._art("Player.Icon"))
         if name == "fanart":
             # Only a film carries its backdrop under the bare ``fanart``
             # key.  An episode keeps the one of its series and a track the
@@ -557,7 +608,8 @@ class KodiProvider(BaseProvider):
                     or self._info("VideoPlayer.Art(fanart)")
                     or self._info("VideoPlayer.Art(tvshow.fanart)")
                     or self._info("MusicPlayer.Art(fanart)")
-                    or self._info("MusicPlayer.Art(artist.fanart)"))
+                    or self._info("MusicPlayer.Art(artist.fanart)")
+                    or self._channel_logo())
         if name == "poster":
             # Same story: an episode has no poster of its own, and the one
             # of the series - or of the season, if it has one - is what a
@@ -694,8 +746,12 @@ class KodiProvider(BaseProvider):
         if name == "playlistlength":
             return self._info("MusicPlayer.PlaylistLength") or self._info("VideoPlayer.PlaylistLength")
         if name == "starttime":
+            if self._live_tv() and self._info("VideoPlayer.StartTime"):
+                return self._info("VideoPlayer.StartTime")
             return self._info("Player.StartTime")
         if name == "finishtime":
+            if self._live_tv() and self._info("VideoPlayer.EndTime"):
+                return self._info("VideoPlayer.EndTime")
             return self._info("Player.FinishTime")
         if name == "seeking":
             return "1" if self._kodi_condition("Player.Seeking") else "0"
