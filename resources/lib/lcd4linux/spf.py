@@ -335,8 +335,39 @@ class SamsungSPF(object):
         if padding:
             block += b"\x00" * padding
         with self._lock:
-            self._device.write(self._ep_out, bytes(block), self.timeout)
+            try:
+                written = self._device.write(self._ep_out, bytes(block),
+                                             self.timeout)
+            except USBError as error:
+                self._abort_transfer()
+                raise DisplayError("frame transfer failed: %s" % error)
+            if written != len(block):
+                self._abort_transfer()
+                raise DisplayError("frame transfer stopped after %d of %d bytes"
+                                   % (written, len(block)))
             self._keepalive()
+
+    def _abort_transfer(self):
+        """Reset the frame after a transfer that did not complete.
+
+        The frame reads the length from the header and then swallows that
+        many bytes, whatever they are.  When a write times out halfway, the
+        rest of that picture never arrives, so the next frame's header and
+        JPEG are taken for the missing tail: the panel shows the top of a
+        picture over a grey block and its firmware hangs until the power is
+        cut.  A USB port reset puts the frame back to a clean state - it
+        re-enumerates, usually as a USB drive, and the next open switches it
+        into monitor mode again.
+        """
+        device = self._device
+        if device is None:
+            return
+        log("resetting the frame after an incomplete transfer")
+        try:
+            device.reset()
+        except Exception as error:
+            debug("frame reset failed: %s" % error)
+        self.close()
 
     def _keepalive(self):
         """Vendor request that stops the frame leaving monitor mode."""

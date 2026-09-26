@@ -7,6 +7,7 @@ when the user only wants to preview a layout.
 
 import os
 import threading
+import time
 
 from . import pngio
 from . import spf
@@ -114,6 +115,13 @@ class SPFTarget(Target):
     re-encoding only the MCU rows that changed.
     """
 
+    #: An unchanged picture is sent again after this long, which is enough
+    #: to keep the frame in monitor mode.  Sending it on every tick bought
+    #: nothing but a busier frame: its decoder is slow, and the more
+    #: pictures are queued behind it the likelier a transfer runs into the
+    #: USB timeout.
+    resend_seconds = 2.0
+
     def __init__(self, index=0, serial=None, rotation=0, mirror=False,
                  timeout=5000, model=None, quality=85, subsample=True,
                  size_override=None):
@@ -129,6 +137,8 @@ class SPFTarget(Target):
         self.last_frame_bytes = 0
         self.brightness = 100
         self._redraw = False
+        self._last_jpeg = None
+        self._last_sent = 0.0
 
     def open(self):
         self.device.open()
@@ -144,11 +154,13 @@ class SPFTarget(Target):
                                    self.subsample)
         self.encoder.set_gain(self.brightness)
         self._redraw = True
+        self._last_jpeg = None
         return True
 
     def close(self):
         self.device.close()
         self.encoder = None
+        self._last_jpeg = None
 
     @property
     def is_open(self):
@@ -188,8 +200,20 @@ class SPFTarget(Target):
         jpeg = self.encoder.encode(frame.buf, force=force or self._redraw)
         self._redraw = False
         self.last_frame_bytes = len(jpeg)
-        self.device.send_image(jpeg)
+        now = time.time()
+        if (not force and jpeg == self._last_jpeg
+                and 0 <= now - self._last_sent < self.resend_seconds):
+            return True
+        self._send(jpeg, now)
         return True
+
+    def _send(self, jpeg, now=None):
+        # Forget the last picture first: if the transfer fails, the frame
+        # is reset and must get the next one whatever it shows.
+        self._last_jpeg = None
+        self.device.send_image(jpeg)
+        self._last_jpeg = jpeg
+        self._last_sent = time.time() if now is None else now
 
     def blank(self):
         """Show a black picture; the closest thing to switching off."""
@@ -197,7 +221,7 @@ class SPFTarget(Target):
             return
         dark = Canvas(self.width, self.height, (0, 0, 0, 255))
         jpeg = self.encoder.encode(dark.buf)
-        self.device.send_image(jpeg)
+        self._send(jpeg)
         self._redraw = True
 
 

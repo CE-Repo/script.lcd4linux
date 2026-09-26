@@ -90,6 +90,9 @@ class FakeSPFDevice(object):
                                       product_name="SPF-72H")
         self.frames = []
         self.keepalives = 0
+        self.resets = 0
+        #: Bulk writes that time out, as a frame whose decoder hangs does.
+        self.fail_writes = 0
 
     def claim(self):
         pass
@@ -98,7 +101,7 @@ class FakeSPFDevice(object):
         pass
 
     def reset(self):
-        pass
+        self.resets += 1
 
     def clear_halt(self, endpoint):
         pass
@@ -108,6 +111,10 @@ class FakeSPFDevice(object):
 
     def write(self, endpoint, data, timeout=0):
         assert endpoint == 0x02, "frames must go to bulk endpoint 2"
+        if self.fail_writes > 0:
+            self.fail_writes -= 1
+            raise usbdev.USBError("bulk write of %d bytes failed" % len(data),
+                                  -7)
         self.frames.append(bytes(data))
         return len(data)
 
@@ -232,6 +239,35 @@ def test_samsung_spf():
     check(stats["rows_reused"] >= stats["rows"] - 4,
           "%d of %d MCU rows reused on the next frame"
           % (stats["rows_reused"], stats["rows"]))
+
+    # An unchanged picture is not queued on the frame again and again, but
+    # still refreshed now and then to keep the frame in monitor mode.
+    sent = len(bus.device.frames)
+    target.present(canvas)
+    check(len(bus.device.frames) == sent, "an unchanged picture is not resent")
+    target._last_sent -= target.resend_seconds + 1
+    target.present(canvas)
+    check(len(bus.device.frames) == sent + 1,
+          "an unchanged picture is refreshed after %.0f s"
+          % target.resend_seconds)
+
+    # A transfer that times out halfway leaves the frame waiting for the
+    # rest of the picture; it has to be reset, not just closed.
+    from lcd4linux.errors import DisplayError
+    bus.device.fail_writes = 1
+    canvas.fill_rect(40, 340, 200, 20, parse_color("#20f0a0"))
+    try:
+        target.present(canvas)
+        failed = False
+    except DisplayError:
+        failed = True
+    check(failed and bus.device.resets == 1 and not target.is_open,
+          "a failed transfer resets and closes the frame")
+    target.open()
+    sent = len(bus.device.frames)
+    target.present(canvas)
+    check(len(bus.device.frames) == sent + 1,
+          "the picture is sent again after reconnecting")
 
     check(spf.model_for(0x200B) == ("SPF-72H", 800, 480),
           "product id 0x200b maps to the SPF-72H")

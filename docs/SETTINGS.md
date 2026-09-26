@@ -219,8 +219,16 @@ switch when they are powered on and not running a slideshow.
 
 **Samsung: the picture freezes**
 Without the keep-alive the frame drops out of monitor mode. The add-on sends it
-after every frame, and it keeps sending frames even when nothing changes — a
-clock without seconds still transmits, just to keep the frame awake.
+after every frame, and it sends an unchanged picture again every two seconds —
+a clock without seconds still transmits, just to keep the frame awake.
+
+**Samsung: half a picture over a grey block, then nothing**
+The frame's firmware hung after a picture only arrived partly, which is what a
+USB transfer that runs into the *USB timeout* leaves behind. The add-on now
+resets the frame when that happens and reconnects after the *Reconnect interval*,
+instead of sending the next picture into the half-finished one. If it still
+happens often, lower *Updates per second while playing* and the *JPEG
+quality*, and try another USB port or cable without a hub.
 
 **The display stays on after Kodi exits**
 Enable *Clear the display when Kodi stops*.
