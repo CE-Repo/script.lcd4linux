@@ -458,9 +458,29 @@
       </group>
 
       <group id="2" label="32026">
-        <setting id="notifications" type="boolean" label="32165" help="32166">
+        <setting id="notify_library" type="boolean" label="32266" help="32267">
           <level>0</level>
-          <default>true</default>
+          <default>false</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="notify_system" type="boolean" label="32268" help="32269">
+          <level>0</level>
+          <default>false</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="notify_addons" type="boolean" label="32270" help="32271">
+          <level>0</level>
+          <default>false</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="notify_messages" type="boolean" label="32272" help="32273">
+          <level>0</level>
+          <default>false</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="notify_page" type="boolean" label="32274" help="32275">
+          <level>0</level>
+          <default>false</default>
           <control type="toggle"/>
         </setting>
         <setting id="notification_seconds" type="integer" label="32167">
@@ -471,16 +491,23 @@
             <step>1</step>
             <maximum>20</maximum>
           </constraints>
-          <dependencies>
-            <dependency type="enable" setting="notifications" operator="is">true</dependency>
-          </dependencies>
           <control type="slider" format="integer">
             <popup>true</popup>
           </control>
         </setting>
-        <setting id="hide_storage_notices" type="boolean" label="32170" help="32171">
-          <level>1</level>
-          <default>true</default>
+        <setting id="notify_display_error" type="boolean" label="32276" help="32277">
+          <level>0</level>
+          <default>false</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="notify_actions" type="boolean" label="32278" help="32279">
+          <level>0</level>
+          <default>false</default>
+          <control type="toggle"/>
+        </setting>
+        <setting id="notify_storage" type="boolean" label="32170" help="32171">
+          <level>0</level>
+          <default>false</default>
           <control type="toggle"/>
         </setting>
         <setting id="debug" type="boolean" label="32168" help="32169">

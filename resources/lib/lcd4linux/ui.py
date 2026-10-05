@@ -87,6 +87,13 @@ def _busy():
 
 
 def _toast(message, heading=None):
+    if xbmcaddon is not None:
+        try:
+            if not xbmcaddon.Addon(ADDON_ID).getSettingBool("notify_actions"):
+                log(message)
+                return
+        except Exception:
+            pass
     dialog = _dialog()
     if dialog is None:
         print(message)

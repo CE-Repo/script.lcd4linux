@@ -53,9 +53,15 @@ DEFAULTS = {
     "start_command": "",
     "stop_command": "",
     "command_timeout": 15,
-    "notifications": True,
+    "notify_library": False,
+    "notify_system": False,
+    "notify_addons": False,
+    "notify_messages": False,
+    "notify_page": False,
     "notification_seconds": 4,
-    "hide_storage_notices": True,
+    "notify_display_error": False,
+    "notify_actions": False,
+    "notify_storage": False,
     "debug": False,
 }
 
