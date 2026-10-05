@@ -156,10 +156,32 @@ It is part of the editor, so it follows the same password and the same
 
 ## Behaviour
 
-Frame rate while playing and while idle, smooth image scaling, Kodi
-notifications on the display, debug logging, and the **power hooks** that run a
-shell command when the service starts and stops — see
-[SETUP.md](SETUP.md#switching-the-frame-on-and-off).
+Frame rate while playing and while idle, smooth image scaling, debug logging,
+and the **power hooks** that run a shell command when the service starts and
+stops — see [SETUP.md](SETUP.md#switching-the-frame-on-and-off).
+
+### Notifications
+
+Every notification has a switch of its own, and **all of them are off by
+default**.
+
+| Setting | Shows |
+|---|---|
+| Display: library scans | video/music library scan and clean started/finished, on the panel |
+| Display: sleep, wake and shutdown | Kodi going to sleep, waking up, quitting or restarting, on the panel |
+| Display: messages from other add-ons | messages other add-ons broadcast, on the panel |
+| Display: messages sent to LCD4Linux | text sent with the `message` command, on the panel |
+| Display: page name when switching pages | the new page's name after `next_page`, on the panel |
+| Notification duration (s) | how long a message stays on the panel |
+| Kodi: warning when the display cannot be opened | a Kodi notification when the panel cannot be opened |
+| Kodi: confirmations of menu actions | Kodi notifications after menu actions (reload, layout chosen, downloads…) |
+| Kodi: frame mounted/removed | Kodi's own notices for the Samsung frame's short-lived USB drive |
+
+About the last one: a Samsung frame first appears as a USB drive, so CoreELEC
+mounts it and Kodi says so, and says so again when the switch to monitor mode
+makes the drive disappear. While the setting is off, the service closes Kodi's
+notification while the frame is a USB drive and for 20 seconds after; other
+notifications are left alone.
 
 ## Language
 

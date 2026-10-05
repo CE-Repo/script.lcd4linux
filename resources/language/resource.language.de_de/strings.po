@@ -224,13 +224,69 @@ msgctxt "#32164"
 msgid "Sharper cover art. Turning it off makes a picture change about a quarter quicker, which shows on a slow box."
 msgstr "Schärferes Cover. Ausgeschaltet ist ein Bildwechsel rund ein Viertel schneller — auf schwacher Hardware spürbar."
 
-msgctxt "#32165"
-msgid "Show Kodi notifications on the display"
-msgstr "Kodi-Benachrichtigungen auf dem Display anzeigen"
+msgctxt "#32266"
+msgid "Display: library scans"
+msgstr "Display: Bibliotheksscans"
 
-msgctxt "#32166"
-msgid "Mirrors library scans, sleep/wake and add-on messages as a banner."
-msgstr "Zeigt Bibliotheks-Scans, Standby/Aufwachen und Add-on-Meldungen als Einblendung."
+msgctxt "#32267"
+msgid "Shows on the display when a video or music library scan or clean starts and finishes."
+msgstr "Zeigt auf dem Display an, wenn ein Scan oder eine Bereinigung der Video- oder Musikbibliothek beginnt und endet."
+
+msgctxt "#32268"
+msgid "Display: sleep, wake and shutdown"
+msgstr "Display: Ruhezustand, Aufwachen und Beenden"
+
+msgctxt "#32269"
+msgid "Shows on the display when Kodi goes to sleep, wakes up, quits or restarts."
+msgstr "Zeigt auf dem Display an, wenn Kodi in den Ruhezustand geht, aufwacht, beendet oder neu gestartet wird."
+
+msgctxt "#32270"
+msgid "Display: messages from other add-ons"
+msgstr "Display: Meldungen anderer Add-ons"
+
+msgctxt "#32271"
+msgid "Shows messages other add-ons send to all listeners on the display."
+msgstr "Zeigt Meldungen, die andere Add-ons an alle senden, auf dem Display an."
+
+msgctxt "#32272"
+msgid "Display: messages sent to LCD4Linux"
+msgstr "Display: an LCD4Linux gesendete Meldungen"
+
+msgctxt "#32273"
+msgid "Shows messages sent with the \"message\" command on the display."
+msgstr "Zeigt Meldungen, die mit dem Befehl \"message\" gesendet werden, auf dem Display an."
+
+msgctxt "#32274"
+msgid "Display: page name when switching pages"
+msgstr "Display: Seitenname beim Seitenwechsel"
+
+msgctxt "#32275"
+msgid "Shows the name of the new page when switching to the next page."
+msgstr "Zeigt beim Wechsel zur nächsten Seite deren Namen an."
+
+msgctxt "#32276"
+msgid "Kodi: warning when the display cannot be opened"
+msgstr "Kodi: Warnung, wenn das Display nicht geöffnet werden kann"
+
+msgctxt "#32277"
+msgid "Shows a Kodi notification when the display cannot be opened."
+msgstr "Zeigt eine Kodi-Benachrichtigung, wenn das Display nicht geöffnet werden kann."
+
+msgctxt "#32278"
+msgid "Kodi: confirmations of menu actions"
+msgstr "Kodi: Bestätigungen von Menüaktionen"
+
+msgctxt "#32279"
+msgid "Shows a Kodi notification after actions from the add-on menu, such as reloading, choosing a layout or downloading symbols and fonts."
+msgstr "Zeigt eine Kodi-Benachrichtigung nach Aktionen aus dem Add-on-Menü, z. B. Neu laden, Layout wählen oder Symbole und Schriften herunterladen."
+
+msgctxt "#32170"
+msgid "Kodi: frame mounted/removed"
+msgstr "Kodi: Rahmen eingebunden/entfernt"
+
+msgctxt "#32171"
+msgid "A Samsung frame first shows up as a USB drive. Shows Kodi's notices that this drive was mounted and removed again; when off, the add-on closes them."
+msgstr "Der Samsung-Rahmen meldet sich zuerst als USB-Laufwerk an. Zeigt Kodis Meldungen, dass dieses Laufwerk eingebunden und wieder entfernt wurde; ausgeschaltet schließt das Add-on sie."
 
 msgctxt "#32167"
 msgid "Notification duration (s)"

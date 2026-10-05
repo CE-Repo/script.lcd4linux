@@ -224,13 +224,69 @@ msgctxt "#32164"
 msgid "Sharper cover art. Turning it off makes a picture change about a quarter quicker, which shows on a slow box."
 msgstr "Élesebb borító. Kikapcsoláskor a kép körülbelül negyedével gyorsabban változik, ami egy lassú elrendezési oldalon látszik."
 
-msgctxt "#32165"
-msgid "Show Kodi notifications on the display"
-msgstr "Kodi értesítések megjelenítése a kijelzőn"
+msgctxt "#32266"
+msgid "Display: library scans"
+msgstr ""
 
-msgctxt "#32166"
-msgid "Mirrors library scans, sleep/wake and add-on messages as a banner."
-msgstr "Tükrözi a médiatári szkenneléseket, az alvás/ébrenlét és a kiegészítő üzeneteket bannerként."
+msgctxt "#32267"
+msgid "Shows on the display when a video or music library scan or clean starts and finishes."
+msgstr ""
+
+msgctxt "#32268"
+msgid "Display: sleep, wake and shutdown"
+msgstr ""
+
+msgctxt "#32269"
+msgid "Shows on the display when Kodi goes to sleep, wakes up, quits or restarts."
+msgstr ""
+
+msgctxt "#32270"
+msgid "Display: messages from other add-ons"
+msgstr ""
+
+msgctxt "#32271"
+msgid "Shows messages other add-ons send to all listeners on the display."
+msgstr ""
+
+msgctxt "#32272"
+msgid "Display: messages sent to LCD4Linux"
+msgstr ""
+
+msgctxt "#32273"
+msgid "Shows messages sent with the \"message\" command on the display."
+msgstr ""
+
+msgctxt "#32274"
+msgid "Display: page name when switching pages"
+msgstr ""
+
+msgctxt "#32275"
+msgid "Shows the name of the new page when switching to the next page."
+msgstr ""
+
+msgctxt "#32276"
+msgid "Kodi: warning when the display cannot be opened"
+msgstr ""
+
+msgctxt "#32277"
+msgid "Shows a Kodi notification when the display cannot be opened."
+msgstr ""
+
+msgctxt "#32278"
+msgid "Kodi: confirmations of menu actions"
+msgstr ""
+
+msgctxt "#32279"
+msgid "Shows a Kodi notification after actions from the add-on menu, such as reloading, choosing a layout or downloading symbols and fonts."
+msgstr ""
+
+msgctxt "#32170"
+msgid "Kodi: frame mounted/removed"
+msgstr ""
+
+msgctxt "#32171"
+msgid "A Samsung frame first shows up as a USB drive. Shows Kodi's notices that this drive was mounted and removed again; when off, the add-on closes them."
+msgstr ""
 
 msgctxt "#32167"
 msgid "Notification duration (s)"

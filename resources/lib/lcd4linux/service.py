@@ -21,6 +21,7 @@ from .bmfont import FontCache
 from .images import ImageCache
 from .kodidata import make_provider
 from .logger import debug, error, log
+from .storagenotice import StorageNoticeGuard
 from .settings import (Config, DEFAULTS, addon_path, ensure_user_directories,
                        profile_path)
 from .usbdev import USBError
@@ -69,18 +70,18 @@ CONTROL_COMMANDS = ("reload", "next_page", "test_pattern", "message",
                     "brightness_up", "brightness_down", "render_thumbs")
 
 #: Kodi events that are mirrored on the panel, mapped to
-#: ``(string id, English fallback)``.
+#: ``(setting, string id, English fallback)``.
 NOTIFICATION_MESSAGES = {
-    "VideoLibrary.OnScanStarted": (32300, "Video library scan started"),
-    "VideoLibrary.OnScanFinished": (32301, "Video library scan finished"),
-    "VideoLibrary.OnCleanStarted": (32302, "Video library clean started"),
-    "VideoLibrary.OnCleanFinished": (32303, "Video library clean finished"),
-    "AudioLibrary.OnScanStarted": (32304, "Music library scan started"),
-    "AudioLibrary.OnScanFinished": (32305, "Music library scan finished"),
-    "System.OnSleep": (32306, "System going to sleep"),
-    "System.OnWake": (32307, "System woken up"),
-    "System.OnQuit": (32308, "Kodi is shutting down"),
-    "System.OnRestart": (32309, "Kodi is restarting"),
+    "VideoLibrary.OnScanStarted": ("notify_library", 32300, "Video library scan started"),
+    "VideoLibrary.OnScanFinished": ("notify_library", 32301, "Video library scan finished"),
+    "VideoLibrary.OnCleanStarted": ("notify_library", 32302, "Video library clean started"),
+    "VideoLibrary.OnCleanFinished": ("notify_library", 32303, "Video library clean finished"),
+    "AudioLibrary.OnScanStarted": ("notify_library", 32304, "Music library scan started"),
+    "AudioLibrary.OnScanFinished": ("notify_library", 32305, "Music library scan finished"),
+    "System.OnSleep": ("notify_system", 32306, "System going to sleep"),
+    "System.OnWake": ("notify_system", 32307, "System woken up"),
+    "System.OnQuit": ("notify_system", 32308, "Kodi is shutting down"),
+    "System.OnRestart": ("notify_system", 32309, "Kodi is restarting"),
 }
 
 
@@ -148,6 +149,7 @@ class Service(object):
         self._thumb_lock = threading.Lock()
         self._thumb_queue = []
         self._thumb_worker = None
+        self._notice_guard = StorageNoticeGuard(self._hide_storage_notices)
 
     # -- helpers ----------------------------------------------------------
     @staticmethod
@@ -158,6 +160,10 @@ class Service(object):
             return xbmcaddon.Addon().getAddonInfo(field)
         except Exception:
             return ""
+
+    def _hide_storage_notices(self):
+        return (xbmc is not None and self.config.output_mode == "usb"
+                and not self.config.notify_storage)
 
     def request_reload(self):
         self._reload_requested = True
@@ -206,13 +212,12 @@ class Service(object):
         if method in ("Player.OnPlay", "Player.OnResume", "Player.OnStop",
                       "Player.OnAVStart", "Player.OnPause"):
             return
-        if not self.config.notifications:
-            return
         message = NOTIFICATION_MESSAGES.get(method)
         if message is not None:
-            self.show_message(localize.text(*message), "")
+            if self.config.get(message[0]):
+                self.show_message(localize.text(*message[1:]), "")
             return
-        if method.startswith("Other."):
+        if method.startswith("Other.") and self.config.notify_addons:
             heading = sender or "Kodi"
             body = method[6:]
             try:
@@ -231,7 +236,7 @@ class Service(object):
         elif command == "next_page":
             if self.renderer is not None:
                 page = self.renderer.next_page()
-                if page is not None:
+                if page is not None and self.config.notify_page:
                     self.show_message(localize.text(32310, "Page"), page.name, 2)
         elif command == "test_pattern":
             self._test_until = time.time() + 10.0
@@ -257,7 +262,7 @@ class Service(object):
                 message = payload.get("message", "")
             except Exception:
                 pass
-            if heading or message:
+            if (heading or message) and self.config.notify_messages:
                 self.show_message(heading, message)
 
     # -- layout previews --------------------------------------------------
@@ -564,7 +569,7 @@ class Service(object):
             return False
 
     def _notify_user(self, err):
-        if xbmcgui is None:
+        if xbmcgui is None or not self.config.notify_display_error:
             return
         try:
             xbmcgui.Dialog().notification(
@@ -655,6 +660,9 @@ class Service(object):
 
     # -- main loop --------------------------------------------------------
     def run(self):
+        # Started first: the frame is mounted, and announced, while the
+        # service is still busy switching it into monitor mode.
+        self._notice_guard.start()
         self.setup()
         log("service running")
         while not self._stop:
@@ -790,6 +798,7 @@ class Service(object):
 
     def shutdown(self):
         log("stopping")
+        self._notice_guard.stop()
         # Clearing comes first: a network display is cleared *through* the
         # web server, so stopping that before the black frame would leave
         # the tablet frozen on the last picture.
