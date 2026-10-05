@@ -55,6 +55,7 @@ DEFAULTS = {
     "command_timeout": 15,
     "notifications": True,
     "notification_seconds": 4,
+    "hide_storage_notices": True,
     "debug": False,
 }
 

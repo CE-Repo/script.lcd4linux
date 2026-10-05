@@ -3613,6 +3613,39 @@ def _png_size(data):
     return struct.unpack(">II", data[16:24])
 
 
+def test_storage_notices():
+    """Kodi's mount/unmount notices for the frame are closed, others are not."""
+    print("storage notices")
+    from lcd4linux import spf, storagenotice
+    from lcd4linux.settings import Config
+
+    check(Config().hide_storage_notices is True,
+          "hiding the frame's USB drive notices is on by default")
+    closed = []
+    state = {"enabled": True, "visible": True}
+    guard = storagenotice.StorageNoticeGuard(
+        lambda: state["enabled"], lambda: state["visible"],
+        lambda: closed.append(True))
+
+    install_fake_spf("monitor")
+    spf._storage_seen[0] = 0.0
+    check(not guard.check(), "an unrelated notification stays")
+
+    install_fake_spf("storage")
+    check(guard.check() and len(closed) == 1,
+          "the notice is closed while the frame is a USB drive")
+    install_fake_spf("monitor")
+    check(guard.check(), "and the removal notice right after the switch too")
+    check(not guard.check(time.time() + storagenotice.NOTICE_WINDOW_SECONDS + 1),
+          "but not long after it")
+
+    state["enabled"] = False
+    check(not guard.check(), "nothing is closed with the setting off")
+    state["enabled"], state["visible"] = True, False
+    check(not guard.check(), "nothing to close without a notification")
+    spf._storage_seen[0] = 0.0
+
+
 def main():
     print("script.lcd4linux self test\n")
     # Nothing in here may reach the network.  A layout naming a family that
@@ -3631,7 +3664,7 @@ def main():
                  test_kodi_texture, test_progressive_jpeg, test_picture_cache, test_rough_first,
                  test_huffman_table,
                  test_jpeg_encoder, test_target_from_settings,
-                 test_samsung_spf, test_late_display, test_brightness,
+                 test_samsung_spf, test_storage_notices, test_late_display, test_brightness,
                  test_localisation,
                  test_settings_xml, test_layout_precedence,
                  test_layout_index, test_layout_chooser,

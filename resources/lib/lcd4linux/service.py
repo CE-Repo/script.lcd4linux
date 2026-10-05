@@ -21,6 +21,7 @@ from .bmfont import FontCache
 from .images import ImageCache
 from .kodidata import make_provider
 from .logger import debug, error, log
+from .storagenotice import StorageNoticeGuard
 from .settings import (Config, DEFAULTS, addon_path, ensure_user_directories,
                        profile_path)
 from .usbdev import USBError
@@ -148,6 +149,7 @@ class Service(object):
         self._thumb_lock = threading.Lock()
         self._thumb_queue = []
         self._thumb_worker = None
+        self._notice_guard = StorageNoticeGuard(self._hide_storage_notices)
 
     # -- helpers ----------------------------------------------------------
     @staticmethod
@@ -158,6 +160,10 @@ class Service(object):
             return xbmcaddon.Addon().getAddonInfo(field)
         except Exception:
             return ""
+
+    def _hide_storage_notices(self):
+        return (xbmc is not None and self.config.output_mode == "usb"
+                and bool(self.config.hide_storage_notices))
 
     def request_reload(self):
         self._reload_requested = True
@@ -655,6 +661,9 @@ class Service(object):
 
     # -- main loop --------------------------------------------------------
     def run(self):
+        # Started first: the frame is mounted, and announced, while the
+        # service is still busy switching it into monitor mode.
+        self._notice_guard.start()
         self.setup()
         log("service running")
         while not self._stop:
@@ -790,6 +799,7 @@ class Service(object):
 
     def shutdown(self):
         log("stopping")
+        self._notice_guard.stop()
         # Clearing comes first: a network display is cleared *through* the
         # web server, so stopping that before the black frame would leave
         # the tablet frozen on the last picture.

@@ -74,6 +74,20 @@ SWITCH_VALUE = 0x00FE
 SWITCH_INDEX = 0x00FE
 SWITCH_LENGTH = 0xFE
 
+#: When a frame was last seen in mass storage mode (``time.time()``).  Kodi
+#: mounts that short-lived USB drive and announces it, and again when the
+#: switch makes it disappear; :mod:`.storagenotice` uses this to tell those
+#: two notices apart from everything else.
+_storage_seen = [0.0]
+
+
+def mark_storage_seen():
+    _storage_seen[0] = time.time()
+
+
+def storage_seen_at():
+    return _storage_seen[0]
+
 
 def storage_ids():
     return tuple((VENDOR_SAMSUNG, model[1]) for model in MODELS)
@@ -146,6 +160,7 @@ class SamsungSPF(object):
                         break
                     if info.product == storage:
                         found.append((info, "storage", name))
+                        mark_storage_seen()
                         break
         finally:
             if devices is not None:
@@ -159,6 +174,8 @@ class SamsungSPF(object):
         devices = None
         try:
             devices, _count, matches = context.find(storage_ids())
+            if matches:
+                mark_storage_seen()
             return len(matches)
         finally:
             if devices is not None:
@@ -170,6 +187,8 @@ class SamsungSPF(object):
         switched = 0
         try:
             devices, _count, matches = context.find(storage_ids())
+            if matches:
+                mark_storage_seen()
             for device, info in matches:
                 try:
                     handle = usbdev.open_device(context, device, info)

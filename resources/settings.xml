@@ -478,6 +478,11 @@
             <popup>true</popup>
           </control>
         </setting>
+        <setting id="hide_storage_notices" type="boolean" label="32170" help="32171">
+          <level>1</level>
+          <default>true</default>
+          <control type="toggle"/>
+        </setting>
         <setting id="debug" type="boolean" label="32168" help="32169">
           <level>2</level>
           <default>false</default>

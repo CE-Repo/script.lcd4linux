@@ -460,6 +460,14 @@ msgctxt "#32027"
 msgid "Samsung photo frame"
 msgstr "Samsung-Bilderrahmen"
 
+msgctxt "#32170"
+msgid "Hide Kodi's mounted/removed notices for the frame"
+msgstr "Kodi-Meldungen „eingebunden/entfernt“ für den Rahmen ausblenden"
+
+msgctxt "#32171"
+msgid "A Samsung frame first shows up as a USB drive. Hides Kodi's notices that this drive was mounted and removed again."
+msgstr "Der Samsung-Rahmen meldet sich zuerst als USB-Laufwerk an. Blendet Kodis Meldungen aus, dass dieses Laufwerk eingebunden und wieder entfernt wurde."
+
 msgctxt "#32174"
 msgid "Samsung model"
 msgstr "Samsung-Modell"

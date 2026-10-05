@@ -161,6 +161,13 @@ notifications on the display, debug logging, and the **power hooks** that run a
 shell command when the service starts and stops — see
 [SETUP.md](SETUP.md#switching-the-frame-on-and-off).
 
+**Hide Kodi's mounted/removed notices for the frame** (on by default): a
+Samsung frame first appears as a USB drive, so CoreELEC mounts it and Kodi
+says so, and says so again when the switch to monitor mode makes the drive
+disappear. With this on, the service closes Kodi's notification while the
+frame is a USB drive and for 20 seconds after; other notifications are left
+alone. Turn it off to see those notices again.
+
 ## Language
 
 Nothing to set: the add-on follows Kodi. Settings, on-screen messages, bundled
