@@ -1,0 +1,125 @@
+{
+  "name": "Terminal - teal (800x480)",
+  "size": [
+    800,
+    480
+  ],
+  "background": "#000000",
+  "defaults": {
+    "font": "mono",
+    "size": 30,
+    "color": "#33ff66"
+  },
+  "pages": [
+    {
+      "name": "$LOCALIZE[32400]",
+      "condition": "video",
+      "priority": 10,
+      "widgets": [
+        {
+          "type": "text",
+          "x": 24,
+          "y": 309,
+          "w": 753,
+          "h": 60,
+          "text": "${player.showtitle}",
+          "font": "mono-bold",
+          "size": 45,
+          "scroll": "marquee",
+          "scrollspeed": 36,
+          "color": "#12a798",
+          "condition": "${player.episodelabel}"
+        },
+        {
+          "type": "text",
+          "x": 24,
+          "y": 309,
+          "w": 753,
+          "h": 58,
+          "text": "${player.title}",
+          "font": "mono-bold",
+          "size": 45,
+          "scroll": "marquee",
+          "scrollspeed": 36,
+          "color": "#12a798",
+          "condition": "!${player.episodelabel}"
+        },
+        {
+          "type": "progress",
+          "x": 24,
+          "y": 388,
+          "w": 752,
+          "h": 32,
+          "value": "${player.percent}",
+          "color": "#07b18f",
+          "background": "#000000",
+          "style": "segments",
+          "segments": 54,
+          "gap": 4,
+          "inactivecolor": "#023e32"
+        },
+        {
+          "type": "text",
+          "x": 24,
+          "y": 267,
+          "w": 753,
+          "h": 45,
+          "text": "${player.year}${player.genre|prefix: · }",
+          "size": 33,
+          "color": "#12a798",
+          "condition": "!${player.episodelabel}",
+          "scroll": "marquee",
+          "scrollspeed": 40,
+          "scrollgap": 2
+        },
+        {
+          "type": "text",
+          "x": 24,
+          "y": 267,
+          "w": 753,
+          "h": 45,
+          "text": "${player.episodelabel|suffix:  ·  }${player.title} ${player.year}",
+          "size": 33,
+          "color": "#12a798",
+          "condition": "${player.episodelabel}",
+          "scroll": "marquee",
+          "scrollspeed": 40,
+          "scrollgap": 2
+        },
+        {
+          "type": "image",
+          "w": 752,
+          "h": 220,
+          "src": "${player.clearlogo}",
+          "fallback": "${player.art(tvshow.clearlogo)}",
+          "radius": 8,
+          "x": 24,
+          "y": 12,
+          "align": "left"
+        },
+        {
+          "type": "image",
+          "w": 752,
+          "h": 248,
+          "src": "${player.poster}",
+          "radius": 8,
+          "x": 24,
+          "y": 12,
+          "align": "left",
+          "condition": "!${player.clearlogo}"
+        },
+        {
+          "type": "image",
+          "w": 752,
+          "h": 248,
+          "src": "${player.thumb}",
+          "radius": 8,
+          "x": 24,
+          "y": 12,
+          "align": "left",
+          "condition": "!${player.clearlogo}"
+        }
+      ]
+    }
+  ]
+}
